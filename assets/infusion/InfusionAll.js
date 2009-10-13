@@ -4893,6 +4893,2513 @@ $.ui.mouse.defaults = {
 };
 
 })(jQuery);
+/* Copyright (c) 2006 Brandon Aaron (http://brandonaaron.net)
+ * Dual licensed under the MIT (http://www.opensource.org/licenses/mit-license.php) 
+ * and GPL (http://www.opensource.org/licenses/gpl-license.php) licenses.
+ *
+ * $LastChangedDate: 2009-05-05 11:14:12 -0400 (Tue, 05 May 2009) $
+ * $Rev: 7137 $
+ *
+ * Version 2.1
+ */
+
+(function($){
+
+/**
+ * The bgiframe is chainable and applies the iframe hack to get 
+ * around zIndex issues in IE6. It will only apply itself in IE 
+ * and adds a class to the iframe called 'bgiframe'. The iframe
+ * is appeneded as the first child of the matched element(s) 
+ * with a tabIndex and zIndex of -1.
+ * 
+ * By default the plugin will take borders, sized with pixel units,
+ * into account. If a different unit is used for the border's width,
+ * then you will need to use the top and left settings as explained below.
+ *
+ * NOTICE: This plugin has been reported to cause perfromance problems
+ * when used on elements that change properties (like width, height and
+ * opacity) a lot in IE6. Most of these problems have been caused by 
+ * the expressions used to calculate the elements width, height and 
+ * borders. Some have reported it is due to the opacity filter. All 
+ * these settings can be changed if needed as explained below.
+ *
+ * @example $('div').bgiframe();
+ * @before <div><p>Paragraph</p></div>
+ * @result <div><iframe class="bgiframe".../><p>Paragraph</p></div>
+ *
+ * @param Map settings Optional settings to configure the iframe.
+ * @option String|Number top The iframe must be offset to the top
+ * 		by the width of the top border. This should be a negative 
+ *      number representing the border-top-width. If a number is 
+ * 		is used here, pixels will be assumed. Otherwise, be sure
+ *		to specify a unit. An expression could also be used. 
+ * 		By default the value is "auto" which will use an expression 
+ * 		to get the border-top-width if it is in pixels.
+ * @option String|Number left The iframe must be offset to the left
+ * 		by the width of the left border. This should be a negative 
+ *      number representing the border-left-width. If a number is 
+ * 		is used here, pixels will be assumed. Otherwise, be sure
+ *		to specify a unit. An expression could also be used. 
+ * 		By default the value is "auto" which will use an expression 
+ * 		to get the border-left-width if it is in pixels.
+ * @option String|Number width This is the width of the iframe. If
+ *		a number is used here, pixels will be assume. Otherwise, be sure
+ * 		to specify a unit. An experssion could also be used.
+ *		By default the value is "auto" which will use an experssion
+ * 		to get the offsetWidth.
+ * @option String|Number height This is the height of the iframe. If
+ *		a number is used here, pixels will be assume. Otherwise, be sure
+ * 		to specify a unit. An experssion could also be used.
+ *		By default the value is "auto" which will use an experssion
+ * 		to get the offsetHeight.
+ * @option Boolean opacity This is a boolean representing whether or not
+ * 		to use opacity. If set to true, the opacity of 0 is applied. If
+ *		set to false, the opacity filter is not applied. Default: true.
+ * @option String src This setting is provided so that one could change 
+ *		the src of the iframe to whatever they need.
+ *		Default: "javascript:false;"
+ *
+ * @name bgiframe
+ * @type jQuery
+ * @cat Plugins/bgiframe
+ * @author Brandon Aaron (brandon.aaron@gmail.com || http://brandonaaron.net)
+ */
+$.fn.bgIframe = $.fn.bgiframe = function(s) {
+	// This is only for IE6
+	if ( $.browser.msie && parseInt($.browser.version) <= 6 ) {
+		s = $.extend({
+			top     : 'auto', // auto == .currentStyle.borderTopWidth
+			left    : 'auto', // auto == .currentStyle.borderLeftWidth
+			width   : 'auto', // auto == offsetWidth
+			height  : 'auto', // auto == offsetHeight
+			opacity : true,
+			src     : 'javascript:false;'
+		}, s || {});
+		var prop = function(n){return n&&n.constructor==Number?n+'px':n;},
+		    html = '<iframe class="bgiframe"frameborder="0"tabindex="-1"src="'+s.src+'"'+
+		               'style="display:block;position:absolute;z-index:-1;'+
+			               (s.opacity !== false?'filter:Alpha(Opacity=\'0\');':'')+
+					       'top:'+(s.top=='auto'?'expression(((parseInt(this.parentNode.currentStyle.borderTopWidth)||0)*-1)+\'px\')':prop(s.top))+';'+
+					       'left:'+(s.left=='auto'?'expression(((parseInt(this.parentNode.currentStyle.borderLeftWidth)||0)*-1)+\'px\')':prop(s.left))+';'+
+					       'width:'+(s.width=='auto'?'expression(this.parentNode.offsetWidth+\'px\')':prop(s.width))+';'+
+					       'height:'+(s.height=='auto'?'expression(this.parentNode.offsetHeight+\'px\')':prop(s.height))+';'+
+					'"/>';
+		return this.each(function() {
+			if ( $('> iframe.bgiframe', this).length == 0 )
+				this.insertBefore( document.createElement(html), this.firstChild );
+		});
+	}
+	return this;
+};
+
+// Add browser.version if it doesn't exist
+if (!$.browser.version)
+	$.browser.version = navigator.userAgent.toLowerCase().match(/.+(?:rv|it|ra|ie)[\/: ]([\d.]+)/)[1];
+
+})(jQuery);/*
+ * jQuery UI Dialog 1.7
+ *
+ * Copyright (c) 2009 AUTHORS.txt (http://jqueryui.com/about)
+ * Dual licensed under the MIT (MIT-LICENSE.txt)
+ * and GPL (GPL-LICENSE.txt) licenses.
+ *
+ * http://docs.jquery.com/UI/Dialog
+ *
+ * Depends:
+ *	ui.core.js
+ *	ui.draggable.js
+ *	ui.resizable.js
+ */
+(function($) {
+
+var setDataSwitch = {
+		dragStart: "start.draggable",
+		drag: "drag.draggable",
+		dragStop: "stop.draggable",
+		maxHeight: "maxHeight.resizable",
+		minHeight: "minHeight.resizable",
+		maxWidth: "maxWidth.resizable",
+		minWidth: "minWidth.resizable",
+		resizeStart: "start.resizable",
+		resize: "drag.resizable",
+		resizeStop: "stop.resizable"
+	},
+	
+	uiDialogClasses =
+		'ui-dialog ' +
+		'ui-widget ' +
+		'ui-widget-content ' +
+		'ui-corner-all ';
+
+$.widget("ui.dialog", {
+
+	_init: function() {
+		this.originalTitle = this.element.attr('title');
+
+		var self = this,
+			options = this.options,
+
+			title = options.title || this.originalTitle || '&nbsp;',
+			titleId = $.ui.dialog.getTitleId(this.element),
+
+			uiDialog = (this.uiDialog = $('<div/>'))
+				.appendTo(document.body)
+				.hide()
+				.addClass(uiDialogClasses + options.dialogClass)
+				.css({
+					position: 'absolute',
+					overflow: 'hidden',
+					zIndex: options.zIndex
+				})
+				// setting tabIndex makes the div focusable
+				// setting outline to 0 prevents a border on focus in Mozilla
+				.attr('tabIndex', -1).css('outline', 0).keydown(function(event) {
+					(options.closeOnEscape && event.keyCode
+						&& event.keyCode == $.ui.keyCode.ESCAPE && self.close(event));
+				})
+				.attr({
+					role: 'dialog',
+					'aria-labelledby': titleId
+				})
+				.mousedown(function(event) {
+					self.moveToTop(false, event);
+				}),
+
+			uiDialogContent = this.element
+				.show()
+				.removeAttr('title')
+				.addClass(
+					'ui-dialog-content ' +
+					'ui-widget-content')
+				.appendTo(uiDialog),
+
+			uiDialogTitlebar = (this.uiDialogTitlebar = $('<div></div>'))
+				.addClass(
+					'ui-dialog-titlebar ' +
+					'ui-widget-header ' +
+					'ui-corner-all ' +
+					'ui-helper-clearfix'
+				)
+				.prependTo(uiDialog),
+
+			uiDialogTitlebarClose = $('<a href="#"/>')
+				.addClass(
+					'ui-dialog-titlebar-close ' +
+					'ui-corner-all'
+				)
+				.attr('role', 'button')
+				.hover(
+					function() {
+						uiDialogTitlebarClose.addClass('ui-state-hover');
+					},
+					function() {
+						uiDialogTitlebarClose.removeClass('ui-state-hover');
+					}
+				)
+				.focus(function() {
+					uiDialogTitlebarClose.addClass('ui-state-focus');
+				})
+				.blur(function() {
+					uiDialogTitlebarClose.removeClass('ui-state-focus');
+				})
+				.mousedown(function(ev) {
+					ev.stopPropagation();
+				})
+				.click(function(event) {
+					self.close(event);
+					return false;
+				})
+				.appendTo(uiDialogTitlebar),
+
+			uiDialogTitlebarCloseText = (this.uiDialogTitlebarCloseText = $('<span/>'))
+				.addClass(
+					'ui-icon ' +
+					'ui-icon-closethick'
+				)
+				.text(options.closeText)
+				.appendTo(uiDialogTitlebarClose),
+
+			uiDialogTitle = $('<span/>')
+				.addClass('ui-dialog-title')
+				.attr('id', titleId)
+				.html(title)
+				.prependTo(uiDialogTitlebar);
+
+		uiDialogTitlebar.find("*").add(uiDialogTitlebar).disableSelection();
+
+		(options.draggable && $.fn.draggable && this._makeDraggable());
+		(options.resizable && $.fn.resizable && this._makeResizable());
+
+		this._createButtons(options.buttons);
+		this._isOpen = false;
+
+		(options.bgiframe && $.fn.bgiframe && uiDialog.bgiframe());
+		(options.autoOpen && this.open());
+		
+	},
+
+	destroy: function() {
+		(this.overlay && this.overlay.destroy());
+		this.uiDialog.hide();
+		this.element
+			.unbind('.dialog')
+			.removeData('dialog')
+			.removeClass('ui-dialog-content ui-widget-content')
+			.hide().appendTo('body');
+		this.uiDialog.remove();
+
+		(this.originalTitle && this.element.attr('title', this.originalTitle));
+	},
+
+	close: function(event) {
+		var self = this;
+		
+		if (false === self._trigger('beforeclose', event)) {
+			return;
+		}
+
+		(self.overlay && self.overlay.destroy());
+		self.uiDialog.unbind('keypress.ui-dialog');
+
+		(self.options.hide
+			? self.uiDialog.hide(self.options.hide, function() {
+				self._trigger('close', event);
+			})
+			: self.uiDialog.hide() && self._trigger('close', event));
+
+		$.ui.dialog.overlay.resize();
+
+		self._isOpen = false;
+	},
+
+	isOpen: function() {
+		return this._isOpen;
+	},
+
+	// the force parameter allows us to move modal dialogs to their correct
+	// position on open
+	moveToTop: function(force, event) {
+
+		if ((this.options.modal && !force)
+			|| (!this.options.stack && !this.options.modal)) {
+			return this._trigger('focus', event);
+		}
+		
+		if (this.options.zIndex > $.ui.dialog.maxZ) {
+			$.ui.dialog.maxZ = this.options.zIndex;
+		}
+		(this.overlay && this.overlay.$el.css('z-index', $.ui.dialog.overlay.maxZ = ++$.ui.dialog.maxZ));
+
+		//Save and then restore scroll since Opera 9.5+ resets when parent z-Index is changed.
+		//  http://ui.jquery.com/bugs/ticket/3193
+		var saveScroll = { scrollTop: this.element.attr('scrollTop'), scrollLeft: this.element.attr('scrollLeft') };
+		this.uiDialog.css('z-index', ++$.ui.dialog.maxZ);
+		this.element.attr(saveScroll);
+		this._trigger('focus', event);
+	},
+
+	open: function() {
+		if (this._isOpen) { return; }
+
+		var options = this.options,
+			uiDialog = this.uiDialog;
+
+		this.overlay = options.modal ? new $.ui.dialog.overlay(this) : null;
+		(uiDialog.next().length && uiDialog.appendTo('body'));
+		this._size();
+		this._position(options.position);
+		uiDialog.show(options.show);
+		this.moveToTop(true);
+
+		// prevent tabbing out of modal dialogs
+		(options.modal && uiDialog.bind('keypress.ui-dialog', function(event) {
+			if (event.keyCode != $.ui.keyCode.TAB) {
+				return;
+			}
+
+			var tabbables = $(':tabbable', this),
+				first = tabbables.filter(':first')[0],
+				last  = tabbables.filter(':last')[0];
+
+			if (event.target == last && !event.shiftKey) {
+				setTimeout(function() {
+					first.focus();
+				}, 1);
+			} else if (event.target == first && event.shiftKey) {
+				setTimeout(function() {
+					last.focus();
+				}, 1);
+			}
+		}));
+
+		// set focus to the first tabbable element in the content area or the first button
+		// if there are no tabbable elements, set focus on the dialog itself
+		$([])
+			.add(uiDialog.find('.ui-dialog-content :tabbable:first'))
+			.add(uiDialog.find('.ui-dialog-buttonpane :tabbable:first'))
+			.add(uiDialog)
+			.filter(':first')
+			.focus();
+
+		this._trigger('open');
+		this._isOpen = true;
+	},
+
+	_createButtons: function(buttons) {
+		var self = this,
+			hasButtons = false,
+			uiDialogButtonPane = $('<div></div>')
+				.addClass(
+					'ui-dialog-buttonpane ' +
+					'ui-widget-content ' +
+					'ui-helper-clearfix'
+				);
+
+		// if we already have a button pane, remove it
+		this.uiDialog.find('.ui-dialog-buttonpane').remove();
+
+		(typeof buttons == 'object' && buttons !== null &&
+			$.each(buttons, function() { return !(hasButtons = true); }));
+		if (hasButtons) {
+			$.each(buttons, function(name, fn) {
+				$('<button type="button"></button>')
+					.addClass(
+						'ui-state-default ' +
+						'ui-corner-all'
+					)
+					.text(name)
+					.click(function() { fn.apply(self.element[0], arguments); })
+					.hover(
+						function() {
+							$(this).addClass('ui-state-hover');
+						},
+						function() {
+							$(this).removeClass('ui-state-hover');
+						}
+					)
+					.focus(function() {
+						$(this).addClass('ui-state-focus');
+					})
+					.blur(function() {
+						$(this).removeClass('ui-state-focus');
+					})
+					.appendTo(uiDialogButtonPane);
+			});
+			uiDialogButtonPane.appendTo(this.uiDialog);
+		}
+	},
+
+	_makeDraggable: function() {
+		var self = this,
+			options = this.options,
+			heightBeforeDrag;
+
+		this.uiDialog.draggable({
+			cancel: '.ui-dialog-content',
+			handle: '.ui-dialog-titlebar',
+			containment: 'document',
+			start: function() {
+				heightBeforeDrag = options.height;
+				$(this).height($(this).height()).addClass("ui-dialog-dragging");
+				(options.dragStart && options.dragStart.apply(self.element[0], arguments));
+			},
+			drag: function() {
+				(options.drag && options.drag.apply(self.element[0], arguments));
+			},
+			stop: function() {
+				$(this).removeClass("ui-dialog-dragging").height(heightBeforeDrag);
+				(options.dragStop && options.dragStop.apply(self.element[0], arguments));
+				$.ui.dialog.overlay.resize();
+			}
+		});
+	},
+
+	_makeResizable: function(handles) {
+		handles = (handles === undefined ? this.options.resizable : handles);
+		var self = this,
+			options = this.options,
+			resizeHandles = typeof handles == 'string'
+				? handles
+				: 'n,e,s,w,se,sw,ne,nw';
+
+		this.uiDialog.resizable({
+			cancel: '.ui-dialog-content',
+			alsoResize: this.element,
+			maxWidth: options.maxWidth,
+			maxHeight: options.maxHeight,
+			minWidth: options.minWidth,
+			minHeight: options.minHeight,
+			start: function() {
+				$(this).addClass("ui-dialog-resizing");
+				(options.resizeStart && options.resizeStart.apply(self.element[0], arguments));
+			},
+			resize: function() {
+				(options.resize && options.resize.apply(self.element[0], arguments));
+			},
+			handles: resizeHandles,
+			stop: function() {
+				$(this).removeClass("ui-dialog-resizing");
+				options.height = $(this).height();
+				options.width = $(this).width();
+				(options.resizeStop && options.resizeStop.apply(self.element[0], arguments));
+				$.ui.dialog.overlay.resize();
+			}
+		})
+		.find('.ui-resizable-se').addClass('ui-icon ui-icon-grip-diagonal-se');
+	},
+
+	_position: function(pos) {
+		var wnd = $(window), doc = $(document),
+			pTop = doc.scrollTop(), pLeft = doc.scrollLeft(),
+			minTop = pTop;
+
+		if ($.inArray(pos, ['center','top','right','bottom','left']) >= 0) {
+			pos = [
+				pos == 'right' || pos == 'left' ? pos : 'center',
+				pos == 'top' || pos == 'bottom' ? pos : 'middle'
+			];
+		}
+		if (pos.constructor != Array) {
+			pos = ['center', 'middle'];
+		}
+		if (pos[0].constructor == Number) {
+			pLeft += pos[0];
+		} else {
+			switch (pos[0]) {
+				case 'left':
+					pLeft += 0;
+					break;
+				case 'right':
+					pLeft += wnd.width() - this.uiDialog.outerWidth();
+					break;
+				default:
+				case 'center':
+					pLeft += (wnd.width() - this.uiDialog.outerWidth()) / 2;
+			}
+		}
+		if (pos[1].constructor == Number) {
+			pTop += pos[1];
+		} else {
+			switch (pos[1]) {
+				case 'top':
+					pTop += 0;
+					break;
+				case 'bottom':
+					pTop += wnd.height() - this.uiDialog.outerHeight();
+					break;
+				default:
+				case 'middle':
+					pTop += (wnd.height() - this.uiDialog.outerHeight()) / 2;
+			}
+		}
+
+		// prevent the dialog from being too high (make sure the titlebar
+		// is accessible)
+		pTop = Math.max(pTop, minTop);
+		this.uiDialog.css({top: pTop, left: pLeft});
+	},
+
+	_setData: function(key, value){
+		(setDataSwitch[key] && this.uiDialog.data(setDataSwitch[key], value));
+		switch (key) {
+			case "buttons":
+				this._createButtons(value);
+				break;
+			case "closeText":
+				this.uiDialogTitlebarCloseText.text(value);
+				break;
+			case "dialogClass":
+				this.uiDialog
+					.removeClass(this.options.dialogClass)
+					.addClass(uiDialogClasses + value);
+				break;
+			case "draggable":
+				(value
+					? this._makeDraggable()
+					: this.uiDialog.draggable('destroy'));
+				break;
+			case "height":
+				this.uiDialog.height(value);
+				break;
+			case "position":
+				this._position(value);
+				break;
+			case "resizable":
+				var uiDialog = this.uiDialog,
+					isResizable = this.uiDialog.is(':data(resizable)');
+
+				// currently resizable, becoming non-resizable
+				(isResizable && !value && uiDialog.resizable('destroy'));
+
+				// currently resizable, changing handles
+				(isResizable && typeof value == 'string' &&
+					uiDialog.resizable('option', 'handles', value));
+
+				// currently non-resizable, becoming resizable
+				(isResizable || this._makeResizable(value));
+				break;
+			case "title":
+				$(".ui-dialog-title", this.uiDialogTitlebar).html(value || '&nbsp;');
+				break;
+			case "width":
+				this.uiDialog.width(value);
+				break;
+		}
+
+		$.widget.prototype._setData.apply(this, arguments);
+	},
+
+	_size: function() {
+		/* If the user has resized the dialog, the .ui-dialog and .ui-dialog-content
+		 * divs will both have width and height set, so we need to reset them
+		 */
+		var options = this.options;
+
+		// reset content sizing
+		this.element.css({
+			height: 0,
+			minHeight: 0,
+			width: 'auto'
+		});
+
+		// reset wrapper sizing
+		// determine the height of all the non-content elements
+		var nonContentHeight = this.uiDialog.css({
+				height: 'auto',
+				width: options.width
+			})
+			.height();
+
+		this.element
+			.css({
+				minHeight: Math.max(options.minHeight - nonContentHeight, 0),
+				height: options.height == 'auto'
+					? 'auto'
+					: Math.max(options.height - nonContentHeight, 0)
+			});
+	}
+});
+
+$.extend($.ui.dialog, {
+	version: "1.7",
+	defaults: {
+		autoOpen: true,
+		bgiframe: false,
+		buttons: {},
+		closeOnEscape: true,
+		closeText: 'close',
+		dialogClass: '',
+		draggable: true,
+		hide: null,
+		height: 'auto',
+		maxHeight: false,
+		maxWidth: false,
+		minHeight: 150,
+		minWidth: 150,
+		modal: false,
+		position: 'center',
+		resizable: true,
+		show: null,
+		stack: true,
+		title: '',
+		width: 300,
+		zIndex: 1000
+	},
+
+	getter: 'isOpen',
+
+	uuid: 0,
+	maxZ: 0,
+
+	getTitleId: function($el) {
+		return 'ui-dialog-title-' + ($el.attr('id') || ++this.uuid);
+	},
+
+	overlay: function(dialog) {
+		this.$el = $.ui.dialog.overlay.create(dialog);
+	}
+});
+
+$.extend($.ui.dialog.overlay, {
+	instances: [],
+	maxZ: 0,
+	events: $.map('focus,mousedown,mouseup,keydown,keypress,click'.split(','),
+		function(event) { return event + '.dialog-overlay'; }).join(' '),
+	create: function(dialog) {
+		if (this.instances.length === 0) {
+			// prevent use of anchors and inputs
+			// we use a setTimeout in case the overlay is created from an
+			// event that we're going to be cancelling (see #2804)
+			setTimeout(function() {
+				$(document).bind($.ui.dialog.overlay.events, function(event) {
+					var dialogZ = $(event.target).parents('.ui-dialog').css('zIndex') || 0;
+					return (dialogZ > $.ui.dialog.overlay.maxZ);
+				});
+			}, 1);
+
+			// allow closing by pressing the escape key
+			$(document).bind('keydown.dialog-overlay', function(event) {
+				(dialog.options.closeOnEscape && event.keyCode
+						&& event.keyCode == $.ui.keyCode.ESCAPE && dialog.close(event));
+			});
+
+			// handle window resize
+			$(window).bind('resize.dialog-overlay', $.ui.dialog.overlay.resize);
+		}
+
+		var $el = $('<div></div>').appendTo(document.body)
+			.addClass('ui-widget-overlay').css({
+				width: this.width(),
+				height: this.height()
+			});
+
+		(dialog.options.bgiframe && $.fn.bgiframe && $el.bgiframe());
+
+		this.instances.push($el);
+		return $el;
+	},
+
+	destroy: function($el) {
+		this.instances.splice($.inArray(this.instances, $el), 1);
+
+		if (this.instances.length === 0) {
+			$([document, window]).unbind('.dialog-overlay');
+		}
+
+		$el.remove();
+	},
+
+	height: function() {
+		// handle IE 6
+		if ($.browser.msie && $.browser.version < 7) {
+			var scrollHeight = Math.max(
+				document.documentElement.scrollHeight,
+				document.body.scrollHeight
+			);
+			var offsetHeight = Math.max(
+				document.documentElement.offsetHeight,
+				document.body.offsetHeight
+			);
+
+			if (scrollHeight < offsetHeight) {
+				return $(window).height() + 'px';
+			} else {
+				return scrollHeight + 'px';
+			}
+		// handle "good" browsers
+		} else {
+			return $(document).height() + 'px';
+		}
+	},
+
+	width: function() {
+		// handle IE 6
+		if ($.browser.msie && $.browser.version < 7) {
+			var scrollWidth = Math.max(
+				document.documentElement.scrollWidth,
+				document.body.scrollWidth
+			);
+			var offsetWidth = Math.max(
+				document.documentElement.offsetWidth,
+				document.body.offsetWidth
+			);
+
+			if (scrollWidth < offsetWidth) {
+				return $(window).width() + 'px';
+			} else {
+				return scrollWidth + 'px';
+			}
+		// handle "good" browsers
+		} else {
+			return $(document).width() + 'px';
+		}
+	},
+
+	resize: function() {
+		/* If the dialog is draggable and the user drags it past the
+		 * right edge of the window, the document becomes wider so we
+		 * need to stretch the overlay. If the user then drags the
+		 * dialog back to the left, the document will become narrower,
+		 * so we need to shrink the overlay to the appropriate size.
+		 * This is handled by shrinking the overlay before setting it
+		 * to the full document size.
+		 */
+		var $overlays = $([]);
+		$.each($.ui.dialog.overlay.instances, function() {
+			$overlays = $overlays.add(this);
+		});
+
+		$overlays.css({
+			width: 0,
+			height: 0
+		}).css({
+			width: $.ui.dialog.overlay.width(),
+			height: $.ui.dialog.overlay.height()
+		});
+	}
+});
+
+$.extend($.ui.dialog.overlay.prototype, {
+	destroy: function() {
+		$.ui.dialog.overlay.destroy(this.$el);
+	}
+});
+
+})(jQuery);
+/*
+ * jQuery UI Draggable 1.7
+ *
+ * Copyright (c) 2009 AUTHORS.txt (http://jqueryui.com/about)
+ * Dual licensed under the MIT (MIT-LICENSE.txt)
+ * and GPL (GPL-LICENSE.txt) licenses.
+ *
+ * http://docs.jquery.com/UI/Draggables
+ *
+ * Depends:
+ *	ui.core.js
+ */
+(function($) {
+
+$.widget("ui.draggable", $.extend({}, $.ui.mouse, {
+
+	_init: function() {
+
+		if (this.options.helper == 'original' && !(/^(?:r|a|f)/).test(this.element.css("position")))
+			this.element[0].style.position = 'relative';
+
+		(this.options.addClasses && this.element.addClass("ui-draggable"));
+		(this.options.disabled && this.element.addClass("ui-draggable-disabled"));
+
+		this._mouseInit();
+
+	},
+
+	destroy: function() {
+		if(!this.element.data('draggable')) return;
+		this.element
+			.removeData("draggable")
+			.unbind(".draggable")
+			.removeClass("ui-draggable"
+				+ " ui-draggable-dragging"
+				+ " ui-draggable-disabled");
+		this._mouseDestroy();
+	},
+
+	_mouseCapture: function(event) {
+
+		var o = this.options;
+
+		if (this.helper || o.disabled || $(event.target).is('.ui-resizable-handle'))
+			return false;
+
+		//Quit if we're not on a valid handle
+		this.handle = this._getHandle(event);
+		if (!this.handle)
+			return false;
+
+		return true;
+
+	},
+
+	_mouseStart: function(event) {
+
+		var o = this.options;
+
+		//Create and append the visible helper
+		this.helper = this._createHelper(event);
+
+		//Cache the helper size
+		this._cacheHelperProportions();
+
+		//If ddmanager is used for droppables, set the global draggable
+		if($.ui.ddmanager)
+			$.ui.ddmanager.current = this;
+
+		/*
+		 * - Position generation -
+		 * This block generates everything position related - it's the core of draggables.
+		 */
+
+		//Cache the margins of the original element
+		this._cacheMargins();
+
+		//Store the helper's css position
+		this.cssPosition = this.helper.css("position");
+		this.scrollParent = this.helper.scrollParent();
+
+		//The element's absolute position on the page minus margins
+		this.offset = this.element.offset();
+		this.offset = {
+			top: this.offset.top - this.margins.top,
+			left: this.offset.left - this.margins.left
+		};
+
+		$.extend(this.offset, {
+			click: { //Where the click happened, relative to the element
+				left: event.pageX - this.offset.left,
+				top: event.pageY - this.offset.top
+			},
+			parent: this._getParentOffset(),
+			relative: this._getRelativeOffset() //This is a relative to absolute position minus the actual position calculation - only used for relative positioned helper
+		});
+
+		//Generate the original position
+		this.originalPosition = this._generatePosition(event);
+		this.originalPageX = event.pageX;
+		this.originalPageY = event.pageY;
+
+		//Adjust the mouse offset relative to the helper if 'cursorAt' is supplied
+		if(o.cursorAt)
+			this._adjustOffsetFromHelper(o.cursorAt);
+
+		//Set a containment if given in the options
+		if(o.containment)
+			this._setContainment();
+
+		//Call plugins and callbacks
+		this._trigger("start", event);
+
+		//Recache the helper size
+		this._cacheHelperProportions();
+
+		//Prepare the droppable offsets
+		if ($.ui.ddmanager && !o.dropBehaviour)
+			$.ui.ddmanager.prepareOffsets(this, event);
+
+		this.helper.addClass("ui-draggable-dragging");
+		this._mouseDrag(event, true); //Execute the drag once - this causes the helper not to be visible before getting its correct position
+		return true;
+	},
+
+	_mouseDrag: function(event, noPropagation) {
+
+		//Compute the helpers position
+		this.position = this._generatePosition(event);
+		this.positionAbs = this._convertPositionTo("absolute");
+
+		//Call plugins and callbacks and use the resulting position if something is returned
+		if (!noPropagation) {
+			var ui = this._uiHash();
+			this._trigger('drag', event, ui);
+			this.position = ui.position;
+		}
+
+		if(!this.options.axis || this.options.axis != "y") this.helper[0].style.left = this.position.left+'px';
+		if(!this.options.axis || this.options.axis != "x") this.helper[0].style.top = this.position.top+'px';
+		if($.ui.ddmanager) $.ui.ddmanager.drag(this, event);
+
+		return false;
+	},
+
+	_mouseStop: function(event) {
+
+		//If we are using droppables, inform the manager about the drop
+		var dropped = false;
+		if ($.ui.ddmanager && !this.options.dropBehaviour)
+			dropped = $.ui.ddmanager.drop(this, event);
+
+		//if a drop comes from outside (a sortable)
+		if(this.dropped) {
+			dropped = this.dropped;
+			this.dropped = false;
+		}
+
+		if((this.options.revert == "invalid" && !dropped) || (this.options.revert == "valid" && dropped) || this.options.revert === true || ($.isFunction(this.options.revert) && this.options.revert.call(this.element, dropped))) {
+			var self = this;
+			$(this.helper).animate(this.originalPosition, parseInt(this.options.revertDuration, 10), function() {
+				self._trigger("stop", event);
+				self._clear();
+			});
+		} else {
+			this._trigger("stop", event);
+			this._clear();
+		}
+
+		return false;
+	},
+
+	_getHandle: function(event) {
+
+		var handle = !this.options.handle || !$(this.options.handle, this.element).length ? true : false;
+		$(this.options.handle, this.element)
+			.find("*")
+			.andSelf()
+			.each(function() {
+				if(this == event.target) handle = true;
+			});
+
+		return handle;
+
+	},
+
+	_createHelper: function(event) {
+
+		var o = this.options;
+		var helper = $.isFunction(o.helper) ? $(o.helper.apply(this.element[0], [event])) : (o.helper == 'clone' ? this.element.clone() : this.element);
+
+		if(!helper.parents('body').length)
+			helper.appendTo((o.appendTo == 'parent' ? this.element[0].parentNode : o.appendTo));
+
+		if(helper[0] != this.element[0] && !(/(fixed|absolute)/).test(helper.css("position")))
+			helper.css("position", "absolute");
+
+		return helper;
+
+	},
+
+	_adjustOffsetFromHelper: function(obj) {
+		if(obj.left != undefined) this.offset.click.left = obj.left + this.margins.left;
+		if(obj.right != undefined) this.offset.click.left = this.helperProportions.width - obj.right + this.margins.left;
+		if(obj.top != undefined) this.offset.click.top = obj.top + this.margins.top;
+		if(obj.bottom != undefined) this.offset.click.top = this.helperProportions.height - obj.bottom + this.margins.top;
+	},
+
+	_getParentOffset: function() {
+
+		//Get the offsetParent and cache its position
+		this.offsetParent = this.helper.offsetParent();
+		var po = this.offsetParent.offset();
+
+		// This is a special case where we need to modify a offset calculated on start, since the following happened:
+		// 1. The position of the helper is absolute, so it's position is calculated based on the next positioned parent
+		// 2. The actual offset parent is a child of the scroll parent, and the scroll parent isn't the document, which means that
+		//    the scroll is included in the initial calculation of the offset of the parent, and never recalculated upon drag
+		if(this.cssPosition == 'absolute' && this.scrollParent[0] != document && $.ui.contains(this.scrollParent[0], this.offsetParent[0])) {
+			po.left += this.scrollParent.scrollLeft();
+			po.top += this.scrollParent.scrollTop();
+		}
+
+		if((this.offsetParent[0] == document.body) //This needs to be actually done for all browsers, since pageX/pageY includes this information
+		|| (this.offsetParent[0].tagName && this.offsetParent[0].tagName.toLowerCase() == 'html' && $.browser.msie)) //Ugly IE fix
+			po = { top: 0, left: 0 };
+
+		return {
+			top: po.top + (parseInt(this.offsetParent.css("borderTopWidth"),10) || 0),
+			left: po.left + (parseInt(this.offsetParent.css("borderLeftWidth"),10) || 0)
+		};
+
+	},
+
+	_getRelativeOffset: function() {
+
+		if(this.cssPosition == "relative") {
+			var p = this.element.position();
+			return {
+				top: p.top - (parseInt(this.helper.css("top"),10) || 0) + this.scrollParent.scrollTop(),
+				left: p.left - (parseInt(this.helper.css("left"),10) || 0) + this.scrollParent.scrollLeft()
+			};
+		} else {
+			return { top: 0, left: 0 };
+		}
+
+	},
+
+	_cacheMargins: function() {
+		this.margins = {
+			left: (parseInt(this.element.css("marginLeft"),10) || 0),
+			top: (parseInt(this.element.css("marginTop"),10) || 0)
+		};
+	},
+
+	_cacheHelperProportions: function() {
+		this.helperProportions = {
+			width: this.helper.outerWidth(),
+			height: this.helper.outerHeight()
+		};
+	},
+
+	_setContainment: function() {
+
+		var o = this.options;
+		if(o.containment == 'parent') o.containment = this.helper[0].parentNode;
+		if(o.containment == 'document' || o.containment == 'window') this.containment = [
+			0 - this.offset.relative.left - this.offset.parent.left,
+			0 - this.offset.relative.top - this.offset.parent.top,
+			$(o.containment == 'document' ? document : window).width() - this.helperProportions.width - this.margins.left,
+			($(o.containment == 'document' ? document : window).height() || document.body.parentNode.scrollHeight) - this.helperProportions.height - this.margins.top
+		];
+
+		if(!(/^(document|window|parent)$/).test(o.containment) && o.containment.constructor != Array) {
+			var ce = $(o.containment)[0]; if(!ce) return;
+			var co = $(o.containment).offset();
+			var over = ($(ce).css("overflow") != 'hidden');
+
+			this.containment = [
+				co.left + (parseInt($(ce).css("borderLeftWidth"),10) || 0) + (parseInt($(ce).css("paddingLeft"),10) || 0) - this.margins.left,
+				co.top + (parseInt($(ce).css("borderTopWidth"),10) || 0) + (parseInt($(ce).css("paddingTop"),10) || 0) - this.margins.top,
+				co.left+(over ? Math.max(ce.scrollWidth,ce.offsetWidth) : ce.offsetWidth) - (parseInt($(ce).css("borderLeftWidth"),10) || 0) - (parseInt($(ce).css("paddingRight"),10) || 0) - this.helperProportions.width - this.margins.left,
+				co.top+(over ? Math.max(ce.scrollHeight,ce.offsetHeight) : ce.offsetHeight) - (parseInt($(ce).css("borderTopWidth"),10) || 0) - (parseInt($(ce).css("paddingBottom"),10) || 0) - this.helperProportions.height - this.margins.top
+			];
+		} else if(o.containment.constructor == Array) {
+			this.containment = o.containment;
+		}
+
+	},
+
+	_convertPositionTo: function(d, pos) {
+
+		if(!pos) pos = this.position;
+		var mod = d == "absolute" ? 1 : -1;
+		var o = this.options, scroll = this.cssPosition == 'absolute' && !(this.scrollParent[0] != document && $.ui.contains(this.scrollParent[0], this.offsetParent[0])) ? this.offsetParent : this.scrollParent, scrollIsRootNode = (/(html|body)/i).test(scroll[0].tagName);
+
+		return {
+			top: (
+				pos.top																	// The absolute mouse position
+				+ this.offset.relative.top * mod										// Only for relative positioned nodes: Relative offset from element to offset parent
+				+ this.offset.parent.top * mod											// The offsetParent's offset without borders (offset + border)
+				- ($.browser.safari && this.cssPosition == 'fixed' ? 0 : ( this.cssPosition == 'fixed' ? -this.scrollParent.scrollTop() : ( scrollIsRootNode ? 0 : scroll.scrollTop() ) ) * mod)
+			),
+			left: (
+				pos.left																// The absolute mouse position
+				+ this.offset.relative.left * mod										// Only for relative positioned nodes: Relative offset from element to offset parent
+				+ this.offset.parent.left * mod											// The offsetParent's offset without borders (offset + border)
+				- ($.browser.safari && this.cssPosition == 'fixed' ? 0 : ( this.cssPosition == 'fixed' ? -this.scrollParent.scrollLeft() : scrollIsRootNode ? 0 : scroll.scrollLeft() ) * mod)
+			)
+		};
+
+	},
+
+	_generatePosition: function(event) {
+
+		var o = this.options, scroll = this.cssPosition == 'absolute' && !(this.scrollParent[0] != document && $.ui.contains(this.scrollParent[0], this.offsetParent[0])) ? this.offsetParent : this.scrollParent, scrollIsRootNode = (/(html|body)/i).test(scroll[0].tagName);
+
+		// This is another very weird special case that only happens for relative elements:
+		// 1. If the css position is relative
+		// 2. and the scroll parent is the document or similar to the offset parent
+		// we have to refresh the relative offset during the scroll so there are no jumps
+		if(this.cssPosition == 'relative' && !(this.scrollParent[0] != document && this.scrollParent[0] != this.offsetParent[0])) {
+			this.offset.relative = this._getRelativeOffset();
+		}
+
+		var pageX = event.pageX;
+		var pageY = event.pageY;
+
+		/*
+		 * - Position constraining -
+		 * Constrain the position to a mix of grid, containment.
+		 */
+
+		if(this.originalPosition) { //If we are not dragging yet, we won't check for options
+
+			if(this.containment) {
+				if(event.pageX - this.offset.click.left < this.containment[0]) pageX = this.containment[0] + this.offset.click.left;
+				if(event.pageY - this.offset.click.top < this.containment[1]) pageY = this.containment[1] + this.offset.click.top;
+				if(event.pageX - this.offset.click.left > this.containment[2]) pageX = this.containment[2] + this.offset.click.left;
+				if(event.pageY - this.offset.click.top > this.containment[3]) pageY = this.containment[3] + this.offset.click.top;
+			}
+
+			if(o.grid) {
+				var top = this.originalPageY + Math.round((pageY - this.originalPageY) / o.grid[1]) * o.grid[1];
+				pageY = this.containment ? (!(top - this.offset.click.top < this.containment[1] || top - this.offset.click.top > this.containment[3]) ? top : (!(top - this.offset.click.top < this.containment[1]) ? top - o.grid[1] : top + o.grid[1])) : top;
+
+				var left = this.originalPageX + Math.round((pageX - this.originalPageX) / o.grid[0]) * o.grid[0];
+				pageX = this.containment ? (!(left - this.offset.click.left < this.containment[0] || left - this.offset.click.left > this.containment[2]) ? left : (!(left - this.offset.click.left < this.containment[0]) ? left - o.grid[0] : left + o.grid[0])) : left;
+			}
+
+		}
+
+		return {
+			top: (
+				pageY																// The absolute mouse position
+				- this.offset.click.top													// Click offset (relative to the element)
+				- this.offset.relative.top												// Only for relative positioned nodes: Relative offset from element to offset parent
+				- this.offset.parent.top												// The offsetParent's offset without borders (offset + border)
+				+ ($.browser.safari && this.cssPosition == 'fixed' ? 0 : ( this.cssPosition == 'fixed' ? -this.scrollParent.scrollTop() : ( scrollIsRootNode ? 0 : scroll.scrollTop() ) ))
+			),
+			left: (
+				pageX																// The absolute mouse position
+				- this.offset.click.left												// Click offset (relative to the element)
+				- this.offset.relative.left												// Only for relative positioned nodes: Relative offset from element to offset parent
+				- this.offset.parent.left												// The offsetParent's offset without borders (offset + border)
+				+ ($.browser.safari && this.cssPosition == 'fixed' ? 0 : ( this.cssPosition == 'fixed' ? -this.scrollParent.scrollLeft() : scrollIsRootNode ? 0 : scroll.scrollLeft() ))
+			)
+		};
+
+	},
+
+	_clear: function() {
+		this.helper.removeClass("ui-draggable-dragging");
+		if(this.helper[0] != this.element[0] && !this.cancelHelperRemoval) this.helper.remove();
+		//if($.ui.ddmanager) $.ui.ddmanager.current = null;
+		this.helper = null;
+		this.cancelHelperRemoval = false;
+	},
+
+	// From now on bulk stuff - mainly helpers
+
+	_trigger: function(type, event, ui) {
+		ui = ui || this._uiHash();
+		$.ui.plugin.call(this, type, [event, ui]);
+		if(type == "drag") this.positionAbs = this._convertPositionTo("absolute"); //The absolute position has to be recalculated after plugins
+		return $.widget.prototype._trigger.call(this, type, event, ui);
+	},
+
+	plugins: {},
+
+	_uiHash: function(event) {
+		return {
+			helper: this.helper,
+			position: this.position,
+			absolutePosition: this.positionAbs, //deprecated
+			offset: this.positionAbs
+		};
+	}
+
+}));
+
+$.extend($.ui.draggable, {
+	version: "1.7",
+	eventPrefix: "drag",
+	defaults: {
+		addClasses: true,
+		appendTo: "parent",
+		axis: false,
+		cancel: ":input,option",
+		connectToSortable: false,
+		containment: false,
+		cursor: "auto",
+		cursorAt: false,
+		delay: 0,
+		distance: 1,
+		grid: false,
+		handle: false,
+		helper: "original",
+		iframeFix: false,
+		opacity: false,
+		refreshPositions: false,
+		revert: false,
+		revertDuration: 500,
+		scope: "default",
+		scroll: true,
+		scrollSensitivity: 20,
+		scrollSpeed: 20,
+		snap: false,
+		snapMode: "both",
+		snapTolerance: 20,
+		stack: false,
+		zIndex: false
+	}
+});
+
+$.ui.plugin.add("draggable", "connectToSortable", {
+	start: function(event, ui) {
+
+		var inst = $(this).data("draggable"), o = inst.options,
+			uiSortable = $.extend({}, ui, { item: inst.element });
+		inst.sortables = [];
+		$(o.connectToSortable).each(function() {
+			var sortable = $.data(this, 'sortable');
+			if (sortable && !sortable.options.disabled) {
+				inst.sortables.push({
+					instance: sortable,
+					shouldRevert: sortable.options.revert
+				});
+				sortable._refreshItems();	//Do a one-time refresh at start to refresh the containerCache
+				sortable._trigger("activate", event, uiSortable);
+			}
+		});
+
+	},
+	stop: function(event, ui) {
+
+		//If we are still over the sortable, we fake the stop event of the sortable, but also remove helper
+		var inst = $(this).data("draggable"),
+			uiSortable = $.extend({}, ui, { item: inst.element });
+
+		$.each(inst.sortables, function() {
+			if(this.instance.isOver) {
+
+				this.instance.isOver = 0;
+
+				inst.cancelHelperRemoval = true; //Don't remove the helper in the draggable instance
+				this.instance.cancelHelperRemoval = false; //Remove it in the sortable instance (so sortable plugins like revert still work)
+
+				//The sortable revert is supported, and we have to set a temporary dropped variable on the draggable to support revert: 'valid/invalid'
+				if(this.shouldRevert) this.instance.options.revert = true;
+
+				//Trigger the stop of the sortable
+				this.instance._mouseStop(event);
+
+				this.instance.options.helper = this.instance.options._helper;
+
+				//If the helper has been the original item, restore properties in the sortable
+				if(inst.options.helper == 'original')
+					this.instance.currentItem.css({ top: 'auto', left: 'auto' });
+
+			} else {
+				this.instance.cancelHelperRemoval = false; //Remove the helper in the sortable instance
+				this.instance._trigger("deactivate", event, uiSortable);
+			}
+
+		});
+
+	},
+	drag: function(event, ui) {
+
+		var inst = $(this).data("draggable"), self = this;
+
+		var checkPos = function(o) {
+			var dyClick = this.offset.click.top, dxClick = this.offset.click.left;
+			var helperTop = this.positionAbs.top, helperLeft = this.positionAbs.left;
+			var itemHeight = o.height, itemWidth = o.width;
+			var itemTop = o.top, itemLeft = o.left;
+
+			return $.ui.isOver(helperTop + dyClick, helperLeft + dxClick, itemTop, itemLeft, itemHeight, itemWidth);
+		};
+
+		$.each(inst.sortables, function(i) {
+			
+			//Copy over some variables to allow calling the sortable's native _intersectsWith
+			this.instance.positionAbs = inst.positionAbs;
+			this.instance.helperProportions = inst.helperProportions;
+			this.instance.offset.click = inst.offset.click;
+			
+			if(this.instance._intersectsWith(this.instance.containerCache)) {
+
+				//If it intersects, we use a little isOver variable and set it once, so our move-in stuff gets fired only once
+				if(!this.instance.isOver) {
+
+					this.instance.isOver = 1;
+					//Now we fake the start of dragging for the sortable instance,
+					//by cloning the list group item, appending it to the sortable and using it as inst.currentItem
+					//We can then fire the start event of the sortable with our passed browser event, and our own helper (so it doesn't create a new one)
+					this.instance.currentItem = $(self).clone().appendTo(this.instance.element).data("sortable-item", true);
+					this.instance.options._helper = this.instance.options.helper; //Store helper option to later restore it
+					this.instance.options.helper = function() { return ui.helper[0]; };
+
+					event.target = this.instance.currentItem[0];
+					this.instance._mouseCapture(event, true);
+					this.instance._mouseStart(event, true, true);
+
+					//Because the browser event is way off the new appended portlet, we modify a couple of variables to reflect the changes
+					this.instance.offset.click.top = inst.offset.click.top;
+					this.instance.offset.click.left = inst.offset.click.left;
+					this.instance.offset.parent.left -= inst.offset.parent.left - this.instance.offset.parent.left;
+					this.instance.offset.parent.top -= inst.offset.parent.top - this.instance.offset.parent.top;
+
+					inst._trigger("toSortable", event);
+					inst.dropped = this.instance.element; //draggable revert needs that
+					//hack so receive/update callbacks work (mostly)
+					inst.currentItem = inst.element;
+					this.instance.fromOutside = inst;
+
+				}
+
+				//Provided we did all the previous steps, we can fire the drag event of the sortable on every draggable drag, when it intersects with the sortable
+				if(this.instance.currentItem) this.instance._mouseDrag(event);
+
+			} else {
+
+				//If it doesn't intersect with the sortable, and it intersected before,
+				//we fake the drag stop of the sortable, but make sure it doesn't remove the helper by using cancelHelperRemoval
+				if(this.instance.isOver) {
+
+					this.instance.isOver = 0;
+					this.instance.cancelHelperRemoval = true;
+					
+					//Prevent reverting on this forced stop
+					this.instance.options.revert = false;
+					
+					// The out event needs to be triggered independently
+					this.instance._trigger('out', event, this.instance._uiHash(this.instance));
+					
+					this.instance._mouseStop(event, true);
+					this.instance.options.helper = this.instance.options._helper;
+
+					//Now we remove our currentItem, the list group clone again, and the placeholder, and animate the helper back to it's original size
+					this.instance.currentItem.remove();
+					if(this.instance.placeholder) this.instance.placeholder.remove();
+
+					inst._trigger("fromSortable", event);
+					inst.dropped = false; //draggable revert needs that
+				}
+
+			};
+
+		});
+
+	}
+});
+
+$.ui.plugin.add("draggable", "cursor", {
+	start: function(event, ui) {
+		var t = $('body'), o = $(this).data('draggable').options;
+		if (t.css("cursor")) o._cursor = t.css("cursor");
+		t.css("cursor", o.cursor);
+	},
+	stop: function(event, ui) {
+		var o = $(this).data('draggable').options;
+		if (o._cursor) $('body').css("cursor", o._cursor);
+	}
+});
+
+$.ui.plugin.add("draggable", "iframeFix", {
+	start: function(event, ui) {
+		var o = $(this).data('draggable').options;
+		$(o.iframeFix === true ? "iframe" : o.iframeFix).each(function() {
+			$('<div class="ui-draggable-iframeFix" style="background: #fff;"></div>')
+			.css({
+				width: this.offsetWidth+"px", height: this.offsetHeight+"px",
+				position: "absolute", opacity: "0.001", zIndex: 1000
+			})
+			.css($(this).offset())
+			.appendTo("body");
+		});
+	},
+	stop: function(event, ui) {
+		$("div.ui-draggable-iframeFix").each(function() { this.parentNode.removeChild(this); }); //Remove frame helpers
+	}
+});
+
+$.ui.plugin.add("draggable", "opacity", {
+	start: function(event, ui) {
+		var t = $(ui.helper), o = $(this).data('draggable').options;
+		if(t.css("opacity")) o._opacity = t.css("opacity");
+		t.css('opacity', o.opacity);
+	},
+	stop: function(event, ui) {
+		var o = $(this).data('draggable').options;
+		if(o._opacity) $(ui.helper).css('opacity', o._opacity);
+	}
+});
+
+$.ui.plugin.add("draggable", "scroll", {
+	start: function(event, ui) {
+		var i = $(this).data("draggable");
+		if(i.scrollParent[0] != document && i.scrollParent[0].tagName != 'HTML') i.overflowOffset = i.scrollParent.offset();
+	},
+	drag: function(event, ui) {
+
+		var i = $(this).data("draggable"), o = i.options, scrolled = false;
+
+		if(i.scrollParent[0] != document && i.scrollParent[0].tagName != 'HTML') {
+
+			if(!o.axis || o.axis != 'x') {
+				if((i.overflowOffset.top + i.scrollParent[0].offsetHeight) - event.pageY < o.scrollSensitivity)
+					i.scrollParent[0].scrollTop = scrolled = i.scrollParent[0].scrollTop + o.scrollSpeed;
+				else if(event.pageY - i.overflowOffset.top < o.scrollSensitivity)
+					i.scrollParent[0].scrollTop = scrolled = i.scrollParent[0].scrollTop - o.scrollSpeed;
+			}
+
+			if(!o.axis || o.axis != 'y') {
+				if((i.overflowOffset.left + i.scrollParent[0].offsetWidth) - event.pageX < o.scrollSensitivity)
+					i.scrollParent[0].scrollLeft = scrolled = i.scrollParent[0].scrollLeft + o.scrollSpeed;
+				else if(event.pageX - i.overflowOffset.left < o.scrollSensitivity)
+					i.scrollParent[0].scrollLeft = scrolled = i.scrollParent[0].scrollLeft - o.scrollSpeed;
+			}
+
+		} else {
+
+			if(!o.axis || o.axis != 'x') {
+				if(event.pageY - $(document).scrollTop() < o.scrollSensitivity)
+					scrolled = $(document).scrollTop($(document).scrollTop() - o.scrollSpeed);
+				else if($(window).height() - (event.pageY - $(document).scrollTop()) < o.scrollSensitivity)
+					scrolled = $(document).scrollTop($(document).scrollTop() + o.scrollSpeed);
+			}
+
+			if(!o.axis || o.axis != 'y') {
+				if(event.pageX - $(document).scrollLeft() < o.scrollSensitivity)
+					scrolled = $(document).scrollLeft($(document).scrollLeft() - o.scrollSpeed);
+				else if($(window).width() - (event.pageX - $(document).scrollLeft()) < o.scrollSensitivity)
+					scrolled = $(document).scrollLeft($(document).scrollLeft() + o.scrollSpeed);
+			}
+
+		}
+
+		if(scrolled !== false && $.ui.ddmanager && !o.dropBehaviour)
+			$.ui.ddmanager.prepareOffsets(i, event);
+
+	}
+});
+
+$.ui.plugin.add("draggable", "snap", {
+	start: function(event, ui) {
+
+		var i = $(this).data("draggable"), o = i.options;
+		i.snapElements = [];
+
+		$(o.snap.constructor != String ? ( o.snap.items || ':data(draggable)' ) : o.snap).each(function() {
+			var $t = $(this); var $o = $t.offset();
+			if(this != i.element[0]) i.snapElements.push({
+				item: this,
+				width: $t.outerWidth(), height: $t.outerHeight(),
+				top: $o.top, left: $o.left
+			});
+		});
+
+	},
+	drag: function(event, ui) {
+
+		var inst = $(this).data("draggable"), o = inst.options;
+		var d = o.snapTolerance;
+
+		var x1 = ui.offset.left, x2 = x1 + inst.helperProportions.width,
+			y1 = ui.offset.top, y2 = y1 + inst.helperProportions.height;
+
+		for (var i = inst.snapElements.length - 1; i >= 0; i--){
+
+			var l = inst.snapElements[i].left, r = l + inst.snapElements[i].width,
+				t = inst.snapElements[i].top, b = t + inst.snapElements[i].height;
+
+			//Yes, I know, this is insane ;)
+			if(!((l-d < x1 && x1 < r+d && t-d < y1 && y1 < b+d) || (l-d < x1 && x1 < r+d && t-d < y2 && y2 < b+d) || (l-d < x2 && x2 < r+d && t-d < y1 && y1 < b+d) || (l-d < x2 && x2 < r+d && t-d < y2 && y2 < b+d))) {
+				if(inst.snapElements[i].snapping) (inst.options.snap.release && inst.options.snap.release.call(inst.element, event, $.extend(inst._uiHash(), { snapItem: inst.snapElements[i].item })));
+				inst.snapElements[i].snapping = false;
+				continue;
+			}
+
+			if(o.snapMode != 'inner') {
+				var ts = Math.abs(t - y2) <= d;
+				var bs = Math.abs(b - y1) <= d;
+				var ls = Math.abs(l - x2) <= d;
+				var rs = Math.abs(r - x1) <= d;
+				if(ts) ui.position.top = inst._convertPositionTo("relative", { top: t - inst.helperProportions.height, left: 0 }).top - inst.margins.top;
+				if(bs) ui.position.top = inst._convertPositionTo("relative", { top: b, left: 0 }).top - inst.margins.top;
+				if(ls) ui.position.left = inst._convertPositionTo("relative", { top: 0, left: l - inst.helperProportions.width }).left - inst.margins.left;
+				if(rs) ui.position.left = inst._convertPositionTo("relative", { top: 0, left: r }).left - inst.margins.left;
+			}
+
+			var first = (ts || bs || ls || rs);
+
+			if(o.snapMode != 'outer') {
+				var ts = Math.abs(t - y1) <= d;
+				var bs = Math.abs(b - y2) <= d;
+				var ls = Math.abs(l - x1) <= d;
+				var rs = Math.abs(r - x2) <= d;
+				if(ts) ui.position.top = inst._convertPositionTo("relative", { top: t, left: 0 }).top - inst.margins.top;
+				if(bs) ui.position.top = inst._convertPositionTo("relative", { top: b - inst.helperProportions.height, left: 0 }).top - inst.margins.top;
+				if(ls) ui.position.left = inst._convertPositionTo("relative", { top: 0, left: l }).left - inst.margins.left;
+				if(rs) ui.position.left = inst._convertPositionTo("relative", { top: 0, left: r - inst.helperProportions.width }).left - inst.margins.left;
+			}
+
+			if(!inst.snapElements[i].snapping && (ts || bs || ls || rs || first))
+				(inst.options.snap.snap && inst.options.snap.snap.call(inst.element, event, $.extend(inst._uiHash(), { snapItem: inst.snapElements[i].item })));
+			inst.snapElements[i].snapping = (ts || bs || ls || rs || first);
+
+		};
+
+	}
+});
+
+$.ui.plugin.add("draggable", "stack", {
+	start: function(event, ui) {
+
+		var o = $(this).data("draggable").options;
+
+		var group = $.makeArray($(o.stack.group)).sort(function(a,b) {
+			return (parseInt($(a).css("zIndex"),10) || o.stack.min) - (parseInt($(b).css("zIndex"),10) || o.stack.min);
+		});
+
+		$(group).each(function(i) {
+			this.style.zIndex = o.stack.min + i;
+		});
+
+		this[0].style.zIndex = o.stack.min + group.length;
+
+	}
+});
+
+$.ui.plugin.add("draggable", "zIndex", {
+	start: function(event, ui) {
+		var t = $(ui.helper), o = $(this).data("draggable").options;
+		if(t.css("zIndex")) o._zIndex = t.css("zIndex");
+		t.css('zIndex', o.zIndex);
+	},
+	stop: function(event, ui) {
+		var o = $(this).data("draggable").options;
+		if(o._zIndex) $(ui.helper).css('zIndex', o._zIndex);
+	}
+});
+
+})(jQuery);
+/*
+ * jQuery UI Accordion 1.7
+ *
+ * Copyright (c) 2009 AUTHORS.txt (http://jqueryui.com/about)
+ * Dual licensed under the MIT (MIT-LICENSE.txt)
+ * and GPL (GPL-LICENSE.txt) licenses.
+ *
+ * http://docs.jquery.com/UI/Accordion
+ *
+ * Depends:
+ *	ui.core.js
+ */
+(function($) {
+
+$.widget("ui.accordion", {
+
+	_init: function() {
+
+		var o = this.options, self = this;
+		this.running = 0;
+
+		// if the user set the alwaysOpen option on init
+		// then we need to set the collapsible option
+		// if they set both on init, collapsible will take priority
+		if (o.collapsible == $.ui.accordion.defaults.collapsible &&
+			o.alwaysOpen != $.ui.accordion.defaults.alwaysOpen) {
+			o.collapsible = !o.alwaysOpen;
+		}
+
+		if ( o.navigation ) {
+			var current = this.element.find("a").filter(o.navigationFilter);
+			if ( current.length ) {
+				if ( current.filter(o.header).length ) {
+					this.active = current;
+				} else {
+					this.active = current.parent().parent().prev();
+					current.addClass("ui-accordion-content-active");
+				}
+			}
+		}
+
+		this.element.addClass("ui-accordion ui-widget ui-helper-reset");
+		
+		// in lack of child-selectors in CSS we need to mark top-LIs in a UL-accordion for some IE-fix
+		if (this.element[0].nodeName == "UL") {
+			this.element.children("li").addClass("ui-accordion-li-fix");
+		}
+
+		this.headers = this.element.find(o.header).addClass("ui-accordion-header ui-helper-reset ui-state-default ui-corner-all")
+			.bind("mouseenter.accordion", function(){ $(this).addClass('ui-state-hover'); })
+			.bind("mouseleave.accordion", function(){ $(this).removeClass('ui-state-hover'); })
+			.bind("focus.accordion", function(){ $(this).addClass('ui-state-focus'); })
+			.bind("blur.accordion", function(){ $(this).removeClass('ui-state-focus'); });
+
+		this.headers
+			.next()
+				.addClass("ui-accordion-content ui-helper-reset ui-widget-content ui-corner-bottom");
+
+		this.active = this._findActive(this.active || o.active).toggleClass("ui-state-default").toggleClass("ui-state-active").toggleClass("ui-corner-all").toggleClass("ui-corner-top");
+		this.active.next().addClass('ui-accordion-content-active');
+
+		//Append icon elements
+		$("<span/>").addClass("ui-icon " + o.icons.header).prependTo(this.headers);
+		this.active.find(".ui-icon").toggleClass(o.icons.header).toggleClass(o.icons.headerSelected);
+
+		// IE7-/Win - Extra vertical space in lists fixed
+		if ($.browser.msie) {
+			this.element.find('a').css('zoom', '1');
+		}
+
+		this.resize();
+
+		//ARIA
+		this.element.attr('role','tablist');
+
+		this.headers
+			.attr('role','tab')
+			.bind('keydown', function(event) { return self._keydown(event); })
+			.next()
+			.attr('role','tabpanel');
+
+		this.headers
+			.not(this.active || "")
+			.attr('aria-expanded','false')
+			.attr("tabIndex", "-1")
+			.next()
+			.hide();
+
+		// make sure at least one header is in the tab order
+		if (!this.active.length) {
+			this.headers.eq(0).attr('tabIndex','0');
+		} else {
+			this.active
+				.attr('aria-expanded','true')
+				.attr('tabIndex', '0');
+		}
+
+		// only need links in taborder for Safari
+		if (!$.browser.safari)
+			this.headers.find('a').attr('tabIndex','-1');
+
+		if (o.event) {
+			this.headers.bind((o.event) + ".accordion", function(event) { return self._clickHandler.call(self, event, this); });
+		}
+
+	},
+
+	destroy: function() {
+		var o = this.options;
+
+		this.element
+			.removeClass("ui-accordion ui-widget ui-helper-reset")
+			.removeAttr("role")
+			.unbind('.accordion')
+			.removeData('accordion');
+
+		this.headers
+			.unbind(".accordion")
+			.removeClass("ui-accordion-header ui-helper-reset ui-state-default ui-corner-all ui-state-active ui-corner-top")
+			.removeAttr("role").removeAttr("aria-expanded").removeAttr("tabindex");
+
+		this.headers.find("a").removeAttr("tabindex");
+		this.headers.children(".ui-icon").remove();
+		var contents = this.headers.next().css("display", "").removeAttr("role").removeClass("ui-helper-reset ui-widget-content ui-corner-bottom ui-accordion-content ui-accordion-content-active");
+		if (o.autoHeight || o.fillHeight) {
+			contents.css("height", "");
+		}
+	},
+	
+	_setData: function(key, value) {
+		if(key == 'alwaysOpen') { key = 'collapsible'; value = !value; }
+		$.widget.prototype._setData.apply(this, arguments);	
+	},
+
+	_keydown: function(event) {
+
+		var o = this.options, keyCode = $.ui.keyCode;
+
+		if (o.disabled || event.altKey || event.ctrlKey)
+			return;
+
+		var length = this.headers.length;
+		var currentIndex = this.headers.index(event.target);
+		var toFocus = false;
+
+		switch(event.keyCode) {
+			case keyCode.RIGHT:
+			case keyCode.DOWN:
+				toFocus = this.headers[(currentIndex + 1) % length];
+				break;
+			case keyCode.LEFT:
+			case keyCode.UP:
+				toFocus = this.headers[(currentIndex - 1 + length) % length];
+				break;
+			case keyCode.SPACE:
+			case keyCode.ENTER:
+				return this._clickHandler({ target: event.target }, event.target);
+		}
+
+		if (toFocus) {
+			$(event.target).attr('tabIndex','-1');
+			$(toFocus).attr('tabIndex','0');
+			toFocus.focus();
+			return false;
+		}
+
+		return true;
+
+	},
+
+	resize: function() {
+
+		var o = this.options, maxHeight;
+
+		if (o.fillSpace) {
+			
+			if($.browser.msie) { var defOverflow = this.element.parent().css('overflow'); this.element.parent().css('overflow', 'hidden'); }
+			maxHeight = this.element.parent().height();
+			if($.browser.msie) { this.element.parent().css('overflow', defOverflow); }
+	
+			this.headers.each(function() {
+				maxHeight -= $(this).outerHeight();
+			});
+
+			var maxPadding = 0;
+			this.headers.next().each(function() {
+				maxPadding = Math.max(maxPadding, $(this).innerHeight() - $(this).height());
+			}).height(Math.max(0, maxHeight - maxPadding))
+			.css('overflow', 'auto');
+
+		} else if ( o.autoHeight ) {
+			maxHeight = 0;
+			this.headers.next().each(function() {
+				maxHeight = Math.max(maxHeight, $(this).outerHeight());
+			}).height(maxHeight);
+		}
+
+	},
+
+	activate: function(index) {
+		// call clickHandler with custom event
+		var active = this._findActive(index)[0];
+		this._clickHandler({ target: active }, active);
+	},
+
+	_findActive: function(selector) {
+		return selector
+			? typeof selector == "number"
+				? this.headers.filter(":eq(" + selector + ")")
+				: this.headers.not(this.headers.not(selector))
+			: selector === false
+				? $([])
+				: this.headers.filter(":eq(0)");
+	},
+
+	_clickHandler: function(event, target) {
+
+		var o = this.options;
+		if (o.disabled) return false;
+
+		// called only when using activate(false) to close all parts programmatically
+		if (!event.target && o.collapsible) {
+			this.active.removeClass("ui-state-active ui-corner-top").addClass("ui-state-default ui-corner-all")
+				.find(".ui-icon").removeClass(o.icons.headerSelected).addClass(o.icons.header);
+			this.active.next().addClass('ui-accordion-content-active');
+			var toHide = this.active.next(),
+				data = {
+					options: o,
+					newHeader: $([]),
+					oldHeader: o.active,
+					newContent: $([]),
+					oldContent: toHide
+				},
+				toShow = (this.active = $([]));
+			this._toggle(toShow, toHide, data);
+			return false;
+		}
+
+		// get the click target
+		var clicked = $(event.currentTarget || target);
+		var clickedIsActive = clicked[0] == this.active[0];
+
+		// if animations are still active, or the active header is the target, ignore click
+		if (this.running || (!o.collapsible && clickedIsActive)) {
+			return false;
+		}
+
+		// switch classes
+		this.active.removeClass("ui-state-active ui-corner-top").addClass("ui-state-default ui-corner-all")
+			.find(".ui-icon").removeClass(o.icons.headerSelected).addClass(o.icons.header);
+		this.active.next().addClass('ui-accordion-content-active');
+		if (!clickedIsActive) {
+			clicked.removeClass("ui-state-default ui-corner-all").addClass("ui-state-active ui-corner-top")
+				.find(".ui-icon").removeClass(o.icons.header).addClass(o.icons.headerSelected);
+			clicked.next().addClass('ui-accordion-content-active');
+		}
+
+		// find elements to show and hide
+		var toShow = clicked.next(),
+			toHide = this.active.next(),
+			data = {
+				options: o,
+				newHeader: clickedIsActive && o.collapsible ? $([]) : clicked,
+				oldHeader: this.active,
+				newContent: clickedIsActive && o.collapsible ? $([]) : toShow.find('> *'),
+				oldContent: toHide.find('> *')
+			},
+			down = this.headers.index( this.active[0] ) > this.headers.index( clicked[0] );
+
+		this.active = clickedIsActive ? $([]) : clicked;
+		this._toggle(toShow, toHide, data, clickedIsActive, down);
+
+		return false;
+
+	},
+
+	_toggle: function(toShow, toHide, data, clickedIsActive, down) {
+
+		var o = this.options, self = this;
+
+		this.toShow = toShow;
+		this.toHide = toHide;
+		this.data = data;
+
+		var complete = function() { if(!self) return; return self._completed.apply(self, arguments); };
+
+		// trigger changestart event
+		this._trigger("changestart", null, this.data);
+
+		// count elements to animate
+		this.running = toHide.size() === 0 ? toShow.size() : toHide.size();
+
+		if (o.animated) {
+
+			var animOptions = {};
+
+			if ( o.collapsible && clickedIsActive ) {
+				animOptions = {
+					toShow: $([]),
+					toHide: toHide,
+					complete: complete,
+					down: down,
+					autoHeight: o.autoHeight || o.fillSpace
+				};
+			} else {
+				animOptions = {
+					toShow: toShow,
+					toHide: toHide,
+					complete: complete,
+					down: down,
+					autoHeight: o.autoHeight || o.fillSpace
+				};
+			}
+
+			if (!o.proxied) {
+				o.proxied = o.animated;
+			}
+
+			if (!o.proxiedDuration) {
+				o.proxiedDuration = o.duration;
+			}
+
+			o.animated = $.isFunction(o.proxied) ?
+				o.proxied(animOptions) : o.proxied;
+
+			o.duration = $.isFunction(o.proxiedDuration) ?
+				o.proxiedDuration(animOptions) : o.proxiedDuration;
+
+			var animations = $.ui.accordion.animations,
+				duration = o.duration,
+				easing = o.animated;
+
+			if (!animations[easing]) {
+				animations[easing] = function(options) {
+					this.slide(options, {
+						easing: easing,
+						duration: duration || 700
+					});
+				};
+			}
+
+			animations[easing](animOptions);
+
+		} else {
+
+			if (o.collapsible && clickedIsActive) {
+				toShow.toggle();
+			} else {
+				toHide.hide();
+				toShow.show();
+			}
+
+			complete(true);
+
+		}
+
+		toHide.prev().attr('aria-expanded','false').attr("tabIndex", "-1").blur();
+		toShow.prev().attr('aria-expanded','true').attr("tabIndex", "0").focus();
+
+	},
+
+	_completed: function(cancel) {
+
+		var o = this.options;
+
+		this.running = cancel ? 0 : --this.running;
+		if (this.running) return;
+
+		if (o.clearStyle) {
+			this.toShow.add(this.toHide).css({
+				height: "",
+				overflow: ""
+			});
+		}
+
+		this._trigger('change', null, this.data);
+	}
+
+});
+
+
+$.extend($.ui.accordion, {
+	version: "1.7",
+	defaults: {
+		active: null,
+		alwaysOpen: true, //deprecated, use collapsible
+		animated: 'slide',
+		autoHeight: true,
+		clearStyle: false,
+		collapsible: false,
+		event: "click",
+		fillSpace: false,
+		header: "> li > :first-child,> :not(li):even",
+		icons: {
+			header: "ui-icon-triangle-1-e",
+			headerSelected: "ui-icon-triangle-1-s"
+		},
+		navigation: false,
+		navigationFilter: function() {
+			return this.href.toLowerCase() == location.href.toLowerCase();
+		}
+	},
+	animations: {
+		slide: function(options, additions) {
+			options = $.extend({
+				easing: "swing",
+				duration: 300
+			}, options, additions);
+			if ( !options.toHide.size() ) {
+				options.toShow.animate({height: "show"}, options);
+				return;
+			}
+			if ( !options.toShow.size() ) {
+				options.toHide.animate({height: "hide"}, options);
+				return;
+			}
+			var overflow = options.toShow.css('overflow'),
+				percentDone,
+				showProps = {},
+				hideProps = {},
+				fxAttrs = [ "height", "paddingTop", "paddingBottom" ],
+				originalWidth;
+			// fix width before calculating height of hidden element
+			var s = options.toShow;
+			originalWidth = s[0].style.width;
+			s.width( parseInt(s.parent().width(),10) - parseInt(s.css("paddingLeft"),10) - parseInt(s.css("paddingRight"),10) - parseInt(s.css("borderLeftWidth"),10) - parseInt(s.css("borderRightWidth"),10) );
+			
+			$.each(fxAttrs, function(i, prop) {
+				hideProps[prop] = 'hide';
+				
+				var parts = ('' + $.css(options.toShow[0], prop)).match(/^([\d+-.]+)(.*)$/);
+				showProps[prop] = {
+					value: parts[1],
+					unit: parts[2] || 'px'
+				};
+			});
+			options.toShow.css({ height: 0, overflow: 'hidden' }).show();
+			options.toHide.filter(":hidden").each(options.complete).end().filter(":visible").animate(hideProps,{
+				step: function(now, settings) {
+					// only calculate the percent when animating height
+					// IE gets very inconsistent results when animating elements
+					// with small values, which is common for padding
+					if (settings.prop == 'height') {
+						percentDone = (settings.now - settings.start) / (settings.end - settings.start);
+					}
+					
+					options.toShow[0].style[settings.prop] =
+						(percentDone * showProps[settings.prop].value) + showProps[settings.prop].unit;
+				},
+				duration: options.duration,
+				easing: options.easing,
+				complete: function() {
+					if ( !options.autoHeight ) {
+						options.toShow.css("height", "");
+					}
+					options.toShow.css("width", originalWidth);
+					options.toShow.css({overflow: overflow});
+					options.complete();
+				}
+			});
+		},
+		bounceslide: function(options) {
+			this.slide(options, {
+				easing: options.down ? "easeOutBounce" : "swing",
+				duration: options.down ? 1000 : 200
+			});
+		},
+		easeslide: function(options) {
+			this.slide(options, {
+				easing: "easeinout",
+				duration: 700
+			});
+		}
+	}
+});
+
+})(jQuery);
+/*
+ * jQuery UI Slider 1.7
+ *
+ * Copyright (c) 2009 AUTHORS.txt (http://jqueryui.com/about)
+ * Dual licensed under the MIT (MIT-LICENSE.txt)
+ * and GPL (GPL-LICENSE.txt) licenses.
+ *
+ * http://docs.jquery.com/UI/Slider
+ *
+ * Depends:
+ *	ui.core.js
+ */
+
+(function($) {
+
+$.widget("ui.slider", $.extend({}, $.ui.mouse, {
+
+	_init: function() {
+
+		var self = this, o = this.options;
+		this._keySliding = false;
+		this._handleIndex = null;
+		this._detectOrientation();
+		this._mouseInit();
+
+		this.element
+			.addClass("ui-slider"
+				+ " ui-slider-" + this.orientation
+				+ " ui-widget"
+				+ " ui-widget-content"
+				+ " ui-corner-all");
+
+		this.range = $([]);
+
+		if (o.range) {
+
+			if (o.range === true) {
+				this.range = $('<div></div>');
+				if (!o.values) o.values = [this._valueMin(), this._valueMin()];
+				if (o.values.length && o.values.length != 2) {
+					o.values = [o.values[0], o.values[0]];
+				}
+			} else {
+				this.range = $('<div></div>');
+			}
+
+			this.range
+				.appendTo(this.element)
+				.addClass("ui-slider-range");
+
+			if (o.range == "min" || o.range == "max") {
+				this.range.addClass("ui-slider-range-" + o.range);
+			}
+
+			// note: this isn't the most fittingly semantic framework class for this element,
+			// but worked best visually with a variety of themes
+			this.range.addClass("ui-widget-header");
+
+		}
+
+		if ($(".ui-slider-handle", this.element).length == 0)
+			$('<a href="#"></a>')
+				.appendTo(this.element)
+				.addClass("ui-slider-handle");
+
+		if (o.values && o.values.length) {
+			while ($(".ui-slider-handle", this.element).length < o.values.length)
+				$('<a href="#"></a>')
+					.appendTo(this.element)
+					.addClass("ui-slider-handle");
+		}
+
+		this.handles = $(".ui-slider-handle", this.element)
+			.addClass("ui-state-default"
+				+ " ui-corner-all");
+
+		this.handle = this.handles.eq(0);
+
+		this.handles.add(this.range).filter("a")
+			.click(function(event) { event.preventDefault(); })
+			.hover(function() { $(this).addClass('ui-state-hover'); }, function() { $(this).removeClass('ui-state-hover'); })
+			.focus(function() { $(".ui-slider .ui-state-focus").removeClass('ui-state-focus'); $(this).addClass('ui-state-focus'); })
+			.blur(function() { $(this).removeClass('ui-state-focus'); });
+
+		this.handles.each(function(i) {
+			$(this).data("index.ui-slider-handle", i);
+		});
+
+		this.handles.keydown(function(event) {
+
+			var ret = true;
+
+			var index = $(this).data("index.ui-slider-handle");
+
+			if (self.options.disabled)
+				return;
+
+			switch (event.keyCode) {
+				case $.ui.keyCode.HOME:
+				case $.ui.keyCode.END:
+				case $.ui.keyCode.UP:
+				case $.ui.keyCode.RIGHT:
+				case $.ui.keyCode.DOWN:
+				case $.ui.keyCode.LEFT:
+					ret = false;
+					if (!self._keySliding) {
+						self._keySliding = true;
+						$(this).addClass("ui-state-active");
+						self._start(event, index);
+					}
+					break;
+			}
+
+			var curVal, newVal, step = self._step();
+			if (self.options.values && self.options.values.length) {
+				curVal = newVal = self.values(index);
+			} else {
+				curVal = newVal = self.value();
+			}
+
+			switch (event.keyCode) {
+				case $.ui.keyCode.HOME:
+					newVal = self._valueMin();
+					break;
+				case $.ui.keyCode.END:
+					newVal = self._valueMax();
+					break;
+				case $.ui.keyCode.UP:
+				case $.ui.keyCode.RIGHT:
+					if(curVal == self._valueMax()) return;
+					newVal = curVal + step;
+					break;
+				case $.ui.keyCode.DOWN:
+				case $.ui.keyCode.LEFT:
+					if(curVal == self._valueMin()) return;
+					newVal = curVal - step;
+					break;
+			}
+
+			self._slide(event, index, newVal);
+
+			return ret;
+
+		}).keyup(function(event) {
+
+			var index = $(this).data("index.ui-slider-handle");
+
+			if (self._keySliding) {
+				self._stop(event, index);
+				self._change(event, index);
+				self._keySliding = false;
+				$(this).removeClass("ui-state-active");
+			}
+
+		});
+
+		this._refreshValue();
+
+	},
+
+	destroy: function() {
+
+		this.handles.remove();
+
+		this.element
+			.removeClass("ui-slider"
+				+ " ui-slider-horizontal"
+				+ " ui-slider-vertical"
+				+ " ui-slider-disabled"
+				+ " ui-widget"
+				+ " ui-widget-content"
+				+ " ui-corner-all")
+			.removeData("slider")
+			.unbind(".slider");
+
+		this._mouseDestroy();
+
+	},
+
+	_mouseCapture: function(event) {
+
+		var o = this.options;
+
+		if (o.disabled)
+			return false;
+
+		this.elementSize = {
+			width: this.element.outerWidth(),
+			height: this.element.outerHeight()
+		};
+		this.elementOffset = this.element.offset();
+
+		var position = { x: event.pageX, y: event.pageY };
+		var normValue = this._normValueFromMouse(position);
+
+		var distance = this._valueMax() + 1, closestHandle;
+		var self = this, index;
+		this.handles.each(function(i) {
+			var thisDistance = Math.abs(normValue - self.values(i));
+			if (distance > thisDistance) {
+				distance = thisDistance;
+				closestHandle = $(this);
+				index = i;
+			}
+		});
+
+		// workaround for bug #3736 (if both handles of a range are at 0,
+		// the first is always used as the one with least distance,
+		// and moving it is obviously prevented by preventing negative ranges)
+		if(o.range == true && this.values(1) == o.min) {
+			closestHandle = $(this.handles[++index]);
+		}
+
+		this._start(event, index);
+
+		self._handleIndex = index;
+
+		closestHandle
+			.addClass("ui-state-active")
+			.focus();
+		
+		var offset = closestHandle.offset();
+		var mouseOverHandle = !$(event.target).parents().andSelf().is('.ui-slider-handle');
+		this._clickOffset = mouseOverHandle ? { left: 0, top: 0 } : {
+			left: event.pageX - offset.left - (closestHandle.width() / 2),
+			top: event.pageY - offset.top
+				- (closestHandle.height() / 2)
+				- (parseInt(closestHandle.css('borderTopWidth'),10) || 0)
+				- (parseInt(closestHandle.css('borderBottomWidth'),10) || 0)
+				+ (parseInt(closestHandle.css('marginTop'),10) || 0)
+		};
+
+		normValue = this._normValueFromMouse(position);
+		this._slide(event, index, normValue);
+		return true;
+
+	},
+
+	_mouseStart: function(event) {
+		return true;
+	},
+
+	_mouseDrag: function(event) {
+
+		var position = { x: event.pageX, y: event.pageY };
+		var normValue = this._normValueFromMouse(position);
+		
+		this._slide(event, this._handleIndex, normValue);
+
+		return false;
+
+	},
+
+	_mouseStop: function(event) {
+
+		this.handles.removeClass("ui-state-active");
+		this._stop(event, this._handleIndex);
+		this._change(event, this._handleIndex);
+		this._handleIndex = null;
+		this._clickOffset = null;
+
+		return false;
+
+	},
+	
+	_detectOrientation: function() {
+		this.orientation = this.options.orientation == 'vertical' ? 'vertical' : 'horizontal';
+	},
+
+	_normValueFromMouse: function(position) {
+
+		var pixelTotal, pixelMouse;
+		if ('horizontal' == this.orientation) {
+			pixelTotal = this.elementSize.width;
+			pixelMouse = position.x - this.elementOffset.left - (this._clickOffset ? this._clickOffset.left : 0);
+		} else {
+			pixelTotal = this.elementSize.height;
+			pixelMouse = position.y - this.elementOffset.top - (this._clickOffset ? this._clickOffset.top : 0);
+		}
+
+		var percentMouse = (pixelMouse / pixelTotal);
+		if (percentMouse > 1) percentMouse = 1;
+		if (percentMouse < 0) percentMouse = 0;
+		if ('vertical' == this.orientation)
+			percentMouse = 1 - percentMouse;
+
+		var valueTotal = this._valueMax() - this._valueMin(),
+			valueMouse = percentMouse * valueTotal,
+			valueMouseModStep = valueMouse % this.options.step,
+			normValue = this._valueMin() + valueMouse - valueMouseModStep;
+
+		if (valueMouseModStep > (this.options.step / 2))
+			normValue += this.options.step;
+
+		// Since JavaScript has problems with large floats, round
+		// the final value to 5 digits after the decimal point (see #4124)
+		return parseFloat(normValue.toFixed(5));
+
+	},
+
+	_start: function(event, index) {
+		this._trigger("start", event, this._uiHash(index));
+	},
+
+	_slide: function(event, index, newVal) {
+
+		var handle = this.handles[index];
+
+		if (this.options.values && this.options.values.length) {
+
+			var otherVal = this.values(index ? 0 : 1);
+
+			if ((index == 0 && newVal >= otherVal) || (index == 1 && newVal <= otherVal))
+				newVal = otherVal;
+
+			if (newVal != this.values(index)) {
+				var newValues = this.values();
+				newValues[index] = newVal;
+				// A slide can be canceled by returning false from the slide callback
+				var allowed = this._trigger("slide", event, this._uiHash(index, newVal, newValues));
+				var otherVal = this.values(index ? 0 : 1);
+				if (allowed !== false) {
+					this.values(index, newVal, ( event.type == 'mousedown' && this.options.animate ), true);
+				}
+			}
+
+		} else {
+
+			if (newVal != this.value()) {
+				// A slide can be canceled by returning false from the slide callback
+				var allowed = this._trigger("slide", event, this._uiHash(index, newVal));
+				if (allowed !== false) {
+					this._setData('value', newVal, ( event.type == 'mousedown' && this.options.animate ));
+				}
+					
+			}
+
+		}
+
+	},
+
+	_stop: function(event, index) {
+		this._trigger("stop", event, this._uiHash(index));
+	},
+
+	_change: function(event, index) {
+		this._trigger("change", event, this._uiHash(index));
+	},
+
+	value: function(newValue) {
+
+		if (arguments.length) {
+			this._setData("value", newValue);
+			this._change(null, 0);
+		}
+
+		return this._value();
+
+	},
+
+	values: function(index, newValue, animated, noPropagation) {
+
+		if (arguments.length > 1) {
+			this.options.values[index] = newValue;
+			this._refreshValue(animated);
+			if(!noPropagation) this._change(null, index);
+		}
+
+		if (arguments.length) {
+			if (this.options.values && this.options.values.length) {
+				return this._values(index);
+			} else {
+				return this.value();
+			}
+		} else {
+			return this._values();
+		}
+
+	},
+
+	_setData: function(key, value, animated) {
+
+		$.widget.prototype._setData.apply(this, arguments);
+
+		switch (key) {
+			case 'orientation':
+
+				this._detectOrientation();
+				
+				this.element
+					.removeClass("ui-slider-horizontal ui-slider-vertical")
+					.addClass("ui-slider-" + this.orientation);
+				this._refreshValue(animated);
+				break;
+			case 'value':
+				this._refreshValue(animated);
+				break;
+		}
+
+	},
+
+	_step: function() {
+		var step = this.options.step;
+		return step;
+	},
+
+	_value: function() {
+
+		var val = this.options.value;
+		if (val < this._valueMin()) val = this._valueMin();
+		if (val > this._valueMax()) val = this._valueMax();
+
+		return val;
+
+	},
+
+	_values: function(index) {
+
+		if (arguments.length) {
+			var val = this.options.values[index];
+			if (val < this._valueMin()) val = this._valueMin();
+			if (val > this._valueMax()) val = this._valueMax();
+
+			return val;
+		} else {
+			return this.options.values;
+		}
+
+	},
+
+	_valueMin: function() {
+		var valueMin = this.options.min;
+		return valueMin;
+	},
+
+	_valueMax: function() {
+		var valueMax = this.options.max;
+		return valueMax;
+	},
+
+	_refreshValue: function(animate) {
+
+		var oRange = this.options.range, o = this.options, self = this;
+
+		if (this.options.values && this.options.values.length) {
+			var vp0, vp1;
+			this.handles.each(function(i, j) {
+				var valPercent = (self.values(i) - self._valueMin()) / (self._valueMax() - self._valueMin()) * 100;
+				var _set = {}; _set[self.orientation == 'horizontal' ? 'left' : 'bottom'] = valPercent + '%';
+				$(this).stop(1,1)[animate ? 'animate' : 'css'](_set, o.animate);
+				if (self.options.range === true) {
+					if (self.orientation == 'horizontal') {
+						(i == 0) && self.range.stop(1,1)[animate ? 'animate' : 'css']({ left: valPercent + '%' }, o.animate);
+						(i == 1) && self.range[animate ? 'animate' : 'css']({ width: (valPercent - lastValPercent) + '%' }, { queue: false, duration: o.animate });
+					} else {
+						(i == 0) && self.range.stop(1,1)[animate ? 'animate' : 'css']({ bottom: (valPercent) + '%' }, o.animate);
+						(i == 1) && self.range[animate ? 'animate' : 'css']({ height: (valPercent - lastValPercent) + '%' }, { queue: false, duration: o.animate });
+					}
+				}
+				lastValPercent = valPercent;
+			});
+		} else {
+			var value = this.value(),
+				valueMin = this._valueMin(),
+				valueMax = this._valueMax(),
+				valPercent = valueMax != valueMin
+					? (value - valueMin) / (valueMax - valueMin) * 100
+					: 0;
+			var _set = {}; _set[self.orientation == 'horizontal' ? 'left' : 'bottom'] = valPercent + '%';
+			this.handle.stop(1,1)[animate ? 'animate' : 'css'](_set, o.animate);
+
+			(oRange == "min") && (this.orientation == "horizontal") && this.range.stop(1,1)[animate ? 'animate' : 'css']({ width: valPercent + '%' }, o.animate);
+			(oRange == "max") && (this.orientation == "horizontal") && this.range[animate ? 'animate' : 'css']({ width: (100 - valPercent) + '%' }, { queue: false, duration: o.animate });
+			(oRange == "min") && (this.orientation == "vertical") && this.range.stop(1,1)[animate ? 'animate' : 'css']({ height: valPercent + '%' }, o.animate);
+			(oRange == "max") && (this.orientation == "vertical") && this.range[animate ? 'animate' : 'css']({ height: (100 - valPercent) + '%' }, { queue: false, duration: o.animate });
+		}
+
+	},
+	
+	_uiHash: function(index, value, values) {
+		
+		var multiple = this.options.values && this.options.values.length;
+		return {
+			handle: this.handles[index],
+			value: value || (multiple ? this.values(index) : this.value()),
+			values: values || (multiple && this.values())
+		};
+
+	}
+
+}));
+
+$.extend($.ui.slider, {
+	getter: "value values",
+	version: "1.7",
+	eventPrefix: "slide",
+	defaults: {
+		animate: false,
+		delay: 0,
+		distance: 0,
+		max: 100,
+		min: 0,
+		orientation: 'horizontal',
+		range: false,
+		step: 1,
+		value: 0,
+		values: null
+	}
+});
+
+})(jQuery);
 /*
  * jQuery delegate plug-in v1.0
  *
@@ -7131,6 +9638,5515 @@ var fluid = fluid || fluid_1_1;
 
   
   })(jQuery, fluid_1_1);
+/*
+Copyright 2008-2009 University of Cambridge
+Copyright 2008-2009 University of Toronto
+Copyright 2007-2009 University of California, Berkeley
+
+Licensed under the Educational Community License (ECL), Version 2.0 or the New
+BSD license. You may not use this file except in compliance with one these
+Licenses.
+
+You may obtain a copy of the ECL 2.0 License and BSD License at
+https://source.fluidproject.org/svn/LICENSE.txt
+*/
+
+// Declare dependencies.
+/*global jQuery*/
+/*global fluid_1_1*/
+
+var fluid_1_1 = fluid_1_1 || {};
+
+(function ($, fluid) {
+    
+    fluid.orientation = {
+        HORIZONTAL: 4,
+        VERTICAL: 1
+    };
+    
+    fluid.rectSides = {
+        // agree with fluid.orientation
+        4: ["left", "right"],
+        1: ["top", "bottom"],
+        // agree with fluid.direction
+        8: "top",
+        12: "bottom",
+        2: "left",
+        3: "right"
+    };
+    
+    /**
+     * This is the position, relative to a given drop target, that a dragged item should be dropped.
+     */
+    fluid.position = {
+        BEFORE: -1,
+        AFTER: 1,
+        INSIDE: 2,
+        REPLACE: 3
+    };
+    
+    /**
+     * For incrementing/decrementing a count or index, or moving in a rectilinear direction.
+     */
+    fluid.direction = {
+        NEXT: 1,
+        PREVIOUS: -1,
+        UP: 8,
+        DOWN: 12,
+        LEFT: 2,
+        RIGHT: 3
+    };
+    
+    fluid.directionSign = function (direction) {
+        return direction === fluid.direction.UP || direction === fluid.direction.LEFT? 
+             fluid.direction.PREVIOUS : fluid.direction.NEXT;
+    };
+    
+    fluid.directionAxis = function (direction) {
+        return direction === fluid.direction.LEFT || direction === fluid.direction.RIGHT?
+            0 : 1; 
+    };
+    
+    fluid.directionOrientation = function (direction) {
+        return fluid.directionAxis(direction)? fluid.orientation.VERTICAL : fluid.orientation.HORIZONTAL;
+    };
+    
+    fluid.keycodeDirection = {
+        up: fluid.direction.UP,
+        down: fluid.direction.DOWN,
+        left: fluid.direction.LEFT,
+        right: fluid.direction.RIGHT
+    };
+    
+    // moves a single node in the DOM to a new position relative to another
+    fluid.moveDom = function (source, target, position) {
+        source = fluid.unwrap(source);
+        target = fluid.unwrap(target);
+        
+        var scan;
+        // fluid.log("moveDom source " + fluid.dumpEl(source) + " target " + fluid.dumpEl(target) + " position " + position);     
+        if (position === fluid.position.INSIDE) {
+            target.appendChild(source);
+        }
+        else if (position === fluid.position.BEFORE) {
+            for (scan = target.previousSibling; ; scan = scan.previousSibling) {
+                if (!scan || !fluid.dom.isIgnorableNode(scan)) {
+                    if (scan !== source) {
+                        fluid.dom.cleanseScripts(source);
+                        target.parentNode.insertBefore(source, target);    
+                    }
+                    break;
+                }
+            }
+        }
+        else if (position === fluid.position.AFTER) {
+            for (scan = target.nextSibling; ; scan = scan.nextSibling) {
+                if (!scan || !fluid.dom.isIgnorableNode(scan)) {
+                    if (scan !== source) {
+                        fluid.dom.cleanseScripts(source);
+                        fluid.dom.insertAfter(source, target);
+                    }
+                    break;
+                }
+            }
+        }
+        else {
+            fluid.fail("Unrecognised position supplied to fluid.moveDom: " + position);
+        }
+    };
+    
+    fluid.normalisePosition = function (position, samespan, targeti, sourcei) {
+        // convert a REPLACE into a primitive BEFORE/AFTER
+        if (position === fluid.position.REPLACE) {
+            position = samespan && targeti >= sourcei? fluid.position.AFTER: fluid.position.BEFORE;
+        }
+        return position;
+    };
+    
+    fluid.permuteDom = function (element, target, position, sourceelements, targetelements) {
+        element = fluid.unwrap(element);
+        target = fluid.unwrap(target);
+        var sourcei = $.inArray(element, sourceelements);
+        if (sourcei === -1) {
+            fluid.fail("Error in permuteDom: source element " + fluid.dumpEl(element) 
+               + " not found in source list " + fluid.dumpEl(sourceelements));
+        }
+        var targeti = $.inArray(target, targetelements);
+        if (targeti === -1) {
+            fluid.fail("Error in permuteDom: target element " + fluid.dumpEl(target) 
+               + " not found in source list " + fluid.dumpEl(targetelements));
+        }
+        var samespan = sourceelements === targetelements;
+        position = fluid.normalisePosition(position, samespan, targeti, sourcei);
+
+        //fluid.log("permuteDom sourcei " + sourcei + " targeti " + targeti);
+        // cache the old neighbourhood of the element for the final move
+        var oldn = {};
+        oldn[fluid.position.AFTER] = element.nextSibling;
+        oldn[fluid.position.BEFORE] = element.previousSibling;
+        fluid.moveDom(sourceelements[sourcei], targetelements[targeti], position);
+        
+        // perform the leftward-moving, AFTER shift
+        var frontlimit = samespan? targeti - 1: sourceelements.length - 2;
+        var i;
+        if (position === fluid.position.BEFORE && samespan) { 
+            // we cannot do skip processing if the element was "fused against the grain" 
+            frontlimit--;
+        }
+        if (!samespan || targeti > sourcei) {
+            for (i = frontlimit; i > sourcei; -- i) {
+                fluid.moveDom(sourceelements[i + 1], sourceelements[i], fluid.position.AFTER);
+            }
+            if (sourcei + 1 < sourceelements.length) {
+                fluid.moveDom(sourceelements[sourcei + 1], oldn[fluid.position.AFTER], fluid.position.BEFORE);
+            }
+        }
+        // perform the rightward-moving, BEFORE shift
+        var backlimit = samespan? sourcei - 1: targetelements.length - 1;
+        if (position === fluid.position.AFTER) { 
+            // we cannot do skip processing if the element was "fused against the grain" 
+            targeti++;
+        }
+        if (!samespan || targeti < sourcei) {
+            for (i = targeti; i < backlimit; ++ i) {
+                fluid.moveDom(targetelements[i], targetelements[i + 1], fluid.position.BEFORE);
+            }
+            if (backlimit >= 0 && backlimit < targetelements.length - 1) {
+                fluid.moveDom(targetelements[backlimit], oldn[fluid.position.BEFORE], fluid.position.AFTER);
+            }                
+        }
+
+    };
+  
+    var curCss = function (a, name) {
+        return window.getComputedStyle? window.getComputedStyle(a, null).getPropertyValue(name) : 
+          a.currentStyle[name];
+    };
+    
+    var isAttached = function (node) {
+        while (node && node.nodeName) {
+            if (node.nodeName === "BODY") {
+                return true;
+            }
+            node = node.parentNode;
+        }
+        return false;
+    };
+    
+    var generalHidden = function (a) {
+        return "hidden" === a.type || curCss(a, "display") === "none" || curCss(a, "visibility") === "hidden" || !isAttached(a);
+    };
+    
+
+    var computeGeometry = function (element, orientation, disposition) {
+        var elem = {};
+        elem.element = element;
+        elem.orientation = orientation;
+        if (disposition === fluid.position.INSIDE) {
+            elem.position = disposition;
+        }
+        if (generalHidden(element)) {
+            elem.clazz = "hidden";
+        }
+        var pos = fluid.dom.computeAbsolutePosition(element) || [0, 0];
+        var width = element.offsetWidth;
+        var height = element.offsetHeight;
+        elem.rect = {left: pos[0], top: pos[1]};
+        elem.rect.right = pos[0] + width;
+        elem.rect.bottom = pos[1] + height;
+        return elem;
+    };
+    
+    // A "suitable large" value for the sentinel blocks at the ends of spans
+    var SENTINEL_DIMENSION = 10000;
+
+    function dumprect(rect) {
+        return "Rect top: " + rect.top +
+                 " left: " + rect.left + 
+               " bottom: " + rect.bottom +
+                " right: " + rect.right;
+    }
+
+    function dumpelem(cacheelem) {
+        if (!cacheelem || !cacheelem.rect) {
+            return "null";
+        } else {
+            return dumprect(cacheelem.rect) + " position: " +
+            cacheelem.position +
+            " for " +
+            fluid.dumpEl(cacheelem.element);
+        }
+    }
+    
+    fluid.dropManager = function () {
+        var targets = [];
+        var cache = {};
+        var that = {};
+        
+        var lastClosest;
+        
+        function cacheKey(element) {
+            return $(element).data("");
+        }
+        
+        function sentinelizeElement(targets, sides, cacheelem, fc, disposition, clazz) {
+            var elemCopy = $.extend(true, {}, cacheelem);
+            elemCopy.rect[sides[fc]] = elemCopy.rect[sides[1 - fc]] + (fc? 1: -1);
+            elemCopy.rect[sides[1 - fc]] = (fc? -1 : 1) * SENTINEL_DIMENSION;
+            elemCopy.position = disposition === fluid.position.INSIDE?
+               disposition : (fc? fluid.position.BEFORE : fluid.position.AFTER);
+            elemCopy.clazz = clazz;
+            targets[targets.length] = elemCopy;
+        }
+        
+        function splitElement(targets, sides, cacheelem, disposition, clazz1, clazz2) {
+            var elem1 = $.extend(true, {}, cacheelem);
+            var elem2 = $.extend(true, {}, cacheelem);
+            var midpoint = (elem1.rect[sides[0]] + elem1.rect[sides[1]]) / 2;
+            elem1.rect[sides[1]] = midpoint; 
+            elem1.position = fluid.position.BEFORE;
+            
+            elem2.rect[sides[0]] = midpoint; 
+            elem2.position = fluid.position.AFTER;
+            
+            elem1.clazz = clazz1;
+            elem2.clazz = clazz2;
+            targets[targets.length] = elem1;
+            targets[targets.length] = elem2;
+        }
+       
+        // Expand this configuration point if we ever go back to a full "permissions" model
+        function getRelativeClass(thisElements, index, relative, thisclazz, mapper) {
+            index += relative;
+            if (index < 0 && thisclazz === "locked") {
+                return "locked";
+            }
+            if (index >= thisElements.length || mapper === null) {
+                return null;
+            } else {
+                relative = thisElements[index];
+                return mapper(relative) === "locked" && thisclazz === "locked" ? "locked" : null;
+            }
+        }
+        
+        var lastGeometry;
+        var displacementX, displacementY;
+        
+        that.updateGeometry = function (geometricInfo) {
+            lastGeometry = geometricInfo;
+            targets = [];
+            cache = {};
+            var mapper = geometricInfo.elementMapper;
+            for (var i = 0; i < geometricInfo.extents.length; ++ i) {
+                var thisInfo = geometricInfo.extents[i];
+                var orientation = thisInfo.orientation;
+                var sides = fluid.rectSides[orientation];
+                
+                var processElement = function (element, sentB, sentF, disposition, j) {
+                    var cacheelem = computeGeometry(element, orientation, disposition);
+                    cacheelem.owner = thisInfo;
+                    if (cacheelem.clazz !== "hidden" && mapper) {
+                        cacheelem.clazz = mapper(element);
+                    }
+                    cache[$.data(element)] = cacheelem;
+                    var backClass = getRelativeClass(thisInfo.elements, j, fluid.position.BEFORE, cacheelem.clazz, mapper); 
+                    var frontClass = getRelativeClass(thisInfo.elements, j, fluid.position.AFTER, cacheelem.clazz, mapper); 
+                    if (disposition === fluid.position.INSIDE) {
+                        targets[targets.length] = cacheelem;
+                    }
+                    else {
+                        splitElement(targets, sides, cacheelem, disposition, backClass, frontClass);
+                    }
+                    // deal with sentinel blocks by creating near-copies of the end elements
+                    if (sentB && geometricInfo.sentinelize) {
+                        sentinelizeElement(targets, sides, cacheelem, 1, disposition, backClass);
+                    }
+                    if (sentF && geometricInfo.sentinelize) {
+                        sentinelizeElement(targets, sides, cacheelem, 0, disposition, frontClass);
+                    }
+                    //fluid.log(dumpelem(cacheelem));
+                    return cacheelem;
+                };
+                
+                var allHidden = true;
+                for (var j = 0; j < thisInfo.elements.length; ++ j) {
+                    var element = thisInfo.elements[j];
+                    var cacheelem = processElement(element, j === 0, j === thisInfo.elements.length - 1, 
+                            fluid.position.INTERLEAVED, j);
+                    if (cacheelem.clazz !== "hidden") {
+                        allHidden = false;
+                    }
+                }
+                if (allHidden && thisInfo.parentElement) {
+                    processElement(thisInfo.parentElement, true, true, 
+                            fluid.position.INSIDE);
+                }
+            }   
+        };
+        
+        that.startDrag = function (event, handlePos, handleWidth, handleHeight) {
+            var handleMidX = handlePos[0] + handleWidth / 2;
+            var handleMidY = handlePos[1] + handleHeight / 2;
+            var dX = handleMidX - event.pageX;
+            var dY = handleMidY - event.pageY;
+            that.updateGeometry(lastGeometry);
+            lastClosest = null;
+            displacementX = dX;
+            displacementY = dY;
+            $("").bind("mousemove.fluid-dropManager", that.mouseMove);
+        };
+        
+        that.lastPosition = function () {
+            return lastClosest;
+        };
+        
+        that.endDrag = function () {
+            $("").unbind("mousemove.fluid-dropManager");
+        };
+        
+        that.mouseMove = function (evt) {
+            var x = evt.pageX + displacementX;
+            var y = evt.pageY + displacementY;
+            //fluid.log("Mouse x " + x + " y " + y );
+            
+            var closestTarget = that.closestTarget(x, y, lastClosest);
+            if (closestTarget && closestTarget !== fluid.dropManager.NO_CHANGE) {
+                lastClosest = closestTarget;
+              
+                that.dropChangeFirer.fire(closestTarget);
+            }
+        };
+        
+        that.dropChangeFirer = fluid.event.getEventFirer();
+        
+        var blankHolder = {
+            element: null
+        };
+        
+        that.closestTarget = function (x, y, lastClosest) {
+            var mindistance = Number.MAX_VALUE;
+            var minelem = blankHolder;
+            var minlockeddistance = Number.MAX_VALUE;
+            var minlockedelem = blankHolder;
+            for (var i = 0; i < targets.length; ++ i) {
+                var cacheelem = targets[i];
+                if (cacheelem.clazz === "hidden") {
+                    continue;
+                }
+                var distance = fluid.geom.minPointRectangle(x, y, cacheelem.rect);
+                if (cacheelem.clazz === "locked") {
+                    if (distance < minlockeddistance) {
+                        minlockeddistance = distance;
+                        minlockedelem = cacheelem;
+                    }
+                } else {
+                    if (distance < mindistance) {
+                        mindistance = distance;
+                        minelem = cacheelem;
+                    }
+                    if (distance === 0) {
+                        break;
+                    }
+                }
+            }
+            if (!minelem) {
+                return minelem;
+            }
+            if (minlockeddistance >= mindistance) {
+                minlockedelem = blankHolder;
+            }
+            //fluid.log("PRE: mindistance " + mindistance + " element " + 
+            //   fluid.dumpEl(minelem.element) + " minlockeddistance " + minlockeddistance
+            //    + " locked elem " + dumpelem(minlockedelem));
+            if (lastClosest && lastClosest.position === minelem.position &&
+                fluid.unwrap(lastClosest.element) === fluid.unwrap(minelem.element) &&
+                fluid.unwrap(lastClosest.lockedelem) === fluid.unwrap(minlockedelem.element)
+                ) {
+                return fluid.dropManager.NO_CHANGE;
+            }
+            //fluid.log("mindistance " + mindistance + " minlockeddistance " + minlockeddistance);
+            return {
+                position: minelem.position,
+                element: minelem.element,
+                lockedelem: minlockedelem.element
+            };
+        };
+        
+        that.shuffleProjectFrom = function (element, direction, includeLocked) {
+            var togo = that.projectFrom(element, direction, includeLocked);
+            togo.position = fluid.position.REPLACE;
+            return togo;
+        };
+        
+        that.projectFrom = function (element, direction, includeLocked) {
+            that.updateGeometry(lastGeometry);
+            var cacheelem = cache[cacheKey(element)];
+            var projected = fluid.geom.projectFrom(cacheelem.rect, direction, targets, includeLocked);
+            if (!projected.cacheelem) {
+                return null;
+            }
+            var retpos = projected.cacheelem.position;
+            return {element: projected.cacheelem.element, 
+                     position: retpos? retpos : fluid.position.BEFORE 
+                     };
+        };
+        
+        function getRelativeElement(element, direction, elements) {
+            var folded = fluid.directionSign(direction);
+      
+            var index = $(elements).index(element) + folded;
+            if (index < 0) {
+                index += elements.length;
+            }
+            index %= elements.length;
+            return elements[index];            
+        }
+        
+        that.logicalFrom = function (element, direction, includeLocked) {
+            var orderables = that.getOwningSpan(element, fluid.position.INTERLEAVED, includeLocked);
+            return {element: getRelativeElement(element, direction, orderables), 
+                position: fluid.position.REPLACE};
+        };
+           
+        that.lockedWrapFrom = function (element, direction, includeLocked) {
+            var base = that.logicalFrom(element, direction, includeLocked);
+            var selectables = that.getOwningSpan(element, fluid.position.INTERLEAVED, includeLocked);
+            var allElements = cache[cacheKey(element)].owner.elements;
+            if (includeLocked || selectables[0] === allElements[0]) {
+                return base;
+            }
+            var directElement = getRelativeElement(element, direction, allElements);
+            if (lastGeometry.elementMapper(directElement) === "locked") {
+                base.element = null;
+                base.clazz = "locked";  
+            }
+            return base;
+        }; 
+        
+        that.getOwningSpan = function (element, position, includeLocked) {
+            var owner = cache[cacheKey(element)].owner; 
+            var elements = position === fluid.position.INSIDE? [owner.parentElement] : owner.elements;
+            if (!includeLocked && lastGeometry.elementMapper) {
+                elements = $.makeArray(elements);
+                fluid.remove_if(elements, function (element) {
+                    return lastGeometry.elementMapper(element) === "locked";
+                });
+            }
+            return elements;
+        };
+        
+        that.geometricMove = function (element, target, position) {
+            var sourceElements = that.getOwningSpan(element, null, true);
+            var targetElements = that.getOwningSpan(target, position, true);
+            fluid.permuteDom(element, target, position, sourceElements, targetElements);
+        };
+        
+        return that;
+    };
+ 
+    fluid.dropManager.NO_CHANGE = "no change";
+
+
+    fluid.geom = fluid.geom || {};
+    
+    // These distance algorithms have been taken from
+    // http://www.cs.mcgill.ca/~cs644/Godfried/2005/Fall/fzamal/concepts.htm
+    
+    /** Returns the minimum squared distance between a point and a rectangle **/
+    fluid.geom.minPointRectangle = function (x, y, rectangle) {
+        var dx = x < rectangle.left? (rectangle.left - x) : 
+                  (x > rectangle.right? (x - rectangle.right) : 0);
+        var dy = y < rectangle.top? (rectangle.top - y) : 
+                  (y > rectangle.bottom? (y - rectangle.bottom) : 0);
+        return dx * dx + dy * dy;
+    };
+    
+    /** Returns the minimum squared distance between two rectangles **/
+    fluid.geom.minRectRect = function (rect1, rect2) {
+        var dx = rect1.right < rect2.left? rect2.left - rect1.right : 
+                 rect2.right < rect1.left? rect1.left - rect2.right :0;
+        var dy = rect1.bottom < rect2.top? rect2.top - rect1.bottom : 
+                 rect2.bottom < rect1.top? rect1.top - rect2.bottom :0;
+        return dx * dx + dy * dy;
+    };
+    
+    var makePenCollect = function () {
+        return {
+            mindist: Number.MAX_VALUE,
+            minrdist: Number.MAX_VALUE
+        };
+    };
+
+    /** Determine the one amongst a set of rectangle targets which is the "best fit"
+     * for an axial motion from a "base rectangle" (commonly arising from the case
+     * of cursor key navigation).
+     * @param {Rectangle} baserect The base rectangl from which the motion is to be referred
+     * @param {fluid.direction} direction  The direction of motion
+     * @param {Array of Rectangle holders} targets An array of objects "cache elements" 
+     * for which the member <code>rect</code> is the holder of the rectangle to be tested.
+     * @return The cache element which is the most appropriate for the requested motion.
+     */
+    fluid.geom.projectFrom = function (baserect, direction, targets, forSelection) {
+        var axis = fluid.directionAxis(direction);
+        var frontSide = fluid.rectSides[direction];
+        var backSide = fluid.rectSides[axis * 15 + 5 - direction];
+        var dirSign = fluid.directionSign(direction);
+        
+        var penrect = {left: (7 * baserect.left + 1 * baserect.right) / 8,
+                       right: (5 * baserect.left + 3 * baserect.right) / 8,
+                       top: (7 * baserect.top + 1 * baserect.bottom) / 8,
+                       bottom: (5 * baserect.top + 3 * baserect.bottom) / 8};
+         
+        penrect[frontSide] = dirSign * SENTINEL_DIMENSION;
+        penrect[backSide] = -penrect[frontSide];
+        
+        function accPen(collect, cacheelem, backSign) {
+            var thisrect = cacheelem.rect;
+            var pdist = fluid.geom.minRectRect(penrect, thisrect);
+            var rdist = -dirSign * backSign * (baserect[backSign === 1 ? frontSide:backSide] 
+                                             - thisrect[backSign === 1 ? backSide:frontSide]);
+            // fluid.log("pdist: " + pdist + " rdist: " + rdist);
+            // the oddity in the rdist comparison is intended to express "half-open"-ness of rectangles
+            // (backSign === 1? 0 : 1) - this is now gone - must be possible to move to perpendicularly abutting regions
+            if (pdist <= collect.mindist && rdist >= 0) {
+                if (pdist === collect.mindist && rdist * backSign > collect.minrdist) {
+                    return;
+                }
+                collect.minrdist = rdist * backSign;
+                collect.mindist = pdist;
+                collect.minelem = cacheelem;
+            }
+        }
+        var collect = makePenCollect();
+        var backcollect = makePenCollect();
+        var lockedcollect = makePenCollect();
+
+        for (var i = 0; i < targets.length; ++ i) {
+            var elem = targets[i];
+            var isPure = elem.owner && elem.element === elem.owner.parentElement;
+            if (elem.clazz === "hidden" || forSelection && isPure) {
+                continue;
+            }
+            else if (!forSelection && elem.clazz === "locked") {
+                accPen(lockedcollect, elem, 1);
+            }
+            else {
+                accPen(collect, elem, 1);
+                accPen(backcollect, elem, -1);
+            }
+            //fluid.log("Element " + i + " " + dumpelem(elem) + " mindist " + collect.mindist);
+        }
+        var wrap = !collect.minelem || backcollect.mindist < collect.mindist;
+        var mincollect = wrap? backcollect: collect;
+        var togo = {
+            wrapped: wrap,
+            cacheelem: mincollect.minelem
+        };
+        if (lockedcollect.mindist < mincollect.mindist) {
+            togo.lockedelem = lockedcollect.minelem;
+        }
+        return togo;
+    };
+})(jQuery, fluid_1_1);
+/*
+Copyright 2007-2009 University of Toronto
+Copyright 2007-2009 University of Cambridge
+Copyright 2007-2009 University of California, Berkeley
+
+Licensed under the Educational Community License (ECL), Version 2.0 or the New
+BSD license. You may not use this file except in compliance with one these
+Licenses.
+
+You may obtain a copy of the ECL 2.0 License and BSD License at
+https://source.fluidproject.org/svn/LICENSE.txt
+*/
+
+// Declare dependencies.
+/*global $, jQuery*/
+/*global fluid_1_1*/
+
+fluid_1_1 = fluid_1_1 || {};
+
+(function ($, fluid) {
+    
+    var defaultAvatarCreator = function (item, cssClass, dropWarning) {
+        var avatar = $(item).clone();
+        
+        fluid.dom.iterateDom(avatar.get(0), function (node) {
+            if (node.tagName.toLowerCase() === "script") {
+                return "delete";
+            }
+            node.removeAttribute("id");
+            if (node.tagName.toLowerCase() === "input") {
+                node.setAttribute("disabled", "disabled");
+            }
+        });
+        
+        avatar.removeAttr("id");
+        avatar.removeClass("ui-droppable");
+        avatar.addClass(cssClass);
+        
+        if (dropWarning) {
+            // Will a 'div' always be valid in this position?
+            var avatarContainer = $(document.createElement("div"));
+            avatarContainer.append(avatar);
+            avatarContainer.append(dropWarning);
+            avatar = avatarContainer;
+        }
+        $("body").append(avatar);
+        if (!$.browser.safari) {
+            // FLUID-1597: Safari appears incapable of correctly determining the dimensions of elements
+            avatar.css("display", "block").width(item.offsetWidth).height(item.offsetHeight);
+        }
+        
+        if ($.browser.opera) { // FLUID-1490. Without this detect, curCSS explodes on the avatar on Firefox.
+            avatar.hide();
+        }
+        return avatar;
+    };   
+    
+    function firstSelectable(that) {
+        var selectables = that.dom.fastLocate("selectables");
+        if (selectables.length <= 0) {
+            return null;
+        }
+        return selectables[0];
+    }
+    
+    function bindHandlersToContainer(container, keyDownHandler, keyUpHandler, mouseMoveHandler) {
+        var actualKeyDown = keyDownHandler;
+        var advancedPrevention = false;
+
+        // FLUID-1598 and others: Opera will refuse to honour a "preventDefault" on a keydown.
+        // http://forums.devshed.com/javascript-development-115/onkeydown-preventdefault-opera-485371.html
+        if ($.browser.opera) {
+            container.keypress(function (evt) {
+                if (advancedPrevention) {
+                    advancedPrevention = false;
+                    evt.preventDefault();
+                    return false;
+                }
+            });
+            actualKeyDown = function (evt) {
+                var oldret = keyDownHandler(evt);
+                if (oldret === false) {
+                    advancedPrevention = true;
+                }
+            };
+        }
+        container.keydown(actualKeyDown);
+        container.keyup(keyUpHandler);
+    }
+    
+    function addRolesToContainer(that) {
+        var first = that.dom.fastLocate("selectables")[0];
+        that.container.attr("role", that.options.containerRole.container);
+        that.container.attr("aria-multiselectable", "false");
+        that.container.attr("aria-readonly", "false");
+        that.container.attr("aria-disabled", "false");
+    }
+    
+    function createAvatarId(parentId) {
+        // Generating the avatar's id to be containerId_avatar
+        // This is safe since there is only a single avatar at a time
+        return parentId + "_avatar";
+    }
+    
+    var adaptKeysets = function (options) {
+        if (options.keysets && !(options.keysets instanceof Array)) {
+            options.keysets = [options.keysets];    
+        }
+    };
+    
+    /**
+     * @param container - the root node of the Reorderer.
+     * @param options - an object containing any of the available options:
+     *                  containerRole - indicates the role, or general use, for this instance of the Reorderer
+     *                  keysets - an object containing sets of keycodes to use for directional navigation. Must contain:
+     *                            modifier - a function that returns a boolean, indicating whether or not the required modifier(s) are activated
+     *                            up
+     *                            down
+     *                            right
+     *                            left
+     *                  styles - an object containing class names for styling the Reorderer
+     *                                  defaultStyle
+     *                                  selected
+     *                                  dragging
+     *                                  hover
+     *                                  dropMarker
+     *                                  mouseDrag
+     *                                  avatar
+     *                  avatarCreator - a function that returns a valid DOM node to be used as the dragging avatar
+     */
+    fluid.reorderer = function (container, options) {
+        if (!container) {
+            fluid.fail("Reorderer initialised with no container");
+        }
+        var thatReorderer = fluid.initView("fluid.reorderer", container, options);
+        options = thatReorderer.options;
+        
+        var dropManager = fluid.dropManager();
+        
+        thatReorderer.layoutHandler = fluid.initSubcomponent(thatReorderer,
+            "layoutHandler", [container, options, dropManager, thatReorderer.dom]);
+        
+        thatReorderer.activeItem = undefined;
+
+        adaptKeysets(options);
+ 
+        var kbDropWarning = thatReorderer.locate("dropWarning");
+        var mouseDropWarning;
+        if (kbDropWarning) {
+            mouseDropWarning = kbDropWarning.clone();
+        }
+
+        var isMove = function (evt) {
+            var keysets = options.keysets;
+            for (var i = 0; i < keysets.length; i++) {
+                if (keysets[i].modifier(evt)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        
+        var isActiveItemMovable = function () {
+            return $.inArray(thatReorderer.activeItem, thatReorderer.dom.fastLocate("movables")) >= 0;
+        };
+        
+        var setDropEffects = function (value) {
+            thatReorderer.dom.fastLocate("dropTargets").attr("aria-dropeffect", value);
+        };
+        
+        var styles = options.styles;
+        
+        var noModifier = function (evt) {
+            return (!evt.ctrlKey && !evt.altKey && !evt.shiftKey && !evt.metaKey);
+        };
+        
+        var handleDirectionKeyDown = function (evt) {
+            var item = thatReorderer.activeItem;
+            if (!item) {
+                return true;
+            }
+            var keysets = options.keysets;
+            for (var i = 0; i < keysets.length; i++) {
+                var keyset = keysets[i];
+                var didProcessKey = false;
+                var keydir = fluid.keyForValue(keyset, evt.keyCode);
+                if (!keydir) {
+                    continue;
+                }
+                var isMovement = keyset.modifier(evt);
+                
+                var dirnum = fluid.keycodeDirection[keydir];
+                var relativeItem = thatReorderer.layoutHandler.getRelativePosition(item, dirnum, !isMovement);
+                if (!relativeItem) {
+                    continue;
+                }
+                
+                if (isMovement) {
+                    var prevent = thatReorderer.events.onBeginMove.fire(item);
+                    if (prevent === false) {
+                        return false;
+                    }
+                    if (kbDropWarning.length > 0) {
+                        if (relativeItem.clazz === "locked") {
+                            thatReorderer.events.onShowKeyboardDropWarning.fire(item, kbDropWarning);
+                            kbDropWarning.show();                       
+                        }
+                        else {
+                            kbDropWarning.hide();
+                        }
+                    }
+                    if (relativeItem.element) {
+                        thatReorderer.requestMovement(relativeItem, item);
+                    }
+            
+                } else if (noModifier(evt)) {
+                    $(relativeItem.element).focus();
+                }
+                return false;
+            }
+            return true;
+        };
+
+        thatReorderer.handleKeyDown = function (evt) {
+            if (!thatReorderer.activeItem || thatReorderer.activeItem !== evt.target) {
+                return true;
+            }
+            // If the key pressed is ctrl, and the active item is movable we want to restyle the active item.
+            var jActiveItem = $(thatReorderer.activeItem);
+            if (!jActiveItem.hasClass(styles.dragging) && isMove(evt)) {
+               // Don't treat the active item as dragging unless it is a movable.
+                if (isActiveItemMovable()) {
+                    jActiveItem.removeClass(styles.selected);
+                    jActiveItem.addClass(styles.dragging);
+                    jActiveItem.attr("aria-grabbed", "true");
+                    setDropEffects("move");
+                }
+                return false;
+            }
+            // The only other keys we listen for are the arrows.
+            return handleDirectionKeyDown(evt);
+        };
+
+        thatReorderer.handleKeyUp = function (evt) {
+            if (!thatReorderer.activeItem || thatReorderer.activeItem !== evt.target) {
+                return true;
+            }
+            var jActiveItem = $(thatReorderer.activeItem);
+            
+            // Handle a key up event for the modifier
+            if (jActiveItem.hasClass(styles.dragging) && !isMove(evt)) {
+                if (kbDropWarning) {
+                    kbDropWarning.hide();
+                }
+                jActiveItem.removeClass(styles.dragging);
+                jActiveItem.addClass(styles.selected);
+                jActiveItem.attr("aria-grabbed", "false");
+                setDropEffects("none");
+                return false;
+            }
+            
+            return false;
+        };
+
+        var dropMarker;
+
+        var createDropMarker = function (tagName) {
+            var dropMarker = $(document.createElement(tagName));
+            dropMarker.addClass(options.styles.dropMarker);
+            dropMarker.hide();
+            return dropMarker;
+        };
+
+        fluid.logEnabled = true;
+
+        thatReorderer.requestMovement = function (requestedPosition, item) {
+          // Temporary censoring to get around ModuleLayout inability to update relative to self.
+            if (!requestedPosition || fluid.unwrap(requestedPosition.element) === fluid.unwrap(item)) {
+                return;
+            }
+            thatReorderer.events.onMove.fire(item, requestedPosition);
+            dropManager.geometricMove(item, requestedPosition.element, requestedPosition.position);
+            //$(thatReorderer.activeItem).removeClass(options.styles.selected);
+           
+            // refocus on the active item because moving places focus on the body
+            $(thatReorderer.activeItem).focus();
+            
+            thatReorderer.refresh();
+            
+            dropManager.updateGeometry(thatReorderer.layoutHandler.getGeometricInfo());
+
+            thatReorderer.events.afterMove.fire(item, requestedPosition, thatReorderer.dom.fastLocate("movables"));
+        };
+
+        var hoverStyleHandler = function (item, state) {
+            thatReorderer.dom.fastLocate("grabHandle", item)[state?"addClass":"removeClass"](styles.hover);
+        };
+        /**
+         * Takes a $ object and adds 'movable' functionality to it
+         */
+        function initMovable(item) {
+            var styles = options.styles;
+            item.attr("aria-grabbed", "false");
+
+            item.mouseover(
+                function () {
+                    thatReorderer.events.onHover.fire(item, true);
+                }
+            );
+        
+            item.mouseout(
+                function () {
+                    thatReorderer.events.onHover.fire(item, false);
+                }
+            );
+            var avatar;
+        
+            thatReorderer.dom.fastLocate("grabHandle", item).draggable({
+                refreshPositions: false,
+                scroll: true,
+                helper: function () {
+                    var dropWarningEl;
+                    if (mouseDropWarning) {
+                        dropWarningEl = mouseDropWarning[0];
+                    }
+                    avatar = $(options.avatarCreator(item[0], styles.avatar, dropWarningEl));
+                    avatar.attr("id", createAvatarId(thatReorderer.container.id));
+                    return avatar;
+                },
+                start: function (e, ui) {
+                    var prevent = thatReorderer.events.onBeginMove.fire(item);
+                    if (prevent === false) {
+                        return false;
+                    }
+                    var handle = thatReorderer.dom.fastLocate("grabHandle", item)[0];
+                    var handlePos = fluid.dom.computeAbsolutePosition(handle);
+                    var handleWidth = handle.offsetWidth;
+                    var handleHeight = handle.offsetHeight;
+                    item.focus();
+                    item.removeClass(options.styles.selected);
+                    item.addClass(options.styles.mouseDrag);
+                    item.attr("aria-grabbed", "true");
+                    setDropEffects("move");
+                    dropManager.startDrag(e, handlePos, handleWidth, handleHeight);
+                    avatar.show();
+                },
+                stop: function (e, ui) {
+                    item.removeClass(options.styles.mouseDrag);
+                    item.addClass(options.styles.selected);
+                    $(thatReorderer.activeItem).attr("aria-grabbed", "false");
+                    var markerNode = fluid.unwrap(dropMarker);
+                    if (markerNode.parentNode) {
+                        markerNode.parentNode.removeChild(markerNode);
+                    }
+                    avatar.hide();
+                    ui.helper = null;
+                    setDropEffects("none");
+                    dropManager.endDrag();
+                    
+                    thatReorderer.requestMovement(dropManager.lastPosition(), item);
+                    // refocus on the active item because moving places focus on the body
+                    thatReorderer.activeItem.focus();
+                },
+                handle: thatReorderer.dom.fastLocate("grabHandle", item)
+            });
+        }
+           
+        function changeSelectedToDefault(jItem, styles) {
+            jItem.removeClass(styles.selected);
+            jItem.removeClass(styles.dragging);
+            jItem.addClass(styles.defaultStyle);
+            jItem.attr("aria-selected", "false");
+        }
+           
+        var selectItem = function (anItem) {
+            thatReorderer.events.onSelect.fire(anItem);
+            var styles = options.styles;
+            // Set the previous active item back to its default state.
+            if (thatReorderer.activeItem && thatReorderer.activeItem !== anItem) {
+                changeSelectedToDefault($(thatReorderer.activeItem), styles);
+            }
+            // Then select the new item.
+            thatReorderer.activeItem = anItem;
+            var jItem = $(anItem);
+            jItem.removeClass(styles.defaultStyle);
+            jItem.addClass(styles.selected);
+            jItem.attr("aria-selected", "true");
+        };
+   
+        var initSelectables = function () {
+            var handleBlur = function (evt) {
+                changeSelectedToDefault($(this), options.styles);
+                return evt.stopPropagation();
+            };
+        
+            var handleFocus = function (evt) {
+                selectItem(this);
+                return evt.stopPropagation();
+            };
+            
+            var selectables = thatReorderer.dom.fastLocate("selectables");
+            for (var i = 0; i < selectables.length; ++ i) {
+                var selectable = $(selectables[i]);
+                if (!$.data(selectable[0], "fluid.reorderer.selectable-initialised")) { 
+                    selectable.addClass(styles.defaultStyle);
+            
+                    selectables.blur(handleBlur);
+                    selectables.focus(handleFocus);
+                    selectables.click(function (evt) {
+                        var handle = fluid.unwrap(thatReorderer.dom.fastLocate("grabHandle", this));
+                        if (fluid.dom.isContainer(handle, evt.target)) {
+                            $(this).focus();
+                        }
+                    });
+                    
+                    selectables.attr("role", options.containerRole.item);
+                    selectables.attr("aria-selected", "false");
+                    selectables.attr("aria-disabled", "false");
+                    $.data(selectable[0], "fluid.reorderer.selectable-initialised", true);
+                }
+            }
+            if (!thatReorderer.selectableContext) {
+                thatReorderer.selectableContext = fluid.selectable(thatReorderer.container, {
+                    selectableElements: selectables,
+                    selectablesTabindex: thatReorderer.options.selectablesTabindex,
+                    direction: null
+                });
+            }
+        };
+    
+        var dropChangeListener = function (dropTarget) {
+            fluid.moveDom(dropMarker, dropTarget.element, dropTarget.position);
+            dropMarker.css("display", "");
+            if (mouseDropWarning) {
+                if (dropTarget.lockedelem) {
+                    mouseDropWarning.show();
+                }
+                else {
+                    mouseDropWarning.hide();
+                }
+            }
+        };
+    
+        var initItems = function () {
+            var movables = thatReorderer.dom.fastLocate("movables");
+            var dropTargets = thatReorderer.dom.fastLocate("dropTargets");
+            initSelectables();
+        
+            // Setup movables
+            for (var i = 0; i < movables.length; i++) {
+                var item = movables[i];
+                if (!$.data(item, "fluid.reorderer.movable-initialised")) { 
+                    initMovable($(item));
+                    $.data(item, "fluid.reorderer.movable-initialised", true);
+                }
+            }
+
+            // In order to create valid html, the drop marker is the same type as the node being dragged.
+            // This creates a confusing UI in cases such as an ordered list. 
+            // drop marker functionality should be made pluggable. 
+            if (movables.length > 0 && !dropMarker) {
+                dropMarker = createDropMarker(movables[0].tagName);
+            }
+            
+            dropManager.updateGeometry(thatReorderer.layoutHandler.getGeometricInfo());
+            
+            dropManager.dropChangeFirer.addListener(dropChangeListener, "fluid.Reorderer");
+            // Setup dropTargets
+            dropTargets.attr("aria-dropeffect", "none");  
+
+        };
+
+
+        // Final initialization of the Reorderer at the end of the construction process 
+        if (thatReorderer.container) {
+            bindHandlersToContainer(thatReorderer.container, 
+                thatReorderer.handleKeyDown,
+                thatReorderer.handleKeyUp);
+            addRolesToContainer(thatReorderer);
+            fluid.tabbable(thatReorderer.container);
+            initItems();
+        }
+
+        if (options.afterMoveCallbackUrl) {
+            thatReorderer.events.afterMove.addListener(function () {
+                var layoutHandler = thatReorderer.layoutHandler;
+                var model = layoutHandler.getModel? layoutHandler.getModel():
+                     options.acquireModel(thatReorderer);
+                $.post(options.afterMoveCallbackUrl, JSON.stringify(model));
+            }, "postModel");
+        }
+        thatReorderer.events.onHover.addListener(hoverStyleHandler, "style");
+
+        thatReorderer.refresh = function () {
+            thatReorderer.dom.refresh("movables");
+            thatReorderer.dom.refresh("selectables");
+            thatReorderer.dom.refresh("grabHandle", thatReorderer.dom.fastLocate("movables"));
+            thatReorderer.dom.refresh("stylisticOffset", thatReorderer.dom.fastLocate("movables"));
+            thatReorderer.dom.refresh("dropTargets");
+            thatReorderer.events.onRefresh.fire();
+            initItems();
+            thatReorderer.selectableContext.selectables = thatReorderer.dom.fastLocate("selectables");
+            thatReorderer.selectableContext.selectablesUpdated(thatReorderer.activeItem);
+        };
+
+        thatReorderer.refresh();
+
+        return thatReorderer;
+    };
+    
+    /**
+     * Constants for key codes in events.
+     */    
+    fluid.reorderer.keys = {
+        TAB: 9,
+        ENTER: 13,
+        SHIFT: 16,
+        CTRL: 17,
+        ALT: 18,
+        META: 19,
+        SPACE: 32,
+        LEFT: 37,
+        UP: 38,
+        RIGHT: 39,
+        DOWN: 40,
+        i: 73,
+        j: 74,
+        k: 75,
+        m: 77
+    };
+    
+    /**
+     * The default key sets for the Reorderer. Should be moved into the proper component defaults.
+     */
+    fluid.reorderer.defaultKeysets = [{
+        modifier : function (evt) {
+            return evt.ctrlKey;
+        },
+        up : fluid.reorderer.keys.UP,
+        down : fluid.reorderer.keys.DOWN,
+        right : fluid.reorderer.keys.RIGHT,
+        left : fluid.reorderer.keys.LEFT
+    },
+    {
+        modifier : function (evt) {
+            return evt.ctrlKey;
+        },
+        up : fluid.reorderer.keys.i,
+        down : fluid.reorderer.keys.m,
+        right : fluid.reorderer.keys.k,
+        left : fluid.reorderer.keys.j
+    }];
+    
+    /**
+     * These roles are used to add ARIA roles to orderable items. This list can be extended as needed,
+     * but the values of the container and item roles must match ARIA-specified roles.
+     */  
+    fluid.reorderer.roles = {
+        GRID: { container: "grid", item: "gridcell" },
+        LIST: { container: "list", item: "listitem" },
+        REGIONS: { container: "main", item: "article" }
+    };
+    
+    // Simplified API for reordering lists and grids.
+    var simpleInit = function (container, layoutHandler, options) {
+        options = options || {};
+        options.layoutHandler = layoutHandler;
+        return fluid.reorderer(container, options);
+    };
+    
+    fluid.reorderList = function (container, options) {
+        return simpleInit(container, "fluid.listLayoutHandler", options);
+    };
+    
+    fluid.reorderGrid = function (container, options) {
+        return simpleInit(container, "fluid.gridLayoutHandler", options); 
+    };
+    
+    fluid.reorderer.SHUFFLE_GEOMETRIC_STRATEGY = "shuffleProjectFrom";
+    fluid.reorderer.GEOMETRIC_STRATEGY         = "projectFrom";
+    fluid.reorderer.LOGICAL_STRATEGY           = "logicalFrom";
+    fluid.reorderer.WRAP_LOCKED_STRATEGY       = "lockedWrapFrom";
+    fluid.reorderer.NO_STRATEGY = null;
+    
+    fluid.reorderer.relativeInfoGetter = function (orientation, coStrategy, contraStrategy, dropManager, dom) {
+        return function (item, direction, forSelection) {
+            var dirorient = fluid.directionOrientation(direction);
+            var strategy = dirorient === orientation? coStrategy: contraStrategy;
+            return strategy !== null? dropManager[strategy](item, direction, forSelection) : null;
+        };
+    };
+    
+    fluid.defaults("fluid.reorderer", {
+        styles: {
+            defaultStyle: "fl-reorderer-movable-default",
+            selected: "fl-reorderer-movable-selected",
+            dragging: "fl-reorderer-movable-dragging",
+            mouseDrag: "fl-reorderer-movable-dragging",
+            hover: "fl-reorderer-movable-hover",
+            dropMarker: "fl-reorderer-dropMarker",
+            avatar: "fl-reorderer-avatar"
+        },
+        selectors: {
+            dropWarning: ".flc-reorderer-dropWarning",
+            movables: ".flc-reorderer-movable",
+            grabHandle: "",
+            stylisticOffset: ""
+        },
+        avatarCreator: defaultAvatarCreator,
+        keysets: fluid.reorderer.defaultKeysets,
+        layoutHandler: {
+            type: "fluid.listLayoutHandler"
+        },
+        
+        events: {
+            onShowKeyboardDropWarning: null,
+            onSelect: null,
+            onBeginMove: "preventable",
+            onMove: null,
+            afterMove: null,
+            onHover: null,
+            onRefresh: null
+        },
+        
+        mergePolicy: {
+            keysets: "replace",
+            "selectors.selectables": "selectors.movables",
+            "selectors.dropTargets": "selectors.movables"
+        }
+    });
+
+
+    /*******************
+     * Layout Handlers *
+     *******************/
+
+    function geometricInfoGetter(orientation, sentinelize, dom) {
+        return function () {
+            return {
+                sentinelize: sentinelize,
+                extents: [{
+                    orientation: orientation,
+                    elements: dom.fastLocate("dropTargets")
+                }],
+                elementMapper: function (element) {
+                    return $.inArray(element, dom.fastLocate("movables")) === -1? "locked": null;
+                }
+            };
+        };
+    }
+    
+    fluid.defaults(true, "fluid.listLayoutHandler", 
+        {orientation:         fluid.orientation.VERTICAL,
+         containerRole:       fluid.reorderer.roles.LIST,
+         selectablesTabindex: -1,
+         sentinelize:         true
+        });
+    
+    // Public layout handlers.
+    fluid.listLayoutHandler = function (container, options, dropManager, dom) {
+        var that = {};
+
+        that.getRelativePosition = 
+          fluid.reorderer.relativeInfoGetter(options.orientation, 
+                fluid.reorderer.LOGICAL_STRATEGY, null, dropManager, dom);
+        
+        that.getGeometricInfo = geometricInfoGetter(options.orientation, options.sentinelize, dom);
+        
+        return that;
+    }; // End ListLayoutHandler
+
+    fluid.defaults(true, "fluid.gridLayoutHandler", 
+        {orientation:         fluid.orientation.HORIZONTAL,
+         containerRole:       fluid.reorderer.roles.GRID,
+         selectablesTabindex: -1,
+         sentinelize:         false
+         });
+    /*
+     * Items in the Lightbox are stored in a list, but they are visually presented as a grid that
+     * changes dimensions when the window changes size. As a result, when the user presses the up or
+     * down arrow key, what lies above or below depends on the current window size.
+     * 
+     * The GridLayoutHandler is responsible for handling changes to this virtual 'grid' of items
+     * in the window, and of informing the Lightbox of which items surround a given item.
+     */
+    fluid.gridLayoutHandler = function (container, options, dropManager, dom) {
+        var that = {};
+
+        that.getRelativePosition = 
+           fluid.reorderer.relativeInfoGetter(options.orientation, 
+                 fluid.reorderer.LOGICAL_STRATEGY, fluid.reorderer.SHUFFLE_GEOMETRIC_STRATEGY, 
+                 dropManager, dom);
+        
+        that.getGeometricInfo = geometricInfoGetter(options.orientation, options.sentinelize, dom);
+        
+        return that;
+    }; // End of GridLayoutHandler
+
+})(jQuery, fluid_1_1);
+/*
+Copyright 2008-2009 University of Cambridge
+Copyright 2008-2009 University of Toronto
+Copyright 2007-2009 University of California, Berkeley
+
+Licensed under the Educational Community License (ECL), Version 2.0 or the New
+BSD license. You may not use this file except in compliance with one these
+Licenses.
+
+You may obtain a copy of the ECL 2.0 License and BSD License at
+https://source.fluidproject.org/svn/LICENSE.txt
+*/
+
+/*global jQuery*/
+/*global fluid_1_1*/
+
+fluid_1_1 = fluid_1_1 || {};
+
+(function ($, fluid) {
+    
+    var deriveLightboxCellBase = function (namebase, index) {
+        return namebase + "lightbox-cell:" + index + ":";
+    };
+            
+    var addThumbnailActivateHandler = function (lightboxContainer) {
+        var enterKeyHandler = function (evt) {
+            if (evt.which === fluid.reorderer.keys.ENTER) {
+                var thumbnailAnchors = $("a", evt.target);
+                document.location = thumbnailAnchors.attr('href');
+            }
+        };
+        
+        $(lightboxContainer).keypress(enterKeyHandler);
+    };
+    
+    // Custom query method seeks all tags descended from a given root with a 
+    // particular tag name, whose id matches a regex.
+    var seekNodesById = function (rootnode, tagname, idmatch) {
+        var inputs = rootnode.getElementsByTagName(tagname);
+        var togo = [];
+        for (var i = 0; i < inputs.length; i += 1) {
+            var input = inputs[i];
+            var id = input.id;
+            if (id && id.match(idmatch)) {
+                togo.push(input);
+            }
+        }
+        return togo;
+    };
+    
+    var createItemFinder = function (parentNode, containerId) {
+        // This orderable finder knows that the lightbox thumbnails are 'div' elements
+        var lightboxCellNamePattern = "^" + deriveLightboxCellBase(containerId, "[0-9]+") + "$";
+        
+        return function () {
+            return seekNodesById(parentNode, "div", lightboxCellNamePattern);
+        };
+    };
+    
+    var findForm = function (element) {
+        while (element) {
+            if (element.nodeName.toLowerCase() === "form") {
+                return element;
+            }
+            element = element.parentNode;
+        }
+    };
+    
+    /**
+     * Returns the default Lightbox order change callback. This callback is used by the Lightbox
+     * to send any changes in image order back to the server. It is implemented by nesting
+     * a form and set of hidden fields within the Lightbox container which contain the order value
+     * for each image displayed in the Lightbox. The default callback submits the form's default 
+     * action via AJAX.
+     * 
+     * @param {Element} lightboxContainer The DOM element containing the form that is POSTed back to the server upon order change 
+     */
+    var defaultAfterMoveCallback = function (lightboxContainer) {
+        var reorderform = findForm(lightboxContainer);
+        
+        return function () {
+            var inputs, i;
+            inputs = seekNodesById(
+                reorderform, 
+                "input", 
+                "^" + deriveLightboxCellBase(lightboxContainer.id, "[^:]*") + "reorder-index$");
+            
+            for (i = 0; i < inputs.length; i += 1) {
+                inputs[i].value = i;
+            }
+        
+            if (reorderform && reorderform.action) {
+                $.post(reorderform.action, 
+                $(reorderform).serialize(),
+                function (type, data, evt) { /* No-op response */ });
+            }
+        };
+    };
+
+    fluid.defaults("fluid.reorderImages", {
+        layoutHandler: "fluid.gridLayoutHandler",
+
+        selectors: {
+            imageTitle: ".flc-reorderer-imageTitle"
+        }
+    });
+
+    // Public Lightbox API
+    /**
+     * Creates a new Lightbox instance from the specified parameters, providing full control over how
+     * the Lightbox is configured.
+     * 
+     * @param {Object} container 
+     * @param {Object} options 
+     */
+    fluid.reorderImages = function (container, options) {
+        var that = fluid.initView("fluid.reorderImages", container, options);
+        
+        var containerEl = fluid.unwrap(that.container);
+
+        if (!that.options.afterMoveCallback) {
+            that.options.afterMoveCallback = defaultAfterMoveCallback(containerEl);
+        }
+        if (!that.options.selectors.movables) {
+            that.options.selectors.movables = createItemFinder(containerEl, containerEl.id);
+        }
+        
+        var reorderer = fluid.reorderer(container, that.options);
+        var movables = reorderer.locate("movables");
+        fluid.transform(movables, function (cell) { 
+            fluid.reorderImages.addAriaRoles(that.options.selectors.imageTitle, cell);
+        });
+                // Remove the anchors from the taborder.
+        fluid.tabindex($("a", container), -1);
+        addThumbnailActivateHandler(container);
+        return reorderer;
+    };
+   
+    
+    fluid.reorderImages.addAriaRoles = function (imageTitle, cell) {
+        cell = $(cell);
+        cell.attr("role", "img");
+        var title = $(imageTitle, cell);
+        if (title[0] === cell[0] || title[0] === document) {
+            fluid.fail("Could not locate cell title using selector " + imageTitle + " in context " + fluid.dumpEl(cell));
+        }
+        var titleId = fluid.allocateSimpleId(title);
+        cell.attr("aria-labelledby", titleId);
+        var image = $("img", cell);
+        image.attr("role", "presentation");
+        image.attr("alt", "");
+    };
+    
+    // This function now deprecated. Please use fluid.reorderImages() instead.
+    fluid.lightbox = fluid.reorderImages;
+    
+        
+})(jQuery, fluid_1_1);
+/*
+Copyright 2008-2009 University of Cambridge
+Copyright 2008-2009 University of Toronto
+Copyright 2007-2009 University of California, Berkeley
+
+Licensed under the Educational Community License (ECL), Version 2.0 or the New
+BSD license. You may not use this file except in compliance with one these
+Licenses.
+
+You may obtain a copy of the ECL 2.0 License and BSD License at
+https://source.fluidproject.org/svn/LICENSE.txt
+*/
+
+// Declare dependencies.
+/*global jQuery*/
+/*global fluid, fluid_1_1*/
+
+fluid_1_1 = fluid_1_1 || {};
+
+(function ($, fluid) {
+
+	fluid.moduleLayout = fluid.moduleLayout || {};
+	
+    /**
+     * Calculate the location of the item and the column in which it resides.
+     * @return  An object with column index and item index (within that column) properties.
+     *          These indices are -1 if the item does not exist in the grid.
+     */
+    var findColumnAndItemIndices = function (item, layout) {
+        return fluid.find(layout.columns,
+            function (column, colIndex) {
+                var index = $.inArray(item, column.elements);
+                return index === -1? null : {columnIndex: colIndex, itemIndex: index};
+            }, {columnIndex: -1, itemIndex: -1});
+    };
+        
+    var findColIndex = function (item, layout) {
+        return fluid.find(layout.columns,
+            function (column, colIndex) {
+            	return item === column.container? colIndex : null;
+            }, -1);
+    };
+
+    /**
+     * Move an item within the layout object. 
+     */
+    fluid.moduleLayout.updateLayout = function (item, target, position, layout) {
+        item = fluid.unwrap(item);
+        target = fluid.unwrap(target);
+        var itemIndices = findColumnAndItemIndices(item, layout);
+        layout.columns[itemIndices.columnIndex].elements.splice(itemIndices.itemIndex, 1);
+        var targetCol;
+        if (position === fluid.position.INSIDE) {
+            targetCol = layout.columns[findColIndex(target, layout)].elements;
+            targetCol.splice(targetCol.length, 0, item);
+
+        } else {
+            var relativeItemIndices = findColumnAndItemIndices(target, layout);
+            targetCol = layout.columns[relativeItemIndices.columnIndex].elements;
+            position = fluid.normalisePosition(position, 
+                  itemIndices.columnIndex === relativeItemIndices.columnIndex, 
+                  relativeItemIndices.itemIndex, itemIndices.itemIndex);
+            var relative = position === fluid.position.BEFORE? 0 : 1;
+            targetCol.splice(relativeItemIndices.itemIndex + relative, 0, item);
+        }
+    };
+       
+    /**
+     * Builds a layout object from a set of columns and modules.
+     * @param {jQuery} container
+     * @param {jQuery} columns
+     * @param {jQuery} portlets
+     */
+    fluid.moduleLayout.layoutFromFlat = function (container, columns, portlets) {
+        var layout = {};
+        layout.container = container;
+        layout.columns = fluid.transform(columns, 
+            function (column) {
+                return {
+                    container: column,
+                    elements: $.makeArray(portlets.filter(function () {
+                    	  // is this a bug in filter? would have expected "this" to be 1st arg
+                        return fluid.dom.isContainer(column, this);
+                    }))
+                };
+            });
+        return layout;
+    };
+      
+    /**
+     * Builds a layout object from a serialisable "layout" object consisting of id lists
+     */
+    fluid.moduleLayout.layoutFromIds = function (idLayout) {
+        return {
+            container: fluid.byId(idLayout.id),
+            columns: fluid.transform(idLayout.columns, 
+                function (column) {
+                    return {
+                        container: fluid.byId(column.id),
+                        elements: fluid.transform(column.children, fluid.byId)
+                    };
+                })
+            };
+    };
+      
+    /**
+     * Serializes the current layout into a structure of ids
+     */
+    fluid.moduleLayout.layoutToIds = function (idLayout) {
+        return {
+            id: fluid.getId(idLayout.container),
+            columns: fluid.transform(idLayout.columns, 
+                function (column) {
+                    return {
+                        id: fluid.getId(column.container),
+                        children: fluid.transform(column.elements, fluid.getId)
+                    };
+                })
+            };
+    };
+    
+    var defaultOnShowKeyboardDropWarning = function (item, dropWarning) {
+        if (dropWarning) {
+            var offset = $(item).offset();
+            dropWarning = $(dropWarning);
+            dropWarning.css("position", "absolute");
+            dropWarning.css("top", offset.top);
+            dropWarning.css("left", offset.left);
+        }
+    };
+    
+    fluid.defaults(true, "fluid.moduleLayoutHandler", 
+        {orientation: fluid.orientation.VERTICAL,
+         containerRole: fluid.reorderer.roles.REGIONS,
+         selectablesTabindex: 0,
+         sentinelize:         true
+         });
+    
+    /**
+     * Module Layout Handler for reordering content modules.
+     * 
+     * General movement guidelines:
+     * 
+     * - Arrowing sideways will always go to the top (moveable) module in the column
+     * - Moving sideways will always move to the top available drop target in the column
+     * - Wrapping is not necessary at this first pass, but is ok
+     */
+    fluid.moduleLayoutHandler = function (container, options, dropManager, dom) {
+        var that = {};
+        
+        function computeLayout() {
+            var togo;
+            if (options.selectors.modules) {
+                togo = fluid.moduleLayout.layoutFromFlat(container, dom.locate("columns"), dom.locate("modules"));
+            }
+            if (!togo) {
+                var idLayout = fluid.model.getBeanValue(options, "moduleLayout.layout");
+                fluid.moduleLayout.layoutFromIds(idLayout);
+            }
+            return togo;
+        }
+        var layout = computeLayout();
+        that.layout = layout;
+
+        function isLocked(item) {
+            var lockedModules = options.selectors.lockedModules? dom.fastLocate("lockedModules") : [];
+            return $.inArray(item, lockedModules) !== -1;
+        }
+
+        that.getRelativePosition  = 
+           fluid.reorderer.relativeInfoGetter(options.orientation, 
+                 fluid.reorderer.WRAP_LOCKED_STRATEGY, fluid.reorderer.GEOMETRIC_STRATEGY, 
+                 dropManager, dom);
+                 
+        that.getGeometricInfo = function () {
+        	var extents = [];
+            var togo = {extents: extents,
+                        sentinelize: options.sentinelize};
+            togo.elementMapper = function (element) {
+                return isLocked(element)? "locked" : null;
+            };
+            for (var col = 0; col < layout.columns.length; col++) {
+                var column = layout.columns[col];
+                var thisEls = {
+                    orientation: options.orientation,
+                    elements: $.makeArray(column.elements),
+                    parentElement: column.container
+                };
+              //  fluid.log("Geometry col " + col + " elements " + fluid.dumpEl(thisEls.elements) + " isLocked [" + 
+              //       fluid.transform(thisEls.elements, togo.elementMapper).join(", ") + "]");
+                extents.push(thisEls);
+            }
+
+            return togo;
+        };
+        
+        function computeModules(all) {
+            return function () {
+                var modules = fluid.accumulate(layout.columns, function (column, list) {
+                    return list.concat(column.elements); // note that concat will not work on a jQuery
+                }, []);
+                if (!all) {
+                    fluid.remove_if(modules, isLocked);
+                }
+                return modules;
+            };
+        }
+        
+        that.returnedOptions = {
+            selectors: {
+                movables: computeModules(false),
+                dropTargets: computeModules(false),
+                selectables: computeModules(true)
+            },
+            listeners: {
+                onMove: function (item, requestedPosition) {
+                    fluid.moduleLayout.updateLayout(item, requestedPosition.element, requestedPosition.position, layout);
+                },
+                onRefresh: function () {
+                    layout = computeLayout();
+                    that.layout = layout;
+                },
+                "onShowKeyboardDropWarning.setPosition": defaultOnShowKeyboardDropWarning
+            }
+        };
+        
+        that.getModel = function () {
+            return fluid.moduleLayout.layoutToIds(layout);
+        };
+              
+        return that;
+    };
+})(jQuery, fluid_1_1);
+/*
+Copyright 2008-2009 University of Cambridge
+Copyright 2008-2009 University of Toronto
+Copyright 2007-2009 University of California, Berkeley
+
+Licensed under the Educational Community License (ECL), Version 2.0 or the New
+BSD license. You may not use this file except in compliance with one these
+Licenses.
+
+You may obtain a copy of the ECL 2.0 License and BSD License at
+https://source.fluidproject.org/svn/LICENSE.txt
+*/
+
+/*global jQuery*/
+/*global fluid_1_1*/
+fluid_1_1 = fluid_1_1 || {};
+
+(function ($, fluid) {
+ 
+    /**
+     * Simple way to create a layout reorderer.
+     * @param {selector} a selector for the layout container
+     * @param {Object} a map of selectors for columns and modules within the layout
+     * @param {Function} a function to be called when the order changes 
+     * @param {Object} additional configuration options
+     */
+    fluid.reorderLayout = function (container, userOptions) {
+        var assembleOptions = {
+            layoutHandler: "fluid.moduleLayoutHandler",
+            selectors: {
+                columns: ".flc-reorderer-column",
+                modules: ".flc-reorderer-module"
+            }
+        };
+        var options = $.extend(true, assembleOptions, userOptions);
+        return fluid.reorderer(container, options);
+    };    
+})(jQuery, fluid_1_1);
+/*! SWFObject v2.1 <http://code.google.com/p/swfobject/>
+	Copyright (c) 2007-2008 Geoff Stearns, Michael Williams, and Bobby van der Sluis
+	This software is released under the MIT License <http://www.opensource.org/licenses/mit-license.php>
+*/
+
+var swfobject = function() {
+	
+	var UNDEF = "undefined",
+		OBJECT = "object",
+		SHOCKWAVE_FLASH = "Shockwave Flash",
+		SHOCKWAVE_FLASH_AX = "ShockwaveFlash.ShockwaveFlash",
+		FLASH_MIME_TYPE = "application/x-shockwave-flash",
+		EXPRESS_INSTALL_ID = "SWFObjectExprInst",
+		
+		win = window,
+		doc = document,
+		nav = navigator,
+		
+		domLoadFnArr = [],
+		regObjArr = [],
+		objIdArr = [],
+		listenersArr = [],
+		script,
+		timer = null,
+		storedAltContent = null,
+		storedAltContentId = null,
+		isDomLoaded = false,
+		isExpressInstallActive = false;
+	
+	/* Centralized function for browser feature detection
+		- Proprietary feature detection (conditional compiling) is used to detect Internet Explorer's features
+		- User agent string detection is only used when no alternative is possible
+		- Is executed directly for optimal performance
+	*/	
+	var ua = function() {
+		var w3cdom = typeof doc.getElementById != UNDEF && typeof doc.getElementsByTagName != UNDEF && typeof doc.createElement != UNDEF,
+			playerVersion = [0,0,0],
+			d = null;
+		if (typeof nav.plugins != UNDEF && typeof nav.plugins[SHOCKWAVE_FLASH] == OBJECT) {
+			d = nav.plugins[SHOCKWAVE_FLASH].description;
+			if (d && !(typeof nav.mimeTypes != UNDEF && nav.mimeTypes[FLASH_MIME_TYPE] && !nav.mimeTypes[FLASH_MIME_TYPE].enabledPlugin)) { // navigator.mimeTypes["application/x-shockwave-flash"].enabledPlugin indicates whether plug-ins are enabled or disabled in Safari 3+
+				d = d.replace(/^.*\s+(\S+\s+\S+$)/, "$1");
+				playerVersion[0] = parseInt(d.replace(/^(.*)\..*$/, "$1"), 10);
+				playerVersion[1] = parseInt(d.replace(/^.*\.(.*)\s.*$/, "$1"), 10);
+				playerVersion[2] = /r/.test(d) ? parseInt(d.replace(/^.*r(.*)$/, "$1"), 10) : 0;
+			}
+		}
+		else if (typeof win.ActiveXObject != UNDEF) {
+			var a = null, fp6Crash = false;
+			try {
+				a = new ActiveXObject(SHOCKWAVE_FLASH_AX + ".7");
+			}
+			catch(e) {
+				try { 
+					a = new ActiveXObject(SHOCKWAVE_FLASH_AX + ".6");
+					playerVersion = [6,0,21];
+					a.AllowScriptAccess = "always";	 // Introduced in fp6.0.47
+				}
+				catch(e) {
+					if (playerVersion[0] == 6) {
+						fp6Crash = true;
+					}
+				}
+				if (!fp6Crash) {
+					try {
+						a = new ActiveXObject(SHOCKWAVE_FLASH_AX);
+					}
+					catch(e) {}
+				}
+			}
+			if (!fp6Crash && a) { // a will return null when ActiveX is disabled
+				try {
+					d = a.GetVariable("$version");	// Will crash fp6.0.21/23/29
+					if (d) {
+						d = d.split(" ")[1].split(",");
+						playerVersion = [parseInt(d[0], 10), parseInt(d[1], 10), parseInt(d[2], 10)];
+					}
+				}
+				catch(e) {}
+			}
+		}
+		var u = nav.userAgent.toLowerCase(),
+			p = nav.platform.toLowerCase(),
+			webkit = /webkit/.test(u) ? parseFloat(u.replace(/^.*webkit\/(\d+(\.\d+)?).*$/, "$1")) : false, // returns either the webkit version or false if not webkit
+			ie = false,
+			windows = p ? /win/.test(p) : /win/.test(u),
+			mac = p ? /mac/.test(p) : /mac/.test(u);
+		/*@cc_on
+			ie = true;
+			@if (@_win32)
+				windows = true;
+			@elif (@_mac)
+				mac = true;
+			@end
+		@*/
+		return { w3cdom:w3cdom, pv:playerVersion, webkit:webkit, ie:ie, win:windows, mac:mac };
+	}();
+
+	/* Cross-browser onDomLoad
+		- Based on Dean Edwards' solution: http://dean.edwards.name/weblog/2006/06/again/
+		- Will fire an event as soon as the DOM of a page is loaded (supported by Gecko based browsers - like Firefox -, IE, Opera9+, Safari)
+	*/ 
+	var onDomLoad = function() {
+		if (!ua.w3cdom) {
+			return;
+		}
+		addDomLoadEvent(main);
+		if (ua.ie && ua.win) {
+			try {	 // Avoid a possible Operation Aborted error
+				doc.write("<scr" + "ipt id=__ie_ondomload defer=true src=//:></scr" + "ipt>"); // String is split into pieces to avoid Norton AV to add code that can cause errors 
+				script = getElementById("__ie_ondomload");
+				if (script) {
+					addListener(script, "onreadystatechange", checkReadyState);
+				}
+			}
+			catch(e) {}
+		}
+		if (ua.webkit && typeof doc.readyState != UNDEF) {
+			timer = setInterval(function() { if (/loaded|complete/.test(doc.readyState)) { callDomLoadFunctions(); }}, 10);
+		}
+		if (typeof doc.addEventListener != UNDEF) {
+			doc.addEventListener("DOMContentLoaded", callDomLoadFunctions, null);
+		}
+		addLoadEvent(callDomLoadFunctions);
+	}();
+	
+	function checkReadyState() {
+		if (script.readyState == "complete") {
+			script.parentNode.removeChild(script);
+			callDomLoadFunctions();
+		}
+	}
+	
+	function callDomLoadFunctions() {
+		if (isDomLoaded) {
+			return;
+		}
+		if (ua.ie && ua.win) { // Test if we can really add elements to the DOM; we don't want to fire it too early
+			var s = createElement("span");
+			try { // Avoid a possible Operation Aborted error
+				var t = doc.getElementsByTagName("body")[0].appendChild(s);
+				t.parentNode.removeChild(t);
+			}
+			catch (e) {
+				return;
+			}
+		}
+		isDomLoaded = true;
+		if (timer) {
+			clearInterval(timer);
+			timer = null;
+		}
+		var dl = domLoadFnArr.length;
+		for (var i = 0; i < dl; i++) {
+			domLoadFnArr[i]();
+		}
+	}
+	
+	function addDomLoadEvent(fn) {
+		if (isDomLoaded) {
+			fn();
+		}
+		else { 
+			domLoadFnArr[domLoadFnArr.length] = fn; // Array.push() is only available in IE5.5+
+		}
+	}
+	
+	/* Cross-browser onload
+		- Based on James Edwards' solution: http://brothercake.com/site/resources/scripts/onload/
+		- Will fire an event as soon as a web page including all of its assets are loaded 
+	 */
+	function addLoadEvent(fn) {
+		if (typeof win.addEventListener != UNDEF) {
+			win.addEventListener("load", fn, false);
+		}
+		else if (typeof doc.addEventListener != UNDEF) {
+			doc.addEventListener("load", fn, false);
+		}
+		else if (typeof win.attachEvent != UNDEF) {
+			addListener(win, "onload", fn);
+		}
+		else if (typeof win.onload == "function") {
+			var fnOld = win.onload;
+			win.onload = function() {
+				fnOld();
+				fn();
+			};
+		}
+		else {
+			win.onload = fn;
+		}
+	}
+	
+	/* Main function
+		- Will preferably execute onDomLoad, otherwise onload (as a fallback)
+	*/
+	function main() { // Static publishing only
+		var rl = regObjArr.length;
+		for (var i = 0; i < rl; i++) { // For each registered object element
+			var id = regObjArr[i].id;
+			if (ua.pv[0] > 0) {
+				var obj = getElementById(id);
+				if (obj) {
+					regObjArr[i].width = obj.getAttribute("width") ? obj.getAttribute("width") : "0";
+					regObjArr[i].height = obj.getAttribute("height") ? obj.getAttribute("height") : "0";
+					if (hasPlayerVersion(regObjArr[i].swfVersion)) { // Flash plug-in version >= Flash content version: Houston, we have a match!
+						if (ua.webkit && ua.webkit < 312) { // Older webkit engines ignore the object element's nested param elements
+							fixParams(obj);
+						}
+						setVisibility(id, true);
+					}
+					else if (regObjArr[i].expressInstall && !isExpressInstallActive && hasPlayerVersion("6.0.65") && (ua.win || ua.mac)) { // Show the Adobe Express Install dialog if set by the web page author and if supported (fp6.0.65+ on Win/Mac OS only)
+						showExpressInstall(regObjArr[i]);
+					}
+					else { // Flash plug-in and Flash content version mismatch: display alternative content instead of Flash content
+						displayAltContent(obj);
+					}
+				}
+			}
+			else {	// If no fp is installed, we let the object element do its job (show alternative content)
+				setVisibility(id, true);
+			}
+		}
+	}
+	
+	/* Fix nested param elements, which are ignored by older webkit engines
+		- This includes Safari up to and including version 1.2.2 on Mac OS 10.3
+		- Fall back to the proprietary embed element
+	*/
+	function fixParams(obj) {
+		var nestedObj = obj.getElementsByTagName(OBJECT)[0];
+		if (nestedObj) {
+			var e = createElement("embed"), a = nestedObj.attributes;
+			if (a) {
+				var al = a.length;
+				for (var i = 0; i < al; i++) {
+					if (a[i].nodeName == "DATA") {
+						e.setAttribute("src", a[i].nodeValue);
+					}
+					else {
+						e.setAttribute(a[i].nodeName, a[i].nodeValue);
+					}
+				}
+			}
+			var c = nestedObj.childNodes;
+			if (c) {
+				var cl = c.length;
+				for (var j = 0; j < cl; j++) {
+					if (c[j].nodeType == 1 && c[j].nodeName == "PARAM") {
+						e.setAttribute(c[j].getAttribute("name"), c[j].getAttribute("value"));
+					}
+				}
+			}
+			obj.parentNode.replaceChild(e, obj);
+		}
+	}
+	
+	/* Show the Adobe Express Install dialog
+		- Reference: http://www.adobe.com/cfusion/knowledgebase/index.cfm?id=6a253b75
+	*/
+	function showExpressInstall(regObj) {
+		isExpressInstallActive = true;
+		var obj = getElementById(regObj.id);
+		if (obj) {
+			if (regObj.altContentId) {
+				var ac = getElementById(regObj.altContentId);
+				if (ac) {
+					storedAltContent = ac;
+					storedAltContentId = regObj.altContentId;
+				}
+			}
+			else {
+				storedAltContent = abstractAltContent(obj);
+			}
+			if (!(/%$/.test(regObj.width)) && parseInt(regObj.width, 10) < 310) {
+				regObj.width = "310";
+			}
+			if (!(/%$/.test(regObj.height)) && parseInt(regObj.height, 10) < 137) {
+				regObj.height = "137";
+			}
+			doc.title = doc.title.slice(0, 47) + " - Flash Player Installation";
+			var pt = ua.ie && ua.win ? "ActiveX" : "PlugIn",
+				dt = doc.title,
+				fv = "MMredirectURL=" + win.location + "&MMplayerType=" + pt + "&MMdoctitle=" + dt,
+				replaceId = regObj.id;
+			// For IE when a SWF is loading (AND: not available in cache) wait for the onload event to fire to remove the original object element
+			// In IE you cannot properly cancel a loading SWF file without breaking browser load references, also obj.onreadystatechange doesn't work
+			if (ua.ie && ua.win && obj.readyState != 4) {
+				var newObj = createElement("div");
+				replaceId += "SWFObjectNew";
+				newObj.setAttribute("id", replaceId);
+				obj.parentNode.insertBefore(newObj, obj); // Insert placeholder div that will be replaced by the object element that loads expressinstall.swf
+				obj.style.display = "none";
+				var fn = function() {
+					obj.parentNode.removeChild(obj);
+				};
+				addListener(win, "onload", fn);
+			}
+			createSWF({ data:regObj.expressInstall, id:EXPRESS_INSTALL_ID, width:regObj.width, height:regObj.height }, { flashvars:fv }, replaceId);
+		}
+	}
+	
+	/* Functions to abstract and display alternative content
+	*/
+	function displayAltContent(obj) {
+		if (ua.ie && ua.win && obj.readyState != 4) {
+			// For IE when a SWF is loading (AND: not available in cache) wait for the onload event to fire to remove the original object element
+			// In IE you cannot properly cancel a loading SWF file without breaking browser load references, also obj.onreadystatechange doesn't work
+			var el = createElement("div");
+			obj.parentNode.insertBefore(el, obj); // Insert placeholder div that will be replaced by the alternative content
+			el.parentNode.replaceChild(abstractAltContent(obj), el);
+			obj.style.display = "none";
+			var fn = function() {
+				obj.parentNode.removeChild(obj);
+			};
+			addListener(win, "onload", fn);
+		}
+		else {
+			obj.parentNode.replaceChild(abstractAltContent(obj), obj);
+		}
+	} 
+
+	function abstractAltContent(obj) {
+		var ac = createElement("div");
+		if (ua.win && ua.ie) {
+			ac.innerHTML = obj.innerHTML;
+		}
+		else {
+			var nestedObj = obj.getElementsByTagName(OBJECT)[0];
+			if (nestedObj) {
+				var c = nestedObj.childNodes;
+				if (c) {
+					var cl = c.length;
+					for (var i = 0; i < cl; i++) {
+						if (!(c[i].nodeType == 1 && c[i].nodeName == "PARAM") && !(c[i].nodeType == 8)) {
+							ac.appendChild(c[i].cloneNode(true));
+						}
+					}
+				}
+			}
+		}
+		return ac;
+	}
+	
+	/* Cross-browser dynamic SWF creation
+	*/
+	function createSWF(attObj, parObj, id) {
+		var r, el = getElementById(id);
+		if (el) {
+			if (typeof attObj.id == UNDEF) { // if no 'id' is defined for the object element, it will inherit the 'id' from the alternative content
+				attObj.id = id;
+			}
+			if (ua.ie && ua.win) { // IE, the object element and W3C DOM methods do not combine: fall back to outerHTML
+				var att = "";
+				for (var i in attObj) {
+					if (attObj[i] != Object.prototype[i]) { // Filter out prototype additions from other potential libraries, like Object.prototype.toJSONString = function() {}
+						if (i.toLowerCase() == "data") {
+							parObj.movie = attObj[i];
+						}
+						else if (i.toLowerCase() == "styleclass") { // 'class' is an ECMA4 reserved keyword
+							att += ' class="' + attObj[i] + '"';
+						}
+						else if (i.toLowerCase() != "classid") {
+							att += ' ' + i + '="' + attObj[i] + '"';
+						}
+					}
+				}
+				var par = "";
+				for (var j in parObj) {
+					if (parObj[j] != Object.prototype[j]) { // Filter out prototype additions from other potential libraries
+						par += '<param name="' + j + '" value="' + parObj[j] + '" />';
+					}
+				}
+				el.outerHTML = '<object classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000"' + att + '>' + par + '</object>';
+				objIdArr[objIdArr.length] = attObj.id; // Stored to fix object 'leaks' on unload (dynamic publishing only)
+				r = getElementById(attObj.id);	
+			}
+			else if (ua.webkit && ua.webkit < 312) { // Older webkit engines ignore the object element's nested param elements: fall back to the proprietary embed element
+				var e = createElement("embed");
+				e.setAttribute("type", FLASH_MIME_TYPE);
+				for (var k in attObj) {
+					if (attObj[k] != Object.prototype[k]) { // Filter out prototype additions from other potential libraries
+						if (k.toLowerCase() == "data") {
+							e.setAttribute("src", attObj[k]);
+						}
+						else if (k.toLowerCase() == "styleclass") { // 'class' is an ECMA4 reserved keyword
+							e.setAttribute("class", attObj[k]);
+						}
+						else if (k.toLowerCase() != "classid") { // Filter out IE specific attribute
+							e.setAttribute(k, attObj[k]);
+						}
+					}
+				}
+				for (var l in parObj) {
+					if (parObj[l] != Object.prototype[l]) { // Filter out prototype additions from other potential libraries
+						if (l.toLowerCase() != "movie") { // Filter out IE specific param element
+							e.setAttribute(l, parObj[l]);
+						}
+					}
+				}
+				el.parentNode.replaceChild(e, el);
+				r = e;
+			}
+			else { // Well-behaving browsers
+				var o = createElement(OBJECT);
+				o.setAttribute("type", FLASH_MIME_TYPE);
+				for (var m in attObj) {
+					if (attObj[m] != Object.prototype[m]) { // Filter out prototype additions from other potential libraries
+						if (m.toLowerCase() == "styleclass") { // 'class' is an ECMA4 reserved keyword
+							o.setAttribute("class", attObj[m]);
+						}
+						else if (m.toLowerCase() != "classid") { // Filter out IE specific attribute
+							o.setAttribute(m, attObj[m]);
+						}
+					}
+				}
+				for (var n in parObj) {
+					if (parObj[n] != Object.prototype[n] && n.toLowerCase() != "movie") { // Filter out prototype additions from other potential libraries and IE specific param element
+						createObjParam(o, n, parObj[n]);
+					}
+				}
+				el.parentNode.replaceChild(o, el);
+				r = o;
+			}
+		}
+		return r;
+	}
+	
+	function createObjParam(el, pName, pValue) {
+		var p = createElement("param");
+		p.setAttribute("name", pName);	
+		p.setAttribute("value", pValue);
+		el.appendChild(p);
+	}
+	
+	/* Cross-browser SWF removal
+		- Especially needed to safely and completely remove a SWF in Internet Explorer
+	*/
+	function removeSWF(id) {
+		var obj = getElementById(id);
+		if (obj && (obj.nodeName == "OBJECT" || obj.nodeName == "EMBED")) {
+			if (ua.ie && ua.win) {
+				if (obj.readyState == 4) {
+					removeObjectInIE(id);
+				}
+				else {
+					win.attachEvent("onload", function() {
+						removeObjectInIE(id);
+					});
+				}
+			}
+			else {
+				obj.parentNode.removeChild(obj);
+			}
+		}
+	}
+	
+	function removeObjectInIE(id) {
+		var obj = getElementById(id);
+		if (obj) {
+			for (var i in obj) {
+				if (typeof obj[i] == "function") {
+					obj[i] = null;
+				}
+			}
+			obj.parentNode.removeChild(obj);
+		}
+	}
+	
+	/* Functions to optimize JavaScript compression
+	*/
+	function getElementById(id) {
+		var el = null;
+		try {
+			el = doc.getElementById(id);
+		}
+		catch (e) {}
+		return el;
+	}
+	
+	function createElement(el) {
+		return doc.createElement(el);
+	}
+	
+	/* Updated attachEvent function for Internet Explorer
+		- Stores attachEvent information in an Array, so on unload the detachEvent functions can be called to avoid memory leaks
+	*/	
+	function addListener(target, eventType, fn) {
+		target.attachEvent(eventType, fn);
+		listenersArr[listenersArr.length] = [target, eventType, fn];
+	}
+	
+	/* Flash Player and SWF content version matching
+	*/
+	function hasPlayerVersion(rv) {
+		var pv = ua.pv, v = rv.split(".");
+		v[0] = parseInt(v[0], 10);
+		v[1] = parseInt(v[1], 10) || 0; // supports short notation, e.g. "9" instead of "9.0.0"
+		v[2] = parseInt(v[2], 10) || 0;
+		return (pv[0] > v[0] || (pv[0] == v[0] && pv[1] > v[1]) || (pv[0] == v[0] && pv[1] == v[1] && pv[2] >= v[2])) ? true : false;
+	}
+	
+	/* Cross-browser dynamic CSS creation
+		- Based on Bobby van der Sluis' solution: http://www.bobbyvandersluis.com/articles/dynamicCSS.php
+	*/	
+	function createCSS(sel, decl) {
+		if (ua.ie && ua.mac) {
+			return;
+		}
+		var h = doc.getElementsByTagName("head")[0], s = createElement("style");
+		s.setAttribute("type", "text/css");
+		s.setAttribute("media", "screen");
+		if (!(ua.ie && ua.win) && typeof doc.createTextNode != UNDEF) {
+			s.appendChild(doc.createTextNode(sel + " {" + decl + "}"));
+		}
+		h.appendChild(s);
+		if (ua.ie && ua.win && typeof doc.styleSheets != UNDEF && doc.styleSheets.length > 0) {
+			var ls = doc.styleSheets[doc.styleSheets.length - 1];
+			if (typeof ls.addRule == OBJECT) {
+				ls.addRule(sel, decl);
+			}
+		}
+	}
+	
+	function setVisibility(id, isVisible) {
+		var v = isVisible ? "visible" : "hidden";
+		if (isDomLoaded && getElementById(id)) {
+			getElementById(id).style.visibility = v;
+		}
+		else {
+			createCSS("#" + id, "visibility:" + v);
+		}
+	}
+
+	/* Filter to avoid XSS attacks 
+	*/
+	function urlEncodeIfNecessary(s) {
+		var regex = /[\\\"<>\.;]/;
+		var hasBadChars = regex.exec(s) != null;
+		return hasBadChars ? encodeURIComponent(s) : s;
+	}
+	
+	/* Release memory to avoid memory leaks caused by closures, fix hanging audio/video threads and force open sockets/NetConnections to disconnect (Internet Explorer only)
+	*/
+	var cleanup = function() {
+		if (ua.ie && ua.win) {
+			window.attachEvent("onunload", function() {
+				// remove listeners to avoid memory leaks
+				var ll = listenersArr.length;
+				for (var i = 0; i < ll; i++) {
+					listenersArr[i][0].detachEvent(listenersArr[i][1], listenersArr[i][2]);
+				}
+				// cleanup dynamically embedded objects to fix audio/video threads and force open sockets and NetConnections to disconnect
+				var il = objIdArr.length;
+				for (var j = 0; j < il; j++) {
+					removeSWF(objIdArr[j]);
+				}
+				// cleanup library's main closures to avoid memory leaks
+				for (var k in ua) {
+					ua[k] = null;
+				}
+				ua = null;
+				for (var l in swfobject) {
+					swfobject[l] = null;
+				}
+				swfobject = null;
+			});
+		}
+	}();
+	
+	
+	return {
+		/* Public API
+			- Reference: http://code.google.com/p/swfobject/wiki/SWFObject_2_0_documentation
+		*/ 
+		registerObject: function(objectIdStr, swfVersionStr, xiSwfUrlStr) {
+			if (!ua.w3cdom || !objectIdStr || !swfVersionStr) {
+				return;
+			}
+			var regObj = {};
+			regObj.id = objectIdStr;
+			regObj.swfVersion = swfVersionStr;
+			regObj.expressInstall = xiSwfUrlStr ? xiSwfUrlStr : false;
+			regObjArr[regObjArr.length] = regObj;
+			setVisibility(objectIdStr, false);
+		},
+		
+		getObjectById: function(objectIdStr) {
+			var r = null;
+			if (ua.w3cdom) {
+				var o = getElementById(objectIdStr);
+				if (o) {
+					var n = o.getElementsByTagName(OBJECT)[0];
+					if (!n || (n && typeof o.SetVariable != UNDEF)) {
+							r = o;
+					}
+					else if (typeof n.SetVariable != UNDEF) {
+						r = n;
+					}
+				}
+			}
+			return r;
+		},
+		
+		embedSWF: function(swfUrlStr, replaceElemIdStr, widthStr, heightStr, swfVersionStr, xiSwfUrlStr, flashvarsObj, parObj, attObj) {
+			if (!ua.w3cdom || !swfUrlStr || !replaceElemIdStr || !widthStr || !heightStr || !swfVersionStr) {
+				return;
+			}
+			widthStr += ""; // Auto-convert to string
+			heightStr += "";
+			if (hasPlayerVersion(swfVersionStr)) {
+				setVisibility(replaceElemIdStr, false);
+				var att = {};
+				if (attObj && typeof attObj === OBJECT) {
+					for (var i in attObj) {
+						if (attObj[i] != Object.prototype[i]) { // Filter out prototype additions from other potential libraries
+							att[i] = attObj[i];
+						}
+					}
+				}
+				att.data = swfUrlStr;
+				att.width = widthStr;
+				att.height = heightStr;
+				var par = {}; 
+				if (parObj && typeof parObj === OBJECT) {
+					for (var j in parObj) {
+						if (parObj[j] != Object.prototype[j]) { // Filter out prototype additions from other potential libraries
+							par[j] = parObj[j];
+						}
+					}
+				}
+				if (flashvarsObj && typeof flashvarsObj === OBJECT) {
+					for (var k in flashvarsObj) {
+						if (flashvarsObj[k] != Object.prototype[k]) { // Filter out prototype additions from other potential libraries
+							if (typeof par.flashvars != UNDEF) {
+								par.flashvars += "&" + k + "=" + flashvarsObj[k];
+							}
+							else {
+								par.flashvars = k + "=" + flashvarsObj[k];
+							}
+						}
+					}
+				}
+				addDomLoadEvent(function() {
+					createSWF(att, par, replaceElemIdStr);
+					if (att.id == replaceElemIdStr) {
+						setVisibility(replaceElemIdStr, true);
+					}
+				});
+			}
+			else if (xiSwfUrlStr && !isExpressInstallActive && hasPlayerVersion("6.0.65") && (ua.win || ua.mac)) {
+				isExpressInstallActive = true; // deferred execution
+				setVisibility(replaceElemIdStr, false);
+				addDomLoadEvent(function() {
+					var regObj = {};
+					regObj.id = regObj.altContentId = replaceElemIdStr;
+					regObj.width = widthStr;
+					regObj.height = heightStr;
+					regObj.expressInstall = xiSwfUrlStr;
+					showExpressInstall(regObj);
+				});
+			}
+		},
+		
+		getFlashPlayerVersion: function() {
+			return { major:ua.pv[0], minor:ua.pv[1], release:ua.pv[2] };
+		},
+		
+		hasFlashPlayerVersion: hasPlayerVersion,
+		
+		createSWF: function(attObj, parObj, replaceElemIdStr) {
+			if (ua.w3cdom) {
+				return createSWF(attObj, parObj, replaceElemIdStr);
+			}
+			else {
+				return undefined;
+			}
+		},
+		
+		removeSWF: function(objElemIdStr) {
+			if (ua.w3cdom) {
+				removeSWF(objElemIdStr);
+			}
+		},
+		
+		createCSS: function(sel, decl) {
+			if (ua.w3cdom) {
+				createCSS(sel, decl);
+			}
+		},
+		
+		addDomLoadEvent: addDomLoadEvent,
+		
+		addLoadEvent: addLoadEvent,
+		
+		getQueryParamValue: function(param) {
+			var q = doc.location.search || doc.location.hash;
+			if (param == null) {
+				return urlEncodeIfNecessary(q);
+			}
+			if (q) {
+				var pairs = q.substring(1).split("&");
+				for (var i = 0; i < pairs.length; i++) {
+					if (pairs[i].substring(0, pairs[i].indexOf("=")) == param) {
+						return urlEncodeIfNecessary(pairs[i].substring((pairs[i].indexOf("=") + 1)));
+					}
+				}
+			}
+			return "";
+		},
+		
+		// For internal usage only
+		expressInstallCallback: function() {
+			if (isExpressInstallActive && storedAltContent) {
+				var obj = getElementById(EXPRESS_INSTALL_ID);
+				if (obj) {
+					obj.parentNode.replaceChild(storedAltContent, obj);
+					if (storedAltContentId) {
+						setVisibility(storedAltContentId, true);
+						if (ua.ie && ua.win) {
+							storedAltContent.style.display = "block";
+						}
+					}
+					storedAltContent = null;
+					storedAltContentId = null;
+					isExpressInstallActive = false;
+				}
+			} 
+		}
+	};
+}();
+/**
+ * SWFUpload: http://www.swfupload.org, http://swfupload.googlecode.com
+ *
+ * mmSWFUpload 1.0: Flash upload dialog - http://profandesign.se/swfupload/,  http://www.vinterwebb.se/
+ *
+ * SWFUpload is (c) 2006-2007 Lars Huring, Olov Nilzén and Mammon Media and is released under the MIT License:
+ * http://www.opensource.org/licenses/mit-license.php
+ *
+ * SWFUpload 2 is (c) 2007-2008 Jake Roberts and is released under the MIT License:
+ * http://www.opensource.org/licenses/mit-license.php
+ *
+ */
+
+
+/* ******************* */
+/* Constructor & Init  */
+/* ******************* */
+var SWFUpload;
+
+if (SWFUpload == undefined) {
+	SWFUpload = function (settings) {
+		this.initSWFUpload(settings);
+	};
+}
+
+SWFUpload.prototype.initSWFUpload = function (settings) {
+	try {
+		this.customSettings = {};	// A container where developers can place their own settings associated with this instance.
+		this.settings = settings;
+		this.eventQueue = [];
+		this.movieName = "SWFUpload_" + SWFUpload.movieCount++;
+		this.movieElement = null;
+
+
+		// Setup global control tracking
+		SWFUpload.instances[this.movieName] = this;
+
+		// Load the settings.  Load the Flash movie.
+		this.initSettings();
+		this.loadFlash();
+		this.displayDebugInfo();
+	} catch (ex) {
+		delete SWFUpload.instances[this.movieName];
+		throw ex;
+	}
+};
+
+/* *************** */
+/* Static Members  */
+/* *************** */
+SWFUpload.instances = {};
+SWFUpload.movieCount = 0;
+SWFUpload.version = "2.2.0 2009-03-25";
+SWFUpload.QUEUE_ERROR = {
+	QUEUE_LIMIT_EXCEEDED	  		: -100,
+	FILE_EXCEEDS_SIZE_LIMIT  		: -110,
+	ZERO_BYTE_FILE			  		: -120,
+	INVALID_FILETYPE		  		: -130
+};
+SWFUpload.UPLOAD_ERROR = {
+	HTTP_ERROR				  		: -200,
+	MISSING_UPLOAD_URL	      		: -210,
+	IO_ERROR				  		: -220,
+	SECURITY_ERROR			  		: -230,
+	UPLOAD_LIMIT_EXCEEDED	  		: -240,
+	UPLOAD_FAILED			  		: -250,
+	SPECIFIED_FILE_ID_NOT_FOUND		: -260,
+	FILE_VALIDATION_FAILED	  		: -270,
+	FILE_CANCELLED			  		: -280,
+	UPLOAD_STOPPED					: -290
+};
+SWFUpload.FILE_STATUS = {
+	QUEUED		 : -1,
+	IN_PROGRESS	 : -2,
+	ERROR		 : -3,
+	COMPLETE	 : -4,
+	CANCELLED	 : -5
+};
+SWFUpload.BUTTON_ACTION = {
+	SELECT_FILE  : -100,
+	SELECT_FILES : -110,
+	START_UPLOAD : -120
+};
+SWFUpload.CURSOR = {
+	ARROW : -1,
+	HAND : -2
+};
+SWFUpload.WINDOW_MODE = {
+	WINDOW : "window",
+	TRANSPARENT : "transparent",
+	OPAQUE : "opaque"
+};
+
+// Private: takes a URL, determines if it is relative and converts to an absolute URL
+// using the current site. Only processes the URL if it can, otherwise returns the URL untouched
+SWFUpload.completeURL = function(url) {
+	if (typeof(url) !== "string" || url.match(/^https?:\/\//i) || url.match(/^\//)) {
+		return url;
+	}
+	
+	var currentURL = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");
+	
+	var indexSlash = window.location.pathname.lastIndexOf("/");
+	if (indexSlash <= 0) {
+		path = "/";
+	} else {
+		path = window.location.pathname.substr(0, indexSlash) + "/";
+	}
+	
+	return /*currentURL +*/ path + url;
+	
+};
+
+
+/* ******************** */
+/* Instance Members  */
+/* ******************** */
+
+// Private: initSettings ensures that all the
+// settings are set, getting a default value if one was not assigned.
+SWFUpload.prototype.initSettings = function () {
+	this.ensureDefault = function (settingName, defaultValue) {
+		this.settings[settingName] = (this.settings[settingName] == undefined) ? defaultValue : this.settings[settingName];
+	};
+	
+	// Upload backend settings
+	this.ensureDefault("upload_url", "");
+	this.ensureDefault("preserve_relative_urls", false);
+	this.ensureDefault("file_post_name", "Filedata");
+	this.ensureDefault("post_params", {});
+	this.ensureDefault("use_query_string", false);
+	this.ensureDefault("requeue_on_error", false);
+	this.ensureDefault("http_success", []);
+	this.ensureDefault("assume_success_timeout", 0);
+	
+	// File Settings
+	this.ensureDefault("file_types", "*.*");
+	this.ensureDefault("file_types_description", "All Files");
+	this.ensureDefault("file_size_limit", 0);	// Default zero means "unlimited"
+	this.ensureDefault("file_upload_limit", 0);
+	this.ensureDefault("file_queue_limit", 0);
+
+	// Flash Settings
+	this.ensureDefault("flash_url", "swfupload.swf");
+	this.ensureDefault("prevent_swf_caching", true);
+	
+	// Button Settings
+	this.ensureDefault("button_image_url", "");
+	this.ensureDefault("button_width", 1);
+	this.ensureDefault("button_height", 1);
+	this.ensureDefault("button_text", "");
+	this.ensureDefault("button_text_style", "color: #000000; font-size: 16pt;");
+	this.ensureDefault("button_text_top_padding", 0);
+	this.ensureDefault("button_text_left_padding", 0);
+	this.ensureDefault("button_action", SWFUpload.BUTTON_ACTION.SELECT_FILES);
+	this.ensureDefault("button_disabled", false);
+	this.ensureDefault("button_placeholder_id", "");
+	this.ensureDefault("button_placeholder", null);
+	this.ensureDefault("button_cursor", SWFUpload.CURSOR.ARROW);
+	this.ensureDefault("button_window_mode", SWFUpload.WINDOW_MODE.WINDOW);
+	
+	// Debug Settings
+	this.ensureDefault("debug", false);
+	this.settings.debug_enabled = this.settings.debug;	// Here to maintain v2 API
+	
+	// Event Handlers
+	this.settings.return_upload_start_handler = this.returnUploadStart;
+	this.ensureDefault("swfupload_loaded_handler", null);
+	this.ensureDefault("file_dialog_start_handler", null);
+	this.ensureDefault("file_queued_handler", null);
+	this.ensureDefault("file_queue_error_handler", null);
+	this.ensureDefault("file_dialog_complete_handler", null);
+	
+	this.ensureDefault("upload_start_handler", null);
+	this.ensureDefault("upload_progress_handler", null);
+	this.ensureDefault("upload_error_handler", null);
+	this.ensureDefault("upload_success_handler", null);
+	this.ensureDefault("upload_complete_handler", null);
+	
+	this.ensureDefault("debug_handler", this.debugMessage);
+
+	this.ensureDefault("custom_settings", {});
+
+	// Other settings
+	this.customSettings = this.settings.custom_settings;
+	
+	// Update the flash url if needed
+	if (!!this.settings.prevent_swf_caching) {
+		this.settings.flash_url = this.settings.flash_url + (this.settings.flash_url.indexOf("?") < 0 ? "?" : "&") + "preventswfcaching=" + new Date().getTime();
+	}
+	
+	if (!this.settings.preserve_relative_urls) {
+		//this.settings.flash_url = SWFUpload.completeURL(this.settings.flash_url);	// Don't need to do this one since flash doesn't look at it
+		this.settings.upload_url = SWFUpload.completeURL(this.settings.upload_url);
+		this.settings.button_image_url = SWFUpload.completeURL(this.settings.button_image_url);
+	}
+	
+	delete this.ensureDefault;
+};
+
+// Private: loadFlash replaces the button_placeholder element with the flash movie.
+SWFUpload.prototype.loadFlash = function () {
+	var targetElement, tempParent;
+
+	// Make sure an element with the ID we are going to use doesn't already exist
+	if (document.getElementById(this.movieName) !== null) {
+		throw "ID " + this.movieName + " is already in use. The Flash Object could not be added";
+	}
+
+	// Get the element where we will be placing the flash movie
+	targetElement = document.getElementById(this.settings.button_placeholder_id) || this.settings.button_placeholder;
+
+	if (targetElement == undefined) {
+		throw "Could not find the placeholder element: " + this.settings.button_placeholder_id;
+	}
+
+	// Append the container and load the flash
+	tempParent = document.createElement("div");
+	tempParent.innerHTML = this.getFlashHTML();	// Using innerHTML is non-standard but the only sensible way to dynamically add Flash in IE (and maybe other browsers)
+	targetElement.parentNode.replaceChild(tempParent.firstChild, targetElement);
+
+	// Fix IE Flash/Form bug
+	if (window[this.movieName] == undefined) {
+		window[this.movieName] = this.getMovieElement();
+	}
+	
+};
+
+// Private: getFlashHTML generates the object tag needed to embed the flash in to the document
+SWFUpload.prototype.getFlashHTML = function () {
+	// Flash Satay object syntax: http://www.alistapart.com/articles/flashsatay
+	return ['<object id="', this.movieName, '" type="application/x-shockwave-flash" data="', this.settings.flash_url, '" width="', this.settings.button_width, '" height="', this.settings.button_height, '" class="swfupload">',
+				'<param name="wmode" value="', this.settings.button_window_mode, '" />',
+				'<param name="movie" value="', this.settings.flash_url, '" />',
+				'<param name="quality" value="high" />',
+				'<param name="menu" value="false" />',
+				'<param name="allowScriptAccess" value="always" />',
+				'<param name="flashvars" value="' + this.getFlashVars() + '" />',
+				'</object>'].join("");
+};
+
+// Private: getFlashVars builds the parameter string that will be passed
+// to flash in the flashvars param.
+SWFUpload.prototype.getFlashVars = function () {
+	// Build a string from the post param object
+	var paramString = this.buildParamString();
+	var httpSuccessString = this.settings.http_success.join(",");
+	
+	// Build the parameter string
+	return ["movieName=", encodeURIComponent(this.movieName),
+			"&amp;uploadURL=", encodeURIComponent(this.settings.upload_url),
+			"&amp;useQueryString=", encodeURIComponent(this.settings.use_query_string),
+			"&amp;requeueOnError=", encodeURIComponent(this.settings.requeue_on_error),
+			"&amp;httpSuccess=", encodeURIComponent(httpSuccessString),
+			"&amp;assumeSuccessTimeout=", encodeURIComponent(this.settings.assume_success_timeout),
+			"&amp;params=", encodeURIComponent(paramString),
+			"&amp;filePostName=", encodeURIComponent(this.settings.file_post_name),
+			"&amp;fileTypes=", encodeURIComponent(this.settings.file_types),
+			"&amp;fileTypesDescription=", encodeURIComponent(this.settings.file_types_description),
+			"&amp;fileSizeLimit=", encodeURIComponent(this.settings.file_size_limit),
+			"&amp;fileUploadLimit=", encodeURIComponent(this.settings.file_upload_limit),
+			"&amp;fileQueueLimit=", encodeURIComponent(this.settings.file_queue_limit),
+			"&amp;debugEnabled=", encodeURIComponent(this.settings.debug_enabled),
+			"&amp;buttonImageURL=", encodeURIComponent(this.settings.button_image_url),
+			"&amp;buttonWidth=", encodeURIComponent(this.settings.button_width),
+			"&amp;buttonHeight=", encodeURIComponent(this.settings.button_height),
+			"&amp;buttonText=", encodeURIComponent(this.settings.button_text),
+			"&amp;buttonTextTopPadding=", encodeURIComponent(this.settings.button_text_top_padding),
+			"&amp;buttonTextLeftPadding=", encodeURIComponent(this.settings.button_text_left_padding),
+			"&amp;buttonTextStyle=", encodeURIComponent(this.settings.button_text_style),
+			"&amp;buttonAction=", encodeURIComponent(this.settings.button_action),
+			"&amp;buttonDisabled=", encodeURIComponent(this.settings.button_disabled),
+			"&amp;buttonCursor=", encodeURIComponent(this.settings.button_cursor)
+		].join("");
+};
+
+// Public: getMovieElement retrieves the DOM reference to the Flash element added by SWFUpload
+// The element is cached after the first lookup
+SWFUpload.prototype.getMovieElement = function () {
+	if (this.movieElement == undefined) {
+		this.movieElement = document.getElementById(this.movieName);
+	}
+
+	if (this.movieElement === null) {
+		throw "Could not find Flash element";
+	}
+	
+	return this.movieElement;
+};
+
+// Private: buildParamString takes the name/value pairs in the post_params setting object
+// and joins them up in to a string formatted "name=value&amp;name=value"
+SWFUpload.prototype.buildParamString = function () {
+	var postParams = this.settings.post_params; 
+	var paramStringPairs = [];
+
+	if (typeof(postParams) === "object") {
+		for (var name in postParams) {
+			if (postParams.hasOwnProperty(name)) {
+				paramStringPairs.push(encodeURIComponent(name.toString()) + "=" + encodeURIComponent(postParams[name].toString()));
+			}
+		}
+	}
+
+	return paramStringPairs.join("&amp;");
+};
+
+// Public: Used to remove a SWFUpload instance from the page. This method strives to remove
+// all references to the SWF, and other objects so memory is properly freed.
+// Returns true if everything was destroyed. Returns a false if a failure occurs leaving SWFUpload in an inconsistant state.
+// Credits: Major improvements provided by steffen
+SWFUpload.prototype.destroy = function () {
+	try {
+		// Make sure Flash is done before we try to remove it
+		this.cancelUpload(null, false);
+		
+
+		// Remove the SWFUpload DOM nodes
+		var movieElement = null;
+		movieElement = this.getMovieElement();
+		
+		if (movieElement && typeof(movieElement.CallFunction) === "unknown") { // We only want to do this in IE
+			// Loop through all the movie's properties and remove all function references (DOM/JS IE 6/7 memory leak workaround)
+			for (var i in movieElement) {
+				try {
+					if (typeof(movieElement[i]) === "function") {
+						movieElement[i] = null;
+					}
+				} catch (ex1) {}
+			}
+
+			// Remove the Movie Element from the page
+			try {
+				movieElement.parentNode.removeChild(movieElement);
+			} catch (ex) {}
+		}
+		
+		// Remove IE form fix reference
+		window[this.movieName] = null;
+
+		// Destroy other references
+		SWFUpload.instances[this.movieName] = null;
+		delete SWFUpload.instances[this.movieName];
+
+		this.movieElement = null;
+		this.settings = null;
+		this.customSettings = null;
+		this.eventQueue = null;
+		this.movieName = null;
+		
+		
+		return true;
+	} catch (ex2) {
+		return false;
+	}
+};
+
+
+// Public: displayDebugInfo prints out settings and configuration
+// information about this SWFUpload instance.
+// This function (and any references to it) can be deleted when placing
+// SWFUpload in production.
+SWFUpload.prototype.displayDebugInfo = function () {
+	this.debug(
+		[
+			"---SWFUpload Instance Info---\n",
+			"Version: ", SWFUpload.version, "\n",
+			"Movie Name: ", this.movieName, "\n",
+			"Settings:\n",
+			"\t", "upload_url:               ", this.settings.upload_url, "\n",
+			"\t", "flash_url:                ", this.settings.flash_url, "\n",
+			"\t", "use_query_string:         ", this.settings.use_query_string.toString(), "\n",
+			"\t", "requeue_on_error:         ", this.settings.requeue_on_error.toString(), "\n",
+			"\t", "http_success:             ", this.settings.http_success.join(", "), "\n",
+			"\t", "assume_success_timeout:   ", this.settings.assume_success_timeout, "\n",
+			"\t", "file_post_name:           ", this.settings.file_post_name, "\n",
+			"\t", "post_params:              ", this.settings.post_params.toString(), "\n",
+			"\t", "file_types:               ", this.settings.file_types, "\n",
+			"\t", "file_types_description:   ", this.settings.file_types_description, "\n",
+			"\t", "file_size_limit:          ", this.settings.file_size_limit, "\n",
+			"\t", "file_upload_limit:        ", this.settings.file_upload_limit, "\n",
+			"\t", "file_queue_limit:         ", this.settings.file_queue_limit, "\n",
+			"\t", "debug:                    ", this.settings.debug.toString(), "\n",
+
+			"\t", "prevent_swf_caching:      ", this.settings.prevent_swf_caching.toString(), "\n",
+
+			"\t", "button_placeholder_id:    ", this.settings.button_placeholder_id.toString(), "\n",
+			"\t", "button_placeholder:       ", (this.settings.button_placeholder ? "Set" : "Not Set"), "\n",
+			"\t", "button_image_url:         ", this.settings.button_image_url.toString(), "\n",
+			"\t", "button_width:             ", this.settings.button_width.toString(), "\n",
+			"\t", "button_height:            ", this.settings.button_height.toString(), "\n",
+			"\t", "button_text:              ", this.settings.button_text.toString(), "\n",
+			"\t", "button_text_style:        ", this.settings.button_text_style.toString(), "\n",
+			"\t", "button_text_top_padding:  ", this.settings.button_text_top_padding.toString(), "\n",
+			"\t", "button_text_left_padding: ", this.settings.button_text_left_padding.toString(), "\n",
+			"\t", "button_action:            ", this.settings.button_action.toString(), "\n",
+			"\t", "button_disabled:          ", this.settings.button_disabled.toString(), "\n",
+
+			"\t", "custom_settings:          ", this.settings.custom_settings.toString(), "\n",
+			"Event Handlers:\n",
+			"\t", "swfupload_loaded_handler assigned:  ", (typeof this.settings.swfupload_loaded_handler === "function").toString(), "\n",
+			"\t", "file_dialog_start_handler assigned: ", (typeof this.settings.file_dialog_start_handler === "function").toString(), "\n",
+			"\t", "file_queued_handler assigned:       ", (typeof this.settings.file_queued_handler === "function").toString(), "\n",
+			"\t", "file_queue_error_handler assigned:  ", (typeof this.settings.file_queue_error_handler === "function").toString(), "\n",
+			"\t", "upload_start_handler assigned:      ", (typeof this.settings.upload_start_handler === "function").toString(), "\n",
+			"\t", "upload_progress_handler assigned:   ", (typeof this.settings.upload_progress_handler === "function").toString(), "\n",
+			"\t", "upload_error_handler assigned:      ", (typeof this.settings.upload_error_handler === "function").toString(), "\n",
+			"\t", "upload_success_handler assigned:    ", (typeof this.settings.upload_success_handler === "function").toString(), "\n",
+			"\t", "upload_complete_handler assigned:   ", (typeof this.settings.upload_complete_handler === "function").toString(), "\n",
+			"\t", "debug_handler assigned:             ", (typeof this.settings.debug_handler === "function").toString(), "\n"
+		].join("")
+	);
+};
+
+/* Note: addSetting and getSetting are no longer used by SWFUpload but are included
+	the maintain v2 API compatibility
+*/
+// Public: (Deprecated) addSetting adds a setting value. If the value given is undefined or null then the default_value is used.
+SWFUpload.prototype.addSetting = function (name, value, default_value) {
+    if (value == undefined) {
+        return (this.settings[name] = default_value);
+    } else {
+        return (this.settings[name] = value);
+	}
+};
+
+// Public: (Deprecated) getSetting gets a setting. Returns an empty string if the setting was not found.
+SWFUpload.prototype.getSetting = function (name) {
+    if (this.settings[name] != undefined) {
+        return this.settings[name];
+	}
+
+    return "";
+};
+
+
+
+// Private: callFlash handles function calls made to the Flash element.
+// Calls are made with a setTimeout for some functions to work around
+// bugs in the ExternalInterface library.
+SWFUpload.prototype.callFlash = function (functionName, argumentArray) {
+	argumentArray = argumentArray || [];
+	
+	var movieElement = this.getMovieElement();
+	var returnValue, returnString;
+
+	// Flash's method if calling ExternalInterface methods (code adapted from MooTools).
+	try {
+		returnString = movieElement.CallFunction('<invoke name="' + functionName + '" returntype="javascript">' + __flash__argumentsToXML(argumentArray, 0) + '</invoke>');
+		returnValue = eval(returnString);
+	} catch (ex) {
+		throw "Call to " + functionName + " failed";
+	}
+	
+	// Unescape file post param values
+	if (returnValue != undefined && typeof returnValue.post === "object") {
+		returnValue = this.unescapeFilePostParams(returnValue);
+	}
+
+	return returnValue;
+};
+
+/* *****************************
+	-- Flash control methods --
+	Your UI should use these
+	to operate SWFUpload
+   ***************************** */
+
+// WARNING: this function does not work in Flash Player 10
+// Public: selectFile causes a File Selection Dialog window to appear.  This
+// dialog only allows 1 file to be selected.
+SWFUpload.prototype.selectFile = function () {
+	this.callFlash("SelectFile");
+};
+
+// WARNING: this function does not work in Flash Player 10
+// Public: selectFiles causes a File Selection Dialog window to appear/ This
+// dialog allows the user to select any number of files
+// Flash Bug Warning: Flash limits the number of selectable files based on the combined length of the file names.
+// If the selection name length is too long the dialog will fail in an unpredictable manner.  There is no work-around
+// for this bug.
+SWFUpload.prototype.selectFiles = function () {
+	this.callFlash("SelectFiles");
+};
+
+
+// Public: startUpload starts uploading the first file in the queue unless
+// the optional parameter 'fileID' specifies the ID 
+SWFUpload.prototype.startUpload = function (fileID) {
+	this.callFlash("StartUpload", [fileID]);
+};
+
+// Public: cancelUpload cancels any queued file.  The fileID parameter may be the file ID or index.
+// If you do not specify a fileID the current uploading file or first file in the queue is cancelled.
+// If you do not want the uploadError event to trigger you can specify false for the triggerErrorEvent parameter.
+SWFUpload.prototype.cancelUpload = function (fileID, triggerErrorEvent) {
+	if (triggerErrorEvent !== false) {
+		triggerErrorEvent = true;
+	}
+	this.callFlash("CancelUpload", [fileID, triggerErrorEvent]);
+};
+
+// Public: stopUpload stops the current upload and requeues the file at the beginning of the queue.
+// If nothing is currently uploading then nothing happens.
+SWFUpload.prototype.stopUpload = function () {
+	this.callFlash("StopUpload");
+};
+
+/* ************************
+ * Settings methods
+ *   These methods change the SWFUpload settings.
+ *   SWFUpload settings should not be changed directly on the settings object
+ *   since many of the settings need to be passed to Flash in order to take
+ *   effect.
+ * *********************** */
+
+// Public: getStats gets the file statistics object.
+SWFUpload.prototype.getStats = function () {
+	return this.callFlash("GetStats");
+};
+
+// Public: setStats changes the SWFUpload statistics.  You shouldn't need to 
+// change the statistics but you can.  Changing the statistics does not
+// affect SWFUpload accept for the successful_uploads count which is used
+// by the upload_limit setting to determine how many files the user may upload.
+SWFUpload.prototype.setStats = function (statsObject) {
+	this.callFlash("SetStats", [statsObject]);
+};
+
+// Public: getFile retrieves a File object by ID or Index.  If the file is
+// not found then 'null' is returned.
+SWFUpload.prototype.getFile = function (fileID) {
+	if (typeof(fileID) === "number") {
+		return this.callFlash("GetFileByIndex", [fileID]);
+	} else {
+		return this.callFlash("GetFile", [fileID]);
+	}
+};
+
+// Public: addFileParam sets a name/value pair that will be posted with the
+// file specified by the Files ID.  If the name already exists then the
+// exiting value will be overwritten.
+SWFUpload.prototype.addFileParam = function (fileID, name, value) {
+	return this.callFlash("AddFileParam", [fileID, name, value]);
+};
+
+// Public: removeFileParam removes a previously set (by addFileParam) name/value
+// pair from the specified file.
+SWFUpload.prototype.removeFileParam = function (fileID, name) {
+	this.callFlash("RemoveFileParam", [fileID, name]);
+};
+
+// Public: setUploadUrl changes the upload_url setting.
+SWFUpload.prototype.setUploadURL = function (url) {
+	this.settings.upload_url = url.toString();
+	this.callFlash("SetUploadURL", [url]);
+};
+
+// Public: setPostParams changes the post_params setting
+SWFUpload.prototype.setPostParams = function (paramsObject) {
+	this.settings.post_params = paramsObject;
+	this.callFlash("SetPostParams", [paramsObject]);
+};
+
+// Public: addPostParam adds post name/value pair.  Each name can have only one value.
+SWFUpload.prototype.addPostParam = function (name, value) {
+	this.settings.post_params[name] = value;
+	this.callFlash("SetPostParams", [this.settings.post_params]);
+};
+
+// Public: removePostParam deletes post name/value pair.
+SWFUpload.prototype.removePostParam = function (name) {
+	delete this.settings.post_params[name];
+	this.callFlash("SetPostParams", [this.settings.post_params]);
+};
+
+// Public: setFileTypes changes the file_types setting and the file_types_description setting
+SWFUpload.prototype.setFileTypes = function (types, description) {
+	this.settings.file_types = types;
+	this.settings.file_types_description = description;
+	this.callFlash("SetFileTypes", [types, description]);
+};
+
+// Public: setFileSizeLimit changes the file_size_limit setting
+SWFUpload.prototype.setFileSizeLimit = function (fileSizeLimit) {
+	this.settings.file_size_limit = fileSizeLimit;
+	this.callFlash("SetFileSizeLimit", [fileSizeLimit]);
+};
+
+// Public: setFileUploadLimit changes the file_upload_limit setting
+SWFUpload.prototype.setFileUploadLimit = function (fileUploadLimit) {
+	this.settings.file_upload_limit = fileUploadLimit;
+	this.callFlash("SetFileUploadLimit", [fileUploadLimit]);
+};
+
+// Public: setFileQueueLimit changes the file_queue_limit setting
+SWFUpload.prototype.setFileQueueLimit = function (fileQueueLimit) {
+	this.settings.file_queue_limit = fileQueueLimit;
+	this.callFlash("SetFileQueueLimit", [fileQueueLimit]);
+};
+
+// Public: setFilePostName changes the file_post_name setting
+SWFUpload.prototype.setFilePostName = function (filePostName) {
+	this.settings.file_post_name = filePostName;
+	this.callFlash("SetFilePostName", [filePostName]);
+};
+
+// Public: setUseQueryString changes the use_query_string setting
+SWFUpload.prototype.setUseQueryString = function (useQueryString) {
+	this.settings.use_query_string = useQueryString;
+	this.callFlash("SetUseQueryString", [useQueryString]);
+};
+
+// Public: setRequeueOnError changes the requeue_on_error setting
+SWFUpload.prototype.setRequeueOnError = function (requeueOnError) {
+	this.settings.requeue_on_error = requeueOnError;
+	this.callFlash("SetRequeueOnError", [requeueOnError]);
+};
+
+// Public: setHTTPSuccess changes the http_success setting
+SWFUpload.prototype.setHTTPSuccess = function (http_status_codes) {
+	if (typeof http_status_codes === "string") {
+		http_status_codes = http_status_codes.replace(" ", "").split(",");
+	}
+	
+	this.settings.http_success = http_status_codes;
+	this.callFlash("SetHTTPSuccess", [http_status_codes]);
+};
+
+// Public: setHTTPSuccess changes the http_success setting
+SWFUpload.prototype.setAssumeSuccessTimeout = function (timeout_seconds) {
+	this.settings.assume_success_timeout = timeout_seconds;
+	this.callFlash("SetAssumeSuccessTimeout", [timeout_seconds]);
+};
+
+// Public: setDebugEnabled changes the debug_enabled setting
+SWFUpload.prototype.setDebugEnabled = function (debugEnabled) {
+	this.settings.debug_enabled = debugEnabled;
+	this.callFlash("SetDebugEnabled", [debugEnabled]);
+};
+
+// Public: setButtonImageURL loads a button image sprite
+SWFUpload.prototype.setButtonImageURL = function (buttonImageURL) {
+	if (buttonImageURL == undefined) {
+		buttonImageURL = "";
+	}
+	
+	this.settings.button_image_url = buttonImageURL;
+	this.callFlash("SetButtonImageURL", [buttonImageURL]);
+};
+
+// Public: setButtonDimensions resizes the Flash Movie and button
+SWFUpload.prototype.setButtonDimensions = function (width, height) {
+	this.settings.button_width = width;
+	this.settings.button_height = height;
+	
+	var movie = this.getMovieElement();
+	if (movie != undefined) {
+		movie.style.width = width + "px";
+		movie.style.height = height + "px";
+	}
+	
+	this.callFlash("SetButtonDimensions", [width, height]);
+};
+// Public: setButtonText Changes the text overlaid on the button
+SWFUpload.prototype.setButtonText = function (html) {
+	this.settings.button_text = html;
+	this.callFlash("SetButtonText", [html]);
+};
+// Public: setButtonTextPadding changes the top and left padding of the text overlay
+SWFUpload.prototype.setButtonTextPadding = function (left, top) {
+	this.settings.button_text_top_padding = top;
+	this.settings.button_text_left_padding = left;
+	this.callFlash("SetButtonTextPadding", [left, top]);
+};
+
+// Public: setButtonTextStyle changes the CSS used to style the HTML/Text overlaid on the button
+SWFUpload.prototype.setButtonTextStyle = function (css) {
+	this.settings.button_text_style = css;
+	this.callFlash("SetButtonTextStyle", [css]);
+};
+// Public: setButtonDisabled disables/enables the button
+SWFUpload.prototype.setButtonDisabled = function (isDisabled) {
+	this.settings.button_disabled = isDisabled;
+	this.callFlash("SetButtonDisabled", [isDisabled]);
+};
+// Public: setButtonAction sets the action that occurs when the button is clicked
+SWFUpload.prototype.setButtonAction = function (buttonAction) {
+	this.settings.button_action = buttonAction;
+	this.callFlash("SetButtonAction", [buttonAction]);
+};
+
+// Public: setButtonCursor changes the mouse cursor displayed when hovering over the button
+SWFUpload.prototype.setButtonCursor = function (cursor) {
+	this.settings.button_cursor = cursor;
+	this.callFlash("SetButtonCursor", [cursor]);
+};
+
+/* *******************************
+	Flash Event Interfaces
+	These functions are used by Flash to trigger the various
+	events.
+	
+	All these functions a Private.
+	
+	Because the ExternalInterface library is buggy the event calls
+	are added to a queue and the queue then executed by a setTimeout.
+	This ensures that events are executed in a determinate order and that
+	the ExternalInterface bugs are avoided.
+******************************* */
+
+SWFUpload.prototype.queueEvent = function (handlerName, argumentArray) {
+	// Warning: Don't call this.debug inside here or you'll create an infinite loop
+	
+	if (argumentArray == undefined) {
+		argumentArray = [];
+	} else if (!(argumentArray instanceof Array)) {
+		argumentArray = [argumentArray];
+	}
+	
+	var self = this;
+	if (typeof this.settings[handlerName] === "function") {
+		// Queue the event
+		this.eventQueue.push(function () {
+			this.settings[handlerName].apply(this, argumentArray);
+		});
+		
+		// Execute the next queued event
+		setTimeout(function () {
+			self.executeNextEvent();
+		}, 0);
+		
+	} else if (this.settings[handlerName] !== null) {
+		throw "Event handler " + handlerName + " is unknown or is not a function";
+	}
+};
+
+// Private: Causes the next event in the queue to be executed.  Since events are queued using a setTimeout
+// we must queue them in order to garentee that they are executed in order.
+SWFUpload.prototype.executeNextEvent = function () {
+	// Warning: Don't call this.debug inside here or you'll create an infinite loop
+
+	var  f = this.eventQueue ? this.eventQueue.shift() : null;
+	if (typeof(f) === "function") {
+		f.apply(this);
+	}
+};
+
+// Private: unescapeFileParams is part of a workaround for a flash bug where objects passed through ExternalInterface cannot have
+// properties that contain characters that are not valid for JavaScript identifiers. To work around this
+// the Flash Component escapes the parameter names and we must unescape again before passing them along.
+SWFUpload.prototype.unescapeFilePostParams = function (file) {
+	var reg = /[$]([0-9a-f]{4})/i;
+	var unescapedPost = {};
+	var uk;
+
+	if (file != undefined) {
+		for (var k in file.post) {
+			if (file.post.hasOwnProperty(k)) {
+				uk = k;
+				var match;
+				while ((match = reg.exec(uk)) !== null) {
+					uk = uk.replace(match[0], String.fromCharCode(parseInt("0x" + match[1], 16)));
+				}
+				unescapedPost[uk] = file.post[k];
+			}
+		}
+
+		file.post = unescapedPost;
+	}
+
+	return file;
+};
+
+// Private: Called by Flash to see if JS can call in to Flash (test if External Interface is working)
+SWFUpload.prototype.testExternalInterface = function () {
+	try {
+		return this.callFlash("TestExternalInterface");
+	} catch (ex) {
+		return false;
+	}
+};
+
+// Private: This event is called by Flash when it has finished loading. Don't modify this.
+// Use the swfupload_loaded_handler event setting to execute custom code when SWFUpload has loaded.
+SWFUpload.prototype.flashReady = function () {
+	// Check that the movie element is loaded correctly with its ExternalInterface methods defined
+	var movieElement = this.getMovieElement();
+
+	if (!movieElement) {
+		this.debug("Flash called back ready but the flash movie can't be found.");
+		return;
+	}
+
+	this.cleanUp(movieElement);
+	
+	this.queueEvent("swfupload_loaded_handler");
+};
+
+// Private: removes Flash added fuctions to the DOM node to prevent memory leaks in IE.
+// This function is called by Flash each time the ExternalInterface functions are created.
+SWFUpload.prototype.cleanUp = function (movieElement) {
+	// Pro-actively unhook all the Flash functions
+	try {
+		if (this.movieElement && typeof(movieElement.CallFunction) === "unknown") { // We only want to do this in IE
+			this.debug("Removing Flash functions hooks (this should only run in IE and should prevent memory leaks)");
+			for (var key in movieElement) {
+				try {
+					if (typeof(movieElement[key]) === "function") {
+						movieElement[key] = null;
+					}
+				} catch (ex) {
+				}
+			}
+		}
+	} catch (ex1) {
+	
+	}
+
+	// Fix Flashes own cleanup code so if the SWFMovie was removed from the page
+	// it doesn't display errors.
+	window["__flash__removeCallback"] = function (instance, name) {
+		try {
+			if (instance) {
+				instance[name] = null;
+			}
+		} catch (flashEx) {
+		
+		}
+	};
+
+};
+
+
+/* This is a chance to do something before the browse window opens */
+SWFUpload.prototype.fileDialogStart = function () {
+	this.queueEvent("file_dialog_start_handler");
+};
+
+
+/* Called when a file is successfully added to the queue. */
+SWFUpload.prototype.fileQueued = function (file) {
+	file = this.unescapeFilePostParams(file);
+	this.queueEvent("file_queued_handler", file);
+};
+
+
+/* Handle errors that occur when an attempt to queue a file fails. */
+SWFUpload.prototype.fileQueueError = function (file, errorCode, message) {
+	file = this.unescapeFilePostParams(file);
+	this.queueEvent("file_queue_error_handler", [file, errorCode, message]);
+};
+
+/* Called after the file dialog has closed and the selected files have been queued.
+	You could call startUpload here if you want the queued files to begin uploading immediately. */
+SWFUpload.prototype.fileDialogComplete = function (numFilesSelected, numFilesQueued, numFilesInQueue) {
+	this.queueEvent("file_dialog_complete_handler", [numFilesSelected, numFilesQueued, numFilesInQueue]);
+};
+
+SWFUpload.prototype.uploadStart = function (file) {
+	file = this.unescapeFilePostParams(file);
+	this.queueEvent("return_upload_start_handler", file);
+};
+
+SWFUpload.prototype.returnUploadStart = function (file) {
+	var returnValue;
+	if (typeof this.settings.upload_start_handler === "function") {
+		file = this.unescapeFilePostParams(file);
+		returnValue = this.settings.upload_start_handler.call(this, file);
+	} else if (this.settings.upload_start_handler != undefined) {
+		throw "upload_start_handler must be a function";
+	}
+
+	// Convert undefined to true so if nothing is returned from the upload_start_handler it is
+	// interpretted as 'true'.
+	if (returnValue === undefined) {
+		returnValue = true;
+	}
+	
+	returnValue = !!returnValue;
+	
+	this.callFlash("ReturnUploadStart", [returnValue]);
+};
+
+
+
+SWFUpload.prototype.uploadProgress = function (file, bytesComplete, bytesTotal) {
+	file = this.unescapeFilePostParams(file);
+	this.queueEvent("upload_progress_handler", [file, bytesComplete, bytesTotal]);
+};
+
+SWFUpload.prototype.uploadError = function (file, errorCode, message) {
+	file = this.unescapeFilePostParams(file);
+	this.queueEvent("upload_error_handler", [file, errorCode, message]);
+};
+
+SWFUpload.prototype.uploadSuccess = function (file, serverData, responseReceived) {
+	file = this.unescapeFilePostParams(file);
+	this.queueEvent("upload_success_handler", [file, serverData, responseReceived]);
+};
+
+SWFUpload.prototype.uploadComplete = function (file) {
+	file = this.unescapeFilePostParams(file);
+	this.queueEvent("upload_complete_handler", file);
+};
+
+/* Called by SWFUpload JavaScript and Flash functions when debug is enabled. By default it writes messages to the
+   internal debug console.  You can override this event and have messages written where you want. */
+SWFUpload.prototype.debug = function (message) {
+	this.queueEvent("debug_handler", message);
+};
+
+
+/* **********************************
+	Debug Console
+	The debug console is a self contained, in page location
+	for debug message to be sent.  The Debug Console adds
+	itself to the body if necessary.
+
+	The console is automatically scrolled as messages appear.
+	
+	If you are using your own debug handler or when you deploy to production and
+	have debug disabled you can remove these functions to reduce the file size
+	and complexity.
+********************************** */
+   
+// Private: debugMessage is the default debug_handler.  If you want to print debug messages
+// call the debug() function.  When overriding the function your own function should
+// check to see if the debug setting is true before outputting debug information.
+SWFUpload.prototype.debugMessage = function (message) {
+	if (this.settings.debug) {
+		var exceptionMessage, exceptionValues = [];
+
+		// Check for an exception object and print it nicely
+		if (typeof message === "object" && typeof message.name === "string" && typeof message.message === "string") {
+			for (var key in message) {
+				if (message.hasOwnProperty(key)) {
+					exceptionValues.push(key + ": " + message[key]);
+				}
+			}
+			exceptionMessage = exceptionValues.join("\n") || "";
+			exceptionValues = exceptionMessage.split("\n");
+			exceptionMessage = "EXCEPTION: " + exceptionValues.join("\nEXCEPTION: ");
+			SWFUpload.Console.writeLine(exceptionMessage);
+		} else {
+			SWFUpload.Console.writeLine(message);
+		}
+	}
+};
+
+SWFUpload.Console = {};
+SWFUpload.Console.writeLine = function (message) {
+	var console, documentForm;
+
+	try {
+		console = document.getElementById("SWFUpload_Console");
+
+		if (!console) {
+			documentForm = document.createElement("form");
+			document.getElementsByTagName("body")[0].appendChild(documentForm);
+
+			console = document.createElement("textarea");
+			console.id = "SWFUpload_Console";
+			console.style.fontFamily = "monospace";
+			console.setAttribute("wrap", "off");
+			console.wrap = "off";
+			console.style.overflow = "auto";
+			console.style.width = "700px";
+			console.style.height = "350px";
+			console.style.margin = "5px";
+			documentForm.appendChild(console);
+		}
+
+		console.value += message + "\n";
+
+		console.scrollTop = console.scrollHeight - console.clientHeight;
+	} catch (ex) {
+		alert("Exception: " + ex.name + " Message: " + ex.message);
+	}
+};
+/*
+Copyright 2008-2009 University of Cambridge
+Copyright 2008-2009 University of Toronto
+Copyright 2007-2009 University of California, Berkeley
+
+Licensed under the Educational Community License (ECL), Version 2.0 or the New
+BSD license. You may not use this file except in compliance with one these
+Licenses.
+
+You may obtain a copy of the ECL 2.0 License and BSD License at
+https://source.fluidproject.org/svn/LICENSE.txt
+*/
+
+/*global jQuery*/
+/*global fluid_1_1*/
+
+fluid_1_1 = fluid_1_1 || {};
+
+(function ($, fluid) {
+    
+    var animateDisplay = function (elm, animation, defaultAnimation) {
+        animation = (animation) ? animation : defaultAnimation;
+        elm.animate(animation.params, animation.duration, animation.callback);
+    };
+    
+    var animateProgress = function (elm, width, speed) {
+        // de-queue any left over animations
+        elm.queue("fx", []); 
+        
+        elm.animate({ 
+            width: width,
+            queue: false
+        }, 
+        speed);
+    };
+    
+    var showProgress = function (that, animation) {
+        if (animation === false) {
+            that.displayElement.show();
+        } else {
+            animateDisplay(that.displayElement, animation, that.options.showAnimation);
+        }
+    };
+    
+    var hideProgress = function (that, delay, animation) {
+        
+        delay = (delay === null || isNaN(delay)) ? that.options.delay : delay;
+        
+        if (delay) {
+            // use a setTimeout to delay the hide for n millies, note use of recursion
+            var timeOut = setTimeout(function () {
+                hideProgress(that, 0, animation);
+            }, delay);
+        } else {
+            if (animation === false) {
+                that.displayElement.hide();
+            } else {
+                animateDisplay(that.displayElement, animation, that.options.hideAnimation);
+            }
+        }   
+    };
+    
+    var updateWidth = function (that, newWidth, dontAnimate) {
+        dontAnimate  = dontAnimate || false;
+        var currWidth = that.indicator.width();
+        var direction = that.options.animate;
+        if ((newWidth > currWidth) && (direction === "both" || direction === "forward") && !dontAnimate) {
+            animateProgress(that.indicator, newWidth, that.options.speed);
+        } else if ((newWidth < currWidth) && (direction === "both" || direction === "backward") && !dontAnimate) {
+            animateProgress(that.indicator, newWidth, that.options.speed);
+        } else {
+            that.indicator.width(newWidth);
+        }
+    };
+         
+    var percentToPixels = function (that, percent) {
+        // progress does not support percents over 100, also all numbers are rounded to integers
+        return Math.round((Math.min(percent, 100) * that.progressBar.width()) / 100);
+    };
+    
+    var refreshRelativeWidth = function (that)  {
+        var pixels = Math.max(percentToPixels(that, parseFloat(that.storedPercent)), that.options.minWidth);
+        updateWidth(that, pixels, true);
+    };
+        
+    var initARIA = function (ariaElement) {
+        ariaElement.attr("role", "progressbar");
+        ariaElement.attr("aria-valuemin", "0");
+        ariaElement.attr("aria-valuemax", "100");
+        ariaElement.attr("aria-live", "assertive");
+        ariaElement.attr("aria-busy", "false");
+        ariaElement.attr("aria-valuenow", "0");
+        ariaElement.attr("aria-valuetext", "");
+    };
+    
+    var updateARIA = function (that, percent) {
+        var busy = percent < 100 && percent > 0;
+        that.ariaElement.attr("aria-busy", busy);
+        that.ariaElement.attr("aria-valuenow", percent);    
+        if (busy) {
+            var busyString = fluid.stringTemplate(that.options.ariaBusyText, {percentComplete : percent});                  
+            that.ariaElement.attr("aria-valuetext", busyString);
+        } else if (percent === 100) {
+            that.ariaElement.attr("aria-valuetext", that.options.ariaDoneText);
+        }
+    };
+        
+    var updateText = function (label, value) {
+        label.html(value);
+    };
+    
+    var repositionIndicator = function (that) {
+        that.indicator.css("top", that.progressBar.position().top)
+            .css("left", 0)
+            .height(that.progressBar.height());
+        refreshRelativeWidth(that);
+    };
+        
+    var updateProgress = function (that, percent, labelText, animationForShow) {
+        
+        // show progress before updating, jQuery will handle the case if the object is already displayed
+        showProgress(that, animationForShow);
+            
+        // do not update if the value of percent is falsey
+        if (percent !== null) {
+            that.storedPercent = percent;
+        
+            var pixels = Math.max(percentToPixels(that, parseFloat(percent)), that.options.minWidth);   
+            updateWidth(that, pixels);
+        }
+        
+        if (labelText !== null) {
+            updateText(that.label, labelText);
+        }
+        
+        // update ARIA
+        if (that.ariaElement) {
+            updateARIA(that, percent);
+        }
+    };
+        
+    var setupProgress = function (that) {
+        that.displayElement = that.locate("displayElement");
+
+        // hide file progress in case it is showing
+        if (that.options.initiallyHidden) {
+            that.displayElement.hide();
+        }
+
+        that.progressBar = that.locate("progressBar");
+        that.label = that.locate("label");
+        that.indicator = that.locate("indicator");
+        that.ariaElement = that.locate("ariaElement");
+        
+        that.indicator.width(that.options.minWidth);
+
+        that.storedPercent = 0;
+                
+        // initialize ARIA
+        if (that.ariaElement) {
+            initARIA(that.ariaElement);
+        }
+
+    };
+           
+    /**
+    * Instantiates a new Progress component.
+    * 
+    * @param {jQuery|Selector|Element} container the DOM element in which the Uploader lives
+    * @param {Object} options configuration options for the component.
+    */
+    fluid.progress = function (container, options) {
+        var that = fluid.initView("fluid.progress", container, options);
+        setupProgress(that);
+        
+        /**
+         * Shows the progress bar if is currently hidden.
+         * 
+         * @param {Object} animation a custom animation used when showing the progress bar
+         */
+        that.show = function (animation) {
+            showProgress(that, animation);
+        };
+        
+        /**
+         * Hides the progress bar if it is visible.
+         * 
+         * @param {Number} delay the amount of time to wait before hiding
+         * @param {Object} animation a custom animation used when hiding the progress bar
+         */
+        that.hide = function (delay, animation) {
+            hideProgress(that, delay, animation);
+        };
+        
+        /**
+         * Updates the state of the progress bar.
+         * This will automatically show the progress bar if it is currently hidden.
+         * Percentage is specified as a decimal value, but will be automatically converted if needed.
+         * 
+         * 
+         * @param {Number|String} percentage the current percentage, specified as a "float-ish" value 
+         * @param {String} labelValue the value to set for the label; this can be an HTML string
+         * @param {Object} animationForShow the animation to use when showing the progress bar if it is hidden
+         */
+        that.update = function (percentage, labelValue, animationForShow) {
+            updateProgress(that, percentage, labelValue, animationForShow);
+        };
+        
+        that.refreshView = function () {
+            repositionIndicator(that);
+        };
+                        
+        return that;  
+    };
+      
+    fluid.defaults("fluid.progress", {  
+        selectors: {
+            displayElement: ".flc-progress", // required, the element that gets displayed when progress is displayed, could be the indicator or bar or some larger outer wrapper as in an overlay effect
+            progressBar: ".flc-progress-bar", //required
+            indicator: ".flc-progress-indicator", //required
+            label: ".flc-progress-label", //optional
+            ariaElement: ".flc-progress-bar" // usually required, except in cases where there are more than one progressor for the same data such as a total and a sub-total
+        },
+        
+        // progress display and hide animations, use the jQuery animation primatives, set to false to use no animation
+        // animations must be symetrical (if you hide with width, you'd better show with width) or you get odd effects
+        // see jQuery docs about animations to customize
+        showAnimation: {
+            params: {
+                opacity: "show"
+            }, 
+            duration: "slow", 
+            callback: null
+        }, // equivalent of $().fadeIn("slow")
+        
+        hideAnimation: {
+            params: {
+                opacity: "hide"
+            }, 
+            duration: "slow", 
+            callback: null
+        }, // equivalent of $().fadeOut("slow")
+
+        minWidth: 5, // 0 length indicators can look broken if there is a long pause between updates
+        delay: 0, // the amount to delay the fade out of the progress
+        speed: 200, // default speed for animations, pretty fast
+        animate: "forward", // suppport "forward", "backward", and "both", any other value is no animation either way
+        initiallyHidden: true, // supports progress indicators which may always be present
+        updatePosition: false,
+        
+        ariaBusyText: "Progress is %percentComplete percent complete",
+        ariaDoneText: "Progress is complete."
+    });
+    
+})(jQuery, fluid_1_1);
+/*
+Copyright 2008-2009 University of Cambridge
+Copyright 2008-2009 University of Toronto
+Copyright 2007-2009 University of California, Berkeley
+
+Licensed under the Educational Community License (ECL), Version 2.0 or the New
+BSD license. You may not use this file except in compliance with one these
+Licenses.
+
+You may obtain a copy of the ECL 2.0 License and BSD License at
+https://source.fluidproject.org/svn/LICENSE.txt
+*/
+
+/*global jQuery*/
+/*global fluid_1_1*/
+
+fluid_1_1 = fluid_1_1 || {};
+
+/***********************
+ * Demo Upload Manager *
+ ***********************/
+
+(function ($, fluid) {
+    
+    var updateProgress = function (file, events, demoState, isUploading) {
+        if (!isUploading) {
+            return;
+        }
+        
+        var chunk = Math.min(demoState.chunkSize, file.size);
+        demoState.bytesUploaded = Math.min(demoState.bytesUploaded + chunk, file.size);
+        events.onFileProgress.fire(file, demoState.bytesUploaded, file.size);
+    };
+    
+        
+    var fireAfterFileComplete = function (that, file) {
+        // this is a horrible hack that needs to be addressed.
+        if (that.swfUploadSettings) {
+            that.swfUploadSettings.upload_complete_handler(file); 
+        } else {
+            that.events.afterFileComplete.fire(file);
+        }
+    };
+    
+    var finishAndContinueOrCleanup = function (that, file) {
+        that.queueManager.finishFile(file);
+        if (that.queueManager.shouldUploadNextFile()) {
+            startUploading(that);
+        } else {
+            that.queueManager.complete();
+        }
+    };
+    
+    var finishUploading = function (that) {
+        if (!that.queue.isUploading) {
+            return;
+        }
+        
+        var file = that.demoState.currentFile;
+        file.filestatus = fluid.uploader.fileStatusConstants.COMPLETE;
+        that.events.onFileSuccess.fire(file);
+        that.demoState.fileIdx++;
+        finishAndContinueOrCleanup(that, file);
+    };
+    
+    var simulateUpload = function (that) {
+        if (!that.queue.isUploading) {
+            return;
+        }
+        
+        var file = that.demoState.currentFile;
+        if (that.demoState.bytesUploaded < file.size) {
+            that.invokeAfterRandomDelay(function () {
+                updateProgress(file, that.events, that.demoState, that.queue.isUploading);
+                simulateUpload(that);
+            });
+        } else {
+            finishUploading(that);
+        } 
+    };
+    
+    var startUploading = function (that) {
+        // Reset our upload stats for each new file.
+        that.demoState.currentFile = that.queue.files[that.demoState.fileIdx];
+        that.demoState.chunksForCurrentFile = Math.ceil(that.demoState.currentFile / that.demoState.chunkSize);
+        that.demoState.bytesUploaded = 0;
+        that.queue.isUploading = true;
+        
+        that.events.onFileStart.fire(that.demoState.currentFile);
+        that.demoState.currentFile.filestatus = fluid.uploader.fileStatusConstants.IN_PROGRESS;
+        simulateUpload(that);
+    };
+
+    var stopDemo = function (that) {
+        var file = that.demoState.currentFile;
+        file.filestatus = fluid.uploader.fileStatusConstants.CANCELLED;
+        that.queue.shouldStop = true;
+        
+        // In SWFUpload's world, pausing is a combinination of an UPLOAD_STOPPED error and a complete.
+        that.events.onFileError.fire(file, 
+                                     fluid.uploader.errorConstants.UPLOAD_STOPPED, 
+                                     "The demo upload was paused by the user.");
+        finishAndContinueOrCleanup(that, file);
+        that.events.onUploadStop.fire();
+    };
+    
+    var setupDemoUploadManager = function (that) {
+        if (that.options.simulateDelay === undefined || that.options.simulateDelay === null) {
+            that.options.simulateDelay = true;
+        }
+          
+        // Initialize state for our upload simulation.
+        that.demoState = {
+            fileIdx: 0,
+            chunkSize: 200000
+        };
+        
+        return that;
+    };
+       
+    /**
+     * The Demo Upload Manager wraps a standard upload manager and simulates the upload process.
+     * 
+     * @param {UploadManager} uploadManager the upload manager to wrap
+     */
+    fluid.demoUploadManager = function (uploadManager) {
+        var that = uploadManager;
+        
+        that.start = function () {
+            that.queueManager.start();
+            startUploading(that);   
+        };
+        
+        /**
+         * Cancels a simulated upload.
+         * This method overrides the default behaviour in SWFUploadManager.
+         */
+        that.stop = function () {
+            stopDemo(that);
+        };
+        
+        /**
+         * Invokes a function after a random delay by using setTimeout.
+         * If the simulateDelay option is false, the function is invoked immediately.
+         * 
+         * @param {Object} fn the function to invoke
+         */
+        that.invokeAfterRandomDelay = function (fn) {
+            var delay;
+            
+            if (that.options.simulateDelay) {
+                delay = Math.floor(Math.random() * 1000 + 100);
+                setTimeout(fn, delay);
+            } else {
+                fn();
+            }
+        };
+        
+        setupDemoUploadManager(that);
+        return that;
+    };
+})(jQuery, fluid_1_1);
+/*
+Copyright 2008-2009 University of Cambridge
+Copyright 2008-2009 University of Toronto
+Copyright 2007-2009 University of California, Berkeley
+
+Licensed under the Educational Community License (ECL), Version 2.0 or the New
+BSD license. You may not use this file except in compliance with one these
+Licenses.
+
+You may obtain a copy of the ECL 2.0 License and BSD License at
+https://source.fluidproject.org/svn/LICENSE.txt
+*/
+
+/*global SWFUpload*/
+/*global jQuery*/
+/*global fluid_1_1*/
+
+fluid_1_1 = fluid_1_1 || {};
+
+(function ($, fluid) {
+    
+    var filterFiles = function (files, filterFn) {
+        var filteredFiles = [];
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            if (filterFn(file) === true) {
+                filteredFiles.push(file);
+            }
+        }
+        
+        return filteredFiles;
+    };
+    
+    var getUploadedFiles = function (that) {
+        return filterFiles(that.files, function (file) {
+            return (file.filestatus === fluid.uploader.fileStatusConstants.COMPLETE);
+        });
+    };
+    
+    var getReadyFiles = function (that) {
+        return filterFiles(that.files, function (file) {
+            return (file.filestatus === fluid.uploader.fileStatusConstants.QUEUED || file.filestatus === fluid.uploader.fileStatusConstants.CANCELLED);
+        });
+    };
+    
+    var getErroredFiles = function (that) {
+        return filterFiles(that.files, function (file) {
+            return (file.filestatus === fluid.uploader.fileStatusConstants.ERROR);
+        });
+    };
+
+    var removeFile = function (that, file) {
+        // Remove the file from the collection and tell the world about it.
+        var idx = $.inArray(file, that.files);
+        that.files.splice(idx, 1);
+    };
+    
+    var clearCurrentBatch = function (that) {
+        that.currentBatch = {
+            fileIdx: -1,
+            files: [],
+            totalBytes: 0,
+            numFilesCompleted: 0,
+            numFilesErrored: 0,
+            bytesUploadedForFile: 0,
+            previousBytesUploadedForFile: 0,
+            totalBytesUploaded: 0
+        };
+    };
+    
+    var updateCurrentBatch = function (that) {
+        var readyFiles = that.getReadyFiles();
+        that.currentBatch.files = readyFiles;
+        that.currentBatch.totalBytes = fluid.fileQueue.sizeOfFiles(readyFiles);
+    };
+    
+    var setupCurrentBatch = function (that) {
+        clearCurrentBatch(that);
+        updateCurrentBatch(that);
+    };
+     
+    fluid.fileQueue = function () {
+        var that = {};
+        that.files = [];
+        that.isUploading = false;
+        
+        that.addFile = function (file) {
+            that.files.push(file);    
+        };
+        
+        that.removeFile = function (file) {
+            removeFile(that, file);
+        };
+        
+        that.totalBytes = function () {
+            return fluid.fileQueue.sizeOfFiles(that.files);
+        };
+        
+        that.getReadyFiles = function () {
+            return getReadyFiles(that);
+        };
+        
+        that.getErroredFiles = function () {
+            return getErroredFiles(that);
+        };
+        
+        that.sizeOfReadyFiles = function () {
+            return fluid.fileQueue.sizeOfFiles(that.getReadyFiles());
+        };
+        
+        that.getUploadedFiles = function () {
+            return getUploadedFiles(that);
+        };
+
+        that.sizeOfUploadedFiles = function () {
+            return fluid.fileQueue.sizeOfFiles(that.getUploadedFiles());
+        };
+
+        that.setupCurrentBatch = function () {
+            setupCurrentBatch(that);
+        };
+        
+        that.clearCurrentBatch = function () {
+            clearCurrentBatch(that);
+        };
+        
+        that.updateCurrentBatch = function () {
+            updateCurrentBatch(that);
+        };
+                
+        return that;
+    };
+    
+    fluid.fileQueue.sizeOfFiles = function (files) {
+        var totalBytes = 0;
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            totalBytes += file.size;
+        }        
+        return totalBytes;
+    };
+    
+    fluid.fileQueue.manager = function (queue, events) {
+        var that = {};
+        that.queue = queue;
+        that.events = events;
+        
+        that.start = function () {
+            that.queue.setupCurrentBatch();
+            that.queue.isUploading = true;
+            that.queue.shouldStop = false;
+            that.events.onUploadStart.fire(that.queue.currentBatch.files); 
+        };
+        
+        that.startFile = function () {
+            that.queue.currentBatch.fileIdx++;
+            that.queue.currentBatch.bytesUploadedForFile = 0;
+            that.queue.currentBatch.previousBytesUploadedForFile = 0; 
+        };
+                
+        that.finishFile = function (file) {
+            var batch = that.queue.currentBatch;
+            batch.numFilesCompleted++;
+            that.events.afterFileComplete.fire(file); 
+        };
+        
+        that.shouldUploadNextFile = function () {
+            return !that.queue.shouldStop && that.queue.isUploading && that.queue.currentBatch.numFilesCompleted < that.queue.currentBatch.files.length;
+        };
+        
+        that.complete = function () {
+            that.events.afterUploadComplete.fire(that.queue.currentBatch.files);
+            that.queue.clearCurrentBatch();
+        };
+        
+        return that;
+    };
+          
+})(jQuery, fluid_1_1);
+/*
+Copyright 2008-2009 University of Cambridge
+Copyright 2008-2009 University of Toronto
+Copyright 2007-2009 University of California, Berkeley
+
+Licensed under the Educational Community License (ECL), Version 2.0 or the New
+BSD license. You may not use this file except in compliance with one these
+Licenses.
+
+You may obtain a copy of the ECL 2.0 License and BSD License at
+https://source.fluidproject.org/svn/LICENSE.txt
+*/
+
+/*global jQuery*/
+/*global fluid_1_1*/
+
+fluid_1_1 = fluid_1_1 || {};
+
+(function ($, fluid) {
+    
+    var refreshView = function (that) {
+        var maxHeight = that.options.maxHeight;
+        var isOverMaxHeight = (that.scrollingElm.children().eq(0).height() > maxHeight);
+        var setHeight = (isOverMaxHeight) ? maxHeight : "";
+        that.scrollingElm.height(setHeight);
+    };
+    
+    var scrollBottom = function (that) {
+        that.scrollingElm[0].scrollTop = that.scrollingElm[0].scrollHeight;
+    };
+    
+    var scrollTo = function (that, element) {
+        if (!element || element.length < 1) {
+            return;
+        }
+        
+        var padTop = 0;
+        var padBottom = 0;
+        
+        var elmPosTop = element[0].offsetTop;
+        var elmHeight = element.height();
+        var containerScrollTop = that.scrollingElm[0].scrollTop;
+        var containerHeight = that.scrollingElm.height();
+        
+        if (that.options.padScroll) {
+            // if the combined height of the elements is greater than the 
+            // viewport then then scrollTo element would not be in view
+            var prevElmHeight = element.prev().height();
+            padTop = (prevElmHeight + elmHeight <= containerHeight) ? prevElmHeight : 0;
+            var nextElmHeight = element.next().height();
+            padBottom =  (nextElmHeight + elmHeight <= containerHeight) ? nextElmHeight : 0;
+        }
+        
+        // if the top of the row is ABOVE the view port move the row into position
+        if ((elmPosTop - padTop) < containerScrollTop) {
+            that.scrollingElm[0].scrollTop = elmPosTop - padTop;
+        }
+        
+        // if the bottom of the row is BELOW the viewport then scroll it into position
+        if (((elmPosTop + elmHeight) + padBottom) > (containerScrollTop + containerHeight)) {
+            elmHeight = (elmHeight < containerHeight) ? elmHeight : containerHeight;
+            that.scrollingElm[0].scrollTop = (elmPosTop - containerHeight + elmHeight + padBottom);
+        }
+    };
+    
+    var setupScroller = function (that) {
+        that.scrollingElm = that.container.parents(that.options.selectors.wrapper);
+        
+        // We should render our own sensible default if the scrolling element is missing.
+        if (!that.scrollingElm.length) {
+            fluid.fail({
+                name: "Missing Scroller",
+                message: "The scroller wrapper element was not found."
+            });
+        }
+        
+        // set the height of the scroller unless this is IE6
+        if (!$.browser.msie || $.browser.version > 6) {
+            that.scrollingElm.css("max-height", that.options.maxHeight);
+        }
+    };
+    
+    /**
+     * Creates a new Scroller component.
+     * 
+     * @param {Object} container the element containing the collection of things to make scrollable 
+     * @param {Object} options configuration options for the component
+     */
+    fluid.scroller = function (container, options) {
+        var that = fluid.initView("fluid.scroller", container, options);
+        setupScroller(that);
+
+        /**
+         * Scrolls the specified element into view
+         * 
+         * @param {jQuery} element the element to scroll into view
+         */
+        that.scrollTo = function (element) {
+            scrollTo(that, element);
+        };
+        
+        /**
+         * Scrolls to the bottom of the view.
+         */
+        that.scrollBottom = function () {
+            scrollBottom(that);
+        };
+        
+        /**
+         * Refreshes the scroller's appearance based on any changes to the document.
+         */
+        that.refreshView = function () {
+            if ($.browser.msie && $.browser.version < 7) {
+                refreshView(that);
+            }
+        };
+        
+        that.refreshView();
+        return that;
+    };
+    
+    fluid.defaults("fluid.scroller", {  
+        selectors: {
+            wrapper: ".flc-scroller"
+        },
+        
+        maxHeight: 180,
+        
+        padScroll: true
+    });
+    
+})(jQuery, fluid_1_1);
+/*
+Copyright 2008-2009 University of Cambridge
+Copyright 2008-2009 University of Toronto
+Copyright 2007-2009 University of California, Berkeley
+
+Licensed under the Educational Community License (ECL), Version 2.0 or the New
+BSD license. You may not use this file except in compliance with one these
+Licenses.
+
+You may obtain a copy of the ECL 2.0 License and BSD License at
+https://source.fluidproject.org/svn/LICENSE.txt
+*/
+
+/*global SWFUpload*/
+/*global swfobject*/
+/*global jQuery*/
+/*global fluid_1_1*/
+
+fluid_1_1 = fluid_1_1 || {};
+
+(function ($, fluid) {
+
+    /*****************************
+     * SWFUpload Setup Decorator *
+     *****************************/
+    
+    var unbindSelectFiles = function () {
+        // There's a bug in SWFUpload 2.2.0b3 that causes the entire browser to crash 
+        // if selectFile() or selectFiles() is invoked. Remove them so no one will accidently crash their browser.
+        var emptyFunction = function () {};
+        SWFUpload.prototype.selectFile = emptyFunction;
+        SWFUpload.prototype.selectFiles = emptyFunction;
+    };
+    
+    var prepareUpstreamOptions = function (that, uploader) {
+        that.returnedOptions = {
+            uploadManager: {
+                type: uploader.options.uploadManager.type || uploader.options.uploadManager
+            }
+        };
+    };
+    
+    var createFlash9MovieContainer = function (that) {
+        var container = $("<div><span></span></div>");
+        container.addClass(that.options.styles.flash9Container);
+        $("body").append(container);
+        return container;
+    };
+    
+    var setupForFlash9 = function (that) {
+        var flashContainer = createFlash9MovieContainer(that);
+        that.returnedOptions.uploadManager.options = {
+            flashURL: that.options.flash9URL || undefined,
+            flashButtonPeerId: fluid.allocateSimpleId(flashContainer.children().eq(0))
+        };
+    };
+    
+    var createFlash10MovieContainer = function (that, uploaderContainer) {        
+        // Wrap the whole uploader first.
+        uploaderContainer.wrap("<div class='" + that.options.styles.uploaderWrapperFlash10 + "'></div>");
+        
+        // Then create a container and placeholder for the Flash movie as a sibling to the uploader.
+        var flashContainer = $("<div><span></span></div>");
+        flashContainer.addClass(that.options.styles.browseButtonOverlay);
+        uploaderContainer.after(flashContainer);
+        unbindSelectFiles();        
+        return flashContainer;
+    };
+    
+    var setupForFlash10 = function (that, uploader) {
+        var o = that.options,
+            flashContainer = createFlash10MovieContainer(that, uploader.container);
+            browseButton = uploader.locate("browseButton"),
+            h = o.flashButtonHeight || browseButton.outerHeight(),
+            w = o.flashButtonWidth || browseButton.outerWidth();
+        
+        fluid.tabindex(browseButton, -1);
+        that.isTransparent = o.flashButtonAlwaysVisible ? false : (!$.browser.msie || o.transparentEvenInIE);
+        that.returnedOptions.uploadManager.options = {
+            flashURL: o.flash10URL || undefined,
+            flashButtonImageURL: that.isTransparent ? undefined : o.flashButtonImageURL, 
+            flashButtonPeerId: fluid.allocateSimpleId(flashContainer.children().eq(0)),
+            flashButtonHeight: h,
+            flashButtonWidth: w,
+            flashButtonWindowMode: that.isTransparent ? SWFUpload.WINDOW_MODE.TRANSPARENT : SWFUpload.WINDOW_MODE.OPAQUE,
+            flashButtonCursorEffect: SWFUpload.CURSOR.HAND,
+            listeners: {
+                onUploadStart: function () {
+                    uploader.uploadManager.swfUploader.setButtonDisabled(true);
+                },
+                afterUploadComplete: function () {
+                    uploader.uploadManager.swfUploader.setButtonDisabled(false);
+                }
+            }   
+        };
+    };
+    
+    /**
+     * SWFUploadSetupDecorator is a decorator designed to setup the DOM correctly for SWFUpload and configure
+     * the Uploader component according to the version of Flash and browser currently running.
+     * 
+     * @param {Uploader} uploader the Uploader component to decorate
+     * @param {options} options configuration options for the decorator
+     */
+    fluid.swfUploadSetupDecorator = function (uploader, options) {
+        var that = {};
+        fluid.mergeComponentOptions(that, "fluid.swfUploadSetupDecorator", options);
+               
+        that.flashVersion = swfobject.getFlashPlayerVersion().major;
+        prepareUpstreamOptions(that, uploader);  
+        if (that.flashVersion === 9) {
+            setupForFlash9(that, uploader);
+        } else {
+            setupForFlash10(that, uploader);
+        }
+        
+        return that;
+    };
+    
+    fluid.defaults("fluid.swfUploadSetupDecorator", {
+        // The flash9URL and flash10URLs are now deprecated in favour of the flashURL option in upload manager.
+        flashButtonAlwaysVisible: false,
+        transparentEvenInIE: true,
+        
+        // Used only when the Flash movie is visible.
+        flashButtonImageURL: "../images/browse.png",
+        
+        styles: {
+            browseButtonOverlay: "fl-uploader-browse-overlay",
+            flash9Container: "fl-uploader-flash9-container",
+            uploaderWrapperFlash10: "fl-uploader-flash10-wrapper"
+        }
+    });
+    
+    
+    /***********************
+     * SWF Upload Manager *
+     ***********************/
+    
+    // Maps SWFUpload's setting names to our component's setting names.
+    var swfUploadOptionsMap = {
+        uploadURL: "upload_url",
+        flashURL: "flash_url",
+        postParams: "post_params",
+        fileSizeLimit: "file_size_limit",
+        fileTypes: "file_types",
+        fileTypesDescription: "file_types_description",
+        fileUploadLimit: "file_upload_limit",
+        fileQueueLimit: "file_queue_limit",
+        flashButtonPeerId: "button_placeholder_id",
+        flashButtonImageURL: "button_image_url",
+        flashButtonHeight: "button_height",
+        flashButtonWidth: "button_width",
+        flashButtonWindowMode: "button_window_mode",
+        flashButtonCursorEffect: "button_cursor",
+        debug: "debug"
+    };
+    
+    // Maps SWFUpload's callback names to our component's callback names.
+    var swfUploadEventMap = {
+        afterReady: "swfupload_loaded_handler",
+        onFileDialog: "file_dialog_start_handler",
+        afterFileQueued: "file_queued_handler",
+        onQueueError: "file_queue_error_handler",
+        afterFileDialog: "file_dialog_complete_handler",
+        onFileStart: "upload_start_handler",
+        onFileProgress: "upload_progress_handler",
+        onFileError: "upload_error_handler",
+        onFileSuccess: "upload_success_handler"
+    };
+    
+    var mapNames = function (nameMap, source, target) {
+        var result = target || {};
+        for (var key in source) {
+            var mappedKey = nameMap[key];
+            if (mappedKey) {
+                result[mappedKey] = source[key];
+            }
+        }
+        
+        return result;
+    };
+    
+    // For each event type, hand the fire function to SWFUpload so it can fire the event at the right time for us.
+    var mapEvents = function (that, nameMap, target) {
+        var result = target || {};
+        for (var eventType in that.events) {
+            var fireFn = that.events[eventType].fire;
+            var mappedName = nameMap[eventType];
+            if (mappedName) {
+                result[mappedName] = fireFn;
+            }   
+        }
+        
+        result.upload_complete_handler = function (file) {
+            that.queueManager.finishFile(file);
+            if (that.queueManager.shouldUploadNextFile()) {
+                that.swfUploader.startUpload();
+            } else {
+                if (that.queueManager.queue.shouldStop) {
+                    that.swfUploader.stopUpload();
+                }
+                that.queueManager.complete();
+            }
+        };
+
+        return result;
+    };
+    
+    // Invokes the OS browse files dialog, allowing either single or multiple select based on the options.
+    var browse = function (that) {
+        if (that.queue.isUploading) {
+            return;
+        }
+                   
+        if (that.options.fileQueueLimit === 1) {
+            that.swfUploader.selectFile();
+        } else {
+            that.swfUploader.selectFiles();
+        }  
+    };
+    
+    /* FLUID-822: while stopping the upload cycle while a file is in mid-upload should be possible
+     * in practice, it sets up a state where when the upload cycle is restarted SWFUpload will get stuck
+     * therefor we only stop the upload after a file has completed but before the next file begins. 
+     */
+    
+    var stopUpload = function (that) {
+        that.queue.shouldStop = true;
+        that.events.onUploadStop.fire();
+    };
+        
+    var bindEvents = function (that) {
+        var fileStatusUpdater = function (file) {
+            fluid.find(that.queue.files, function (potentialMatch) {
+                if (potentialMatch.id === file.id) {
+                    potentialMatch.filestatus = file.filestatus;
+                    return true;
+                }
+            });
+        };
+
+        // Add a listener that will keep our file queue model in sync with SWFUpload.
+        that.events.afterFileQueued.addListener(function (file) {
+            that.queue.addFile(file); 
+        });
+
+        that.events.onFileStart.addListener(function (file) {
+            that.queueManager.startFile();
+            fileStatusUpdater(file);
+        });
+        
+        that.events.onFileProgress.addListener(function (file, currentBytes, totalBytes) {
+            var currentBatch = that.queue.currentBatch;
+            var byteIncrement = currentBytes - currentBatch.previousBytesUploadedForFile;
+            currentBatch.totalBytesUploaded += byteIncrement;
+            currentBatch.bytesUploadedForFile += byteIncrement;
+            currentBatch.previousBytesUploadedForFile = currentBytes;
+            fileStatusUpdater(file);
+        });
+        
+        that.events.onFileError.addListener(function (file, error) {
+            if (error === fluid.uploader.errorConstants.UPLOAD_STOPPED) {
+                that.queue.isUploading = false;
+            } else if (that.queue.isUploading) {
+                that.queue.currentBatch.totalBytesUploaded += file.size;
+                that.queue.currentBatch.numFilesErrored++;
+            }
+            fileStatusUpdater(file);
+        });
+        
+        that.events.onFileSuccess.addListener(function (file) {
+            if (that.queue.currentBatch.bytesUploadedForFile === 0) {
+                that.queue.currentBatch.totalBytesUploaded += file.size;
+            }
+            fileStatusUpdater(file);
+        });
+        
+        that.events.afterUploadComplete.addListener(function () {
+            that.queue.isUploading = false; 
+        });
+    };
+    
+    var removeFile = function (that, file) {
+        that.queue.removeFile(file);
+        that.swfUploader.cancelUpload(file.id);
+        that.events.afterFileRemoved.fire(file);
+    };
+    
+    // Instantiates a new SWFUploader instance and attaches it the upload manager.
+    var setupSwfUploadManager = function (that, events) {
+        that.events = events;
+        that.queue = fluid.fileQueue();
+        that.queueManager = fluid.fileQueue.manager(that.queue, that.events);
+        
+        // Map the event and settings names to SWFUpload's expectations.
+        that.swfUploadSettings = mapNames(swfUploadOptionsMap, that.options);
+        mapEvents(that, swfUploadEventMap, that.swfUploadSettings);
+        
+        // Setup the instance.
+        that.swfUploader = new SWFUpload(that.swfUploadSettings);
+        
+        bindEvents(that);
+    };
+    
+    /**
+     * Server Upload Manager is responsible for coordinating with the Flash-based SWFUploader library,
+     * providing a simple way to start, pause, and cancel the uploading process. It requires a working
+     * server to respond to the upload POST requests.
+     * 
+     * @param {Object} eventBindings an object containing upload lifecycle callbacks
+     * @param {Object} options configuration options for the upload manager
+     */
+    fluid.swfUploadManager = function (events, options) {
+        var that = {};
+        
+        // This needs to be refactored!
+        fluid.mergeComponentOptions(that, "fluid.swfUploadManager", options);
+        fluid.mergeListeners(events, that.options.listeners);
+   
+        /**
+         * Opens the native OS browse file dialog.
+         */
+        that.browseForFiles = function () {
+            browse(that);
+        };
+        
+        /**
+         * Removes the specified file from the upload queue.
+         * 
+         * @param {File} file the file to remove
+         */
+        that.removeFile = function (file) {
+            removeFile(that, file);
+        };
+        
+        /**
+         * Starts uploading all queued files to the server.
+         */
+        that.start = function () {
+            that.queueManager.start();
+            that.swfUploader.startUpload();
+        };
+        
+        /**
+         * Cancels an in-progress upload.
+         */
+        that.stop = function () {
+            stopUpload(that);
+        };
+        
+        setupSwfUploadManager(that, events);
+        return that;
+    };
+    
+    fluid.defaults("fluid.swfUploadManager", {
+        uploadURL: "",
+        flashURL: "../../../lib/swfupload/flash/swfupload.swf",
+        flashButtonPeerId: "",
+        postParams: {},
+        fileSizeLimit: "20480",
+        fileTypes: "*",
+        fileTypesDescription: null,
+        fileUploadLimit: 0,
+        fileQueueLimit: 0,
+        debug: false
+    });
+    
+})(jQuery, fluid_1_1);
+/*
+Copyright 2007-2009 University of Toronto
+Copyright 2007-2009 University of California, Berkeley
+Copyright 2007-2009 University of Cambridge
+
+Licensed under the Educational Community License (ECL), Version 2.0 or the New
+BSD license. You may not use this file except in compliance with one these
+Licenses.
+
+You may obtain a copy of the ECL 2.0 License and BSD License at
+https://source.fluidproject.org/svn/LICENSE.txt
+*/
+
+/*global SWFUpload*/
+/*global swfobject*/
+/*global jQuery*/
+/*global fluid_1_1*/
+
+fluid_1_1 = fluid_1_1 || {};
+
+
+/*******************
+ * File Queue View *
+ *******************/
+
+(function ($, fluid) {
+    
+    // Real data binding would be nice to replace these two pairs.
+    var rowForFile = function (that, file) {
+        return that.locate("fileQueue").find("#" + file.id);
+    };
+    
+    var errorRowForFile = function (that, file) {
+        return $("#" + file.id + "_error", that.container);
+    };
+    
+    var fileForRow = function (that, row) {
+        var files = that.uploadManager.queue.files;
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            if (file.id.toString() === row.attr("id")) {
+                return file;
+            }
+        }
+        return null;
+    };
+    
+    var progressorForFile = function (that, file) {
+        var progressId = file.id + "_progress";
+        return that.fileProgressors[progressId];
+    };
+    
+    var startFileProgress = function (that, file) {
+        var fileRowElm = rowForFile(that, file);
+        that.scroller.scrollTo(fileRowElm);
+         
+        // update the progressor and make sure that it's in position
+        var fileProgressor = progressorForFile(that, file);
+        fileProgressor.refreshView();
+        fileProgressor.show();
+    };
+        
+    var updateFileProgress = function (that, file, fileBytesComplete, fileTotalBytes) {
+        var filePercent = fluid.uploader.derivePercent(fileBytesComplete, fileTotalBytes);
+        var filePercentStr = filePercent + "%";    
+        progressorForFile(that, file).update(filePercent, filePercentStr);
+    };
+    
+    var hideFileProgress = function (that, file) {
+        var fileRowElm = rowForFile(that, file);
+        progressorForFile(that, file).hide();
+        if (file.filestatus === fluid.uploader.fileStatusConstants.COMPLETE) {
+            that.locate("fileIconBtn", fileRowElm).removeClass(that.options.styles.dim);
+        } 
+    };
+    
+    var removeFileProgress = function (that, file) {
+        var fileProgressor = progressorForFile(that, file);
+        if (!fileProgressor) {
+            return;
+        }
+        var rowProgressor = fileProgressor.displayElement;
+        rowProgressor.remove();
+    };
+ 
+    var animateRowRemoval = function (that, row) {
+        row.fadeOut("fast", function () {
+            row.remove();  
+            that.refreshView();
+        });
+    };
+    
+    var removeFileErrorRow = function (that, file) {
+        if (file.filestatus === fluid.uploader.fileStatusConstants.ERROR) {
+            animateRowRemoval(that, errorRowForFile(that, file));
+        }
+    };
+   
+    var removeFileAndRow = function (that, file, row) {
+        // Clean up the stuff associated with a file row.
+        removeFileProgress(that, file);
+        removeFileErrorRow(that, file);
+        
+        // Remove the file itself.
+        that.uploadManager.removeFile(file);
+        animateRowRemoval(that, row);
+    };
+    
+    var removeFileForRow = function (that, row) {
+        var file = fileForRow(that, row);
+        if (!file || file.filestatus === fluid.uploader.fileStatusConstants.COMPLETE) {
+            return;
+        }
+        removeFileAndRow(that, file, row);
+    };
+    
+    var removeRowForFile = function (that, file) {
+        var row = rowForFile(that, file);
+        removeFileAndRow(that, file, row);
+    };
+    
+    var bindHover = function (row, styles) {
+        var over = function () {
+            if (row.hasClass(styles.ready) && !row.hasClass(styles.uploading)) {
+                row.addClass(styles.hover);
+            }
+        };
+        
+        var out = function () {
+            if (row.hasClass(styles.ready) && !row.hasClass(styles.uploading)) {
+                row.removeClass(styles.hover);
+            }   
+        };
+        row.hover(over, out);
+    };
+    
+    var bindDeleteKey = function (that, row) {
+        var deleteHandler = function () {
+            removeFileForRow(that, row);
+        };
+       
+        fluid.activatable(row, null, {
+            additionalBindings: [{
+                key: $.ui.keyCode.DELETE, 
+                activateHandler: deleteHandler
+            }]
+        });
+    };
+    
+    var bindRowHandlers = function (that, row) {
+        if ($.browser.msie && $.browser.version < 7) {
+            bindHover(row, that.options.styles);
+        }
+        
+        that.locate("fileIconBtn", row).click(function () {
+            removeFileForRow(that, row);
+        });
+        
+        bindDeleteKey(that, row);
+    };
+    
+    var renderRowFromTemplate = function (that, file) {
+        var row = that.rowTemplate.clone();
+        row.removeClass(that.options.styles.hiddenTemplate);
+        that.locate("fileName", row).text(file.name);
+        that.locate("fileSize", row).text(fluid.uploader.formatFileSize(file.size));
+        that.locate("fileIconBtn", row).addClass(that.options.styles.remove);
+        row.attr("id", file.id);
+        row.addClass(that.options.styles.ready);
+        bindRowHandlers(that, row);
+        
+        return row;    
+    };
+    
+    var createProgressorFromTemplate = function (that, row) {
+        // create a new progress bar for the row and position it
+        var rowProgressor = that.rowProgressorTemplate.clone();
+        var rowId = row.attr("id");
+        var progressId = rowId + "_progress";
+        rowProgressor.attr("id", progressId);
+        rowProgressor.css("top", row.position().top);
+        rowProgressor.height(row.height()).width(5);
+        that.container.after(rowProgressor);
+       
+        that.fileProgressors[progressId] = fluid.progress(that.uploadContainer, {
+            selectors: {
+                progressBar: "#" + rowId,
+                displayElement: "#" + progressId,
+                label: "#" + progressId + " .fl-uploader-file-progress-text",
+                indicator: "#" + progressId
+            }
+        });
+    };
+    
+    var addFile = function (that, file) {
+        var row = renderRowFromTemplate(that, file);
+        /* FLUID-2720 - do not hide the row under IE8 */
+        if (!($.browser.msie && ($.browser.version >= 8))) {
+            row.hide();
+        }
+        that.container.append(row);
+        row.fadeIn("slow");
+        that.scroller.scrollBottom();
+        createProgressorFromTemplate(that, row);
+
+        that.refreshView();
+    };
+    
+    var prepareForUpload = function (that) {
+        var rowButtons = that.locate("fileIconBtn", that.locate("fileRows"));
+        rowButtons.attr("disabled", "disabled");
+        rowButtons.addClass(that.options.styles.dim);    
+    };
+
+    var refreshAfterUpload = function (that) {
+        var rowButtons = that.locate("fileIconBtn", that.locate("fileRows"));
+        rowButtons.removeAttr("disabled");
+        rowButtons.removeClass(that.options.styles.dim);    
+    };
+        
+    var changeRowState = function (that, row, newState) {
+        row.removeClass(that.options.styles.ready).removeClass(that.options.styles.error).addClass(newState);
+    };
+    
+    var markRowAsComplete = function (that, file) {
+        // update styles and keyboard bindings for the file row
+        var row = rowForFile(that, file);
+        changeRowState(that, row, that.options.styles.uploaded);
+        row.attr("title", that.options.strings.status.success);
+        fluid.enabled(row, false);
+        
+        // update the click event and the styling for the file delete button
+        var removeRowBtn = that.locate("fileIconBtn", row);
+        removeRowBtn.unbind("click");
+        removeRowBtn.removeClass(that.options.styles.remove);
+		removeRowBtn.attr("title", that.options.strings.status.success); 
+    };
+    
+    var renderErrorInfoRowFromTemplate = function (that, fileRow, error) {
+        // Render the row by cloning the template and binding its id to the file.
+        var errorRow = that.errorInfoRowTemplate.clone();
+        errorRow.attr("id", fileRow.attr("id") + "_error");
+        
+        // Look up the error message and render it.
+        var errorType = fluid.keyForValue(fluid.uploader.errorConstants, error);
+        var errorMsg = that.options.strings.errors[errorType];
+        that.locate("errorText", errorRow).text(errorMsg);
+        fileRow.after(errorRow);
+        that.scroller.scrollTo(errorRow);
+    };
+    
+    var showErrorForFile = function (that, file, error) {
+        hideFileProgress(that, file);
+        if (file.filestatus === fluid.uploader.fileStatusConstants.ERROR) {
+            var fileRowElm = rowForFile(that, file);
+            changeRowState(that, fileRowElm, that.options.styles.error);
+            renderErrorInfoRowFromTemplate(that, fileRowElm, error);
+        }
+    };
+    
+    var bindModelEvents = function (that) {
+        that.returnedOptions = {
+            listeners: {
+                afterFileQueued: that.addFile,
+                onUploadStart: that.prepareForUpload,
+                onFileStart: that.showFileProgress,
+                onFileProgress: that.updateFileProgress,
+                onFileSuccess: that.markFileComplete,
+                onFileError: that.showErrorForFile,
+                afterFileComplete: that.hideFileProgress,
+                afterUploadComplete: that.refreshAfterUpload
+            }
+        };
+    };
+    
+    var addKeyboardNavigation = function (that) {
+        fluid.tabbable(that.container);
+        that.selectableContext = fluid.selectable(that.container, {
+            selectableSelector: that.options.selectors.fileRows,
+            onSelect: function (itemToSelect) {
+                $(itemToSelect).addClass(that.options.styles.selected);
+            },
+            onUnselect: function (selectedItem) {
+                $(selectedItem).removeClass(that.options.styles.selected);
+            }
+        });
+    };
+    
+    var prepareTemplateElements = function (that) {
+        // Grab our template elements out of the DOM.  
+        that.rowTemplate = that.locate("rowTemplate").remove();
+        that.errorInfoRowTemplate = that.locate("errorInfoRowTemplate").remove();
+        that.errorInfoRowTemplate.removeClass(that.options.styles.hiddenTemplate);
+        that.rowProgressorTemplate = that.locate("rowProgressorTemplate", that.uploadContainer).remove();
+    };
+    
+    var setupFileQueue = function (that, uploadManager) {
+        that.uploadManager = uploadManager;
+        that.scroller = fluid.scroller(that.container);
+        prepareTemplateElements(that);         
+        addKeyboardNavigation(that); 
+        bindModelEvents(that);
+    };
+    
+    /**
+     * Creates a new File Queue view.
+     * 
+     * @param {jQuery|selector} container the file queue's container DOM element
+     * @param {UploadManager} uploadManager an upload manager model instance
+     * @param {Object} options configuration options for the view
+     */
+    fluid.fileQueueView = function (container, parentContainer, uploadManager, options) {
+        var that = fluid.initView("fluid.fileQueueView", container, options);
+        that.uploadContainer = parentContainer;
+        that.fileProgressors = {};
+        
+        that.addFile = function (file) {
+            addFile(that, file);
+        };
+        
+        that.removeFile = function (file) {
+            removeRowForFile(that, file);
+        };
+        
+        that.prepareForUpload = function () {
+            prepareForUpload(that);
+        };
+        
+        that.refreshAfterUpload = function () {
+            refreshAfterUpload(that);
+        };
+
+        that.showFileProgress = function (file) {
+            startFileProgress(that, file);
+        };
+        
+        that.updateFileProgress = function (file, fileBytesComplete, fileTotalBytes) {
+            updateFileProgress(that, file, fileBytesComplete, fileTotalBytes); 
+        };
+        
+        that.markFileComplete = function (file) {
+            progressorForFile(that, file).update(100, "100%");
+            markRowAsComplete(that, file);
+        };
+        
+        that.showErrorForFile = function (file, error) {
+            showErrorForFile(that, file, error);
+        };
+        
+        that.hideFileProgress = function (file) {
+            hideFileProgress(that, file);
+        };
+        
+        that.refreshView = function () {
+            that.scroller.refreshView();
+            that.selectableContext.refresh();
+        };
+        
+        setupFileQueue(that, uploadManager);     
+        return that;
+    };
+    
+    fluid.defaults("fluid.fileQueueView", {
+        selectors: {
+            fileRows: ".flc-uploader-file",
+            fileName: ".flc-uploader-file-name",
+            fileSize: ".flc-uploader-file-size",
+            fileIconBtn: ".flc-uploader-file-action",      
+            errorText: ".flc-uploader-file-error",
+            
+            rowTemplate: ".flc-uploader-file-tmplt",
+            errorInfoRowTemplate: ".flc-uploader-file-error-tmplt",
+            rowProgressorTemplate: ".flc-uploader-file-progressor-tmplt"
+        },
+        
+        styles: {
+            hover: "fl-uploader-file-hover",
+            selected: "fl-uploader-file-focus",
+            ready: "fl-uploader-file-state-ready",
+            uploading: "fl-uploader-file-state-uploading",
+            uploaded: "fl-uploader-file-state-uploaded",
+            error: "fl-uploader-file-state-error",
+            remove: "fl-uploader-file-action-remove",
+            dim: "fl-uploader-dim",
+            hiddenTemplate: "fl-uploader-hidden-templates"
+        },
+        
+        strings: {
+            progress: {
+                toUploadLabel: "To upload: %fileCount %fileLabel (%totalBytes)", 
+                singleFile: "file",
+                pluralFiles: "files"
+            },
+            status: {
+                success: "File Uploaded",
+                error: "File Upload Error"
+            }, 
+            errors: {
+                HTTP_ERROR: "File upload error: a network error occured or the file was rejected (reason unknown).",
+                IO_ERROR: "File upload error: a network error occured.",
+                UPLOAD_LIMIT_EXCEEDED: "File upload error: you have uploaded as many files as you are allowed during this session",
+                UPLOAD_FAILED: "File upload error: the upload failed for an unknown reason.",
+                QUEUE_LIMIT_EXCEEDED: "You have as many files in the queue as can be added at one time. Removing files from the queue may allow you to add different files.",
+                FILE_EXCEEDS_SIZE_LIMIT: "One or more of the files that you attempted to add to the queue exceeded the limit of %fileSizeLimit.",
+                ZERO_BYTE_FILE: "One or more of the files that you attempted to add contained no data.",
+                INVALID_FILETYPE: "One or more files were not added to the queue because they were of the wrong type."
+            }
+        }
+    });
+   
+})(jQuery, fluid_1_1);
+
+
+/************
+ * Uploader *
+ ************/
+
+(function ($, fluid) {
+    
+    var fileOrFiles = function (that, numFiles) {
+        return (numFiles === 1) ? that.options.strings.progress.singleFile : 
+                                  that.options.strings.progress.pluralFiles;
+    };
+    
+    var enableElement = function (that, elm) {
+        elm.removeAttr("disabled");
+        elm.removeClass(that.options.styles.dim);
+    };
+    
+    var disableElement = function (that, elm) {
+        elm.attr("disabled", "disabled");
+        elm.addClass(that.options.styles.dim);
+    };
+    
+    var showElement = function (that, elm) {
+        elm.removeClass(that.options.styles.hidden);
+    };
+     
+    var hideElement = function (that, elm) {
+        elm.addClass(that.options.styles.hidden);
+    };
+    
+    var setTotalProgressStyle = function (that, didError) {
+        didError = didError || false;
+        var indicator = that.totalProgress.indicator;
+        indicator.toggleClass(that.options.styles.totalProgress, !didError);
+        indicator.toggleClass(that.options.styles.totalProgressError, didError);
+    };
+    
+    var setStateEmpty = function (that) {
+        disableElement(that, that.locate("uploadButton"));
+        
+        // If the queue is totally empty, treat it specially.
+        if (that.uploadManager.queue.files.length === 0) { 
+            that.locate("browseButton").text(that.options.strings.buttons.browse);
+            showElement(that, that.locate("instructions"));
+        }
+    };
+    
+    var setStateDone = function (that) {
+        disableElement(that, that.locate("uploadButton"));
+        enableElement(that, that.locate("browseButton"));
+        hideElement(that, that.locate("pauseButton"));
+        showElement(that, that.locate("uploadButton"));
+    };
+
+    var setStateLoaded = function (that) {
+        that.locate("browseButton").text(that.options.strings.buttons.addMore);
+        hideElement(that, that.locate("pauseButton"));
+        showElement(that, that.locate("uploadButton"));
+        enableElement(that, that.locate("uploadButton"));
+        enableElement(that, that.locate("browseButton"));
+        hideElement(that, that.locate("instructions"));
+        that.totalProgress.hide();
+    };
+    
+    var setStateUploading = function (that) {
+        that.totalProgress.hide(false, false);
+        setTotalProgressStyle(that);
+        hideElement(that, that.locate("uploadButton"));
+        disableElement(that, that.locate("browseButton"));
+        enableElement(that, that.locate("pauseButton"));
+        showElement(that, that.locate("pauseButton"));
+        that.locate(that.options.focusWithEvent.afterUploadStart).focus();
+    };    
+    
+    var renderUploadTotalMessage = function (that) {
+        // Render template for the total file status message.
+        var numReadyFiles = that.uploadManager.queue.getReadyFiles().length;
+        var bytesReadyFiles = that.uploadManager.queue.sizeOfReadyFiles();
+        var fileLabelStr = fileOrFiles(that, numReadyFiles);
+                                                   
+        var totalStateStr = fluid.stringTemplate(that.options.strings.progress.toUploadLabel, {
+            fileCount: numReadyFiles, 
+            fileLabel: fileLabelStr, 
+            totalBytes: fluid.uploader.formatFileSize(bytesReadyFiles)
+        });
+        that.locate("totalFileStatusText").html(totalStateStr);
+    };
+        
+    var updateTotalProgress = function (that) {
+        var batch = that.uploadManager.queue.currentBatch;
+        var totalPercent = fluid.uploader.derivePercent(batch.totalBytesUploaded, batch.totalBytes);
+        var numFilesInBatch = batch.files.length;
+        var fileLabelStr = fileOrFiles(that, numFilesInBatch);
+        
+        var totalProgressStr = fluid.stringTemplate(that.options.strings.progress.totalProgressLabel, {
+            curFileN: batch.fileIdx + 1, 
+            totalFilesN: numFilesInBatch, 
+            fileLabel: fileLabelStr,
+            currBytes: fluid.uploader.formatFileSize(batch.totalBytesUploaded), 
+            totalBytes: fluid.uploader.formatFileSize(batch.totalBytes)
+        });  
+        that.totalProgress.update(totalPercent, totalProgressStr);
+    };
+    
+    var updateTotalAtCompletion = function (that) {
+        var numErroredFiles = that.uploadManager.queue.getErroredFiles().length;
+        var numTotalFiles = that.uploadManager.queue.files.length;
+        var fileLabelStr = fileOrFiles(that, numTotalFiles);
+        
+        var errorStr = "";
+        
+        // if there are errors then change the total progress bar
+        // and set up the errorStr so that we can use it in the totalProgressStr
+        if (numErroredFiles > 0) {
+            var errorLabelString = (numErroredFiles === 1) ? that.options.strings.progress.singleError : 
+                                                             that.options.strings.progress.pluralErrors;
+            setTotalProgressStyle(that, true);
+            errorStr = fluid.stringTemplate(that.options.strings.progress.numberOfErrors, {
+                errorsN: numErroredFiles,
+                errorLabel: errorLabelString
+            });
+        }
+        
+        var totalProgressStr = fluid.stringTemplate(that.options.strings.progress.completedLabel, {
+            curFileN: that.uploadManager.queue.getUploadedFiles().length, 
+            totalFilesN: numTotalFiles,
+            errorString: errorStr,
+            fileLabel: fileLabelStr,
+            totalCurrBytes: fluid.uploader.formatFileSize(that.uploadManager.queue.sizeOfUploadedFiles())
+        });
+        
+        that.totalProgress.update(100, totalProgressStr);
+    };
+   
+    var bindDOMEvents = function (that) {
+        that.locate("browseButton").click(function (evnt) {        
+            that.uploadManager.browseForFiles();
+            evnt.preventDefault();
+        });
+        
+        that.locate("uploadButton").click(function () {
+            that.uploadManager.start();
+        });
+
+        that.locate("pauseButton").click(function () {
+            that.uploadManager.stop();
+        });
+    };
+
+    var updateStateAfterFileDialog = function (that) {
+        if (that.uploadManager.queue.getReadyFiles().length > 0) {
+            setStateLoaded(that);
+            renderUploadTotalMessage(that);
+            that.locate(that.options.focusWithEvent.afterFileDialog).focus();  
+        }
+    };
+    
+    var updateStateAfterFileRemoval = function (that) {
+        if (that.uploadManager.queue.getReadyFiles().length === 0) {
+            setStateEmpty(that);
+        }
+        renderUploadTotalMessage(that);
+    };
+    
+    var updateStateAfterPause = function (that) {
+        // do nothing, moved to afterUploadComplete
+    };
+    
+    var updateStateAfterCompletion = function (that) {
+        var userPaused = that.uploadManager.queue.shouldStop;
+        if (that.uploadManager.queue.getReadyFiles().length === 0) {
+            setStateDone(that);
+        } else {
+            setStateLoaded(that);
+        }
+        updateTotalAtCompletion(that);
+    };
+    
+    var bindModelEvents = function (that) {
+        that.events.afterFileDialog.addListener(function () {
+            updateStateAfterFileDialog(that);
+        });
+        
+        that.events.afterFileRemoved.addListener(function () {
+            updateStateAfterFileRemoval(that);
+        });
+        
+        that.events.onUploadStart.addListener(function () {
+            setStateUploading(that);
+        });
+        
+        that.events.onUploadStop.addListener(function () {
+            that.locate(that.options.focusWithEvent.afterUploadStop).focus();
+        });
+        
+        that.events.onFileProgress.addListener(function () {
+            updateTotalProgress(that); 
+        });
+        
+        that.events.onFileSuccess.addListener(function () {
+            updateTotalProgress(that); 
+        });
+        
+        that.events.onFileError.addListener(function (file, error, message) {
+            if (error === fluid.uploader.errorConstants.UPLOAD_STOPPED) {
+                updateStateAfterPause(that);
+            }
+        });
+
+        that.events.afterUploadComplete.addListener(function () {
+            updateStateAfterCompletion(that);
+        });
+    };
+   
+    var initUploadManager = function (that) {
+        var manager = fluid.initSubcomponent(that, 
+                                             "uploadManager", 
+                                             [that.events, fluid.COMPONENT_OPTIONS]);
+        return that.options.demo ? fluid.demoUploadManager(manager) : manager;
+    };
+    
+    var setupUploader = function (that) {
+        // Instantiate the upload manager, file queue view, and total file progress bar,
+        // passing them smaller chunks of the overall options for the uploader.
+        that.decorators = fluid.initSubcomponents(that, "decorators", [that, fluid.COMPONENT_OPTIONS]);
+        that.uploadManager = initUploadManager(that);
+        that.fileQueueView = fluid.initSubcomponent(that, 
+                                                    "fileQueueView", 
+                                                    [that.locate("fileQueue"),
+                                                    that.container, 
+                                                    that.uploadManager,
+                                                    fluid.COMPONENT_OPTIONS]); 
+        that.totalProgress = fluid.initSubcomponent(that,
+                                                    "totalProgressBar",
+                                                    [that.container, fluid.COMPONENT_OPTIONS]);
+        
+        // Upload button should not be enabled until there are files to upload
+        disableElement(that, that.locate("uploadButton"));
+        bindDOMEvents(that);
+        bindModelEvents(that);
+    };
+    
+    /**
+     * Instantiates a new Uploader component.
+     * 
+     * @param {Object} container the DOM element in which the Uploader lives
+     * @param {Object} options configuration options for the component.
+     */
+    fluid.uploader = function (container, options) {
+        var that = fluid.initView("fluid.uploader", container, options);
+        
+        setupUploader(that);
+        return that;  
+    };
+    
+    /**
+     * Instantiates a new Uploader component in the progressive enhancement style.
+     * This mode requires another DOM element to be present, the element that is to be enhanced.
+     * This method checks to see if the correct version of Flash is present, and will only
+     * create the Uploader component if so.
+     * 
+     * @param {Object} container the DOM element in which the Uploader component lives
+     * @param {Object} enhanceable the DOM element to show if the system requirements aren't met
+     * @param {Object} options configuration options for the component
+     */
+    fluid.progressiveEnhanceableUploader = function (container, enhanceable, options) {
+        enhanceable = fluid.container(enhanceable);
+        container = fluid.container(container);
+              
+        if (swfobject.getFlashPlayerVersion().major < 9) {
+            // Degrade gracefully.
+            enhanceable.show();
+        } else {
+            // Instantiate the component.
+            container.show();
+            return fluid.uploader(container, options);
+        }
+    };
+    
+    /**
+     * Pretty prints a file's size, converting from bytes to kilobytes or megabytes.
+     * 
+     * @param {Number} bytes the files size, specified as in number bytes.
+     */
+    fluid.uploader.formatFileSize = function (bytes) {
+        if (typeof bytes === "number") {
+            if (bytes === 0) {
+                return "0.0 KB";
+            } else if (bytes > 0) {
+                if (bytes < 1048576) {
+                    return (Math.ceil(bytes / 1024 * 10) / 10).toFixed(1) + " KB";
+                }
+                else {
+                    return (Math.ceil(bytes / 1048576 * 10) / 10).toFixed(1) + " MB";
+                }
+            }
+        }
+        return "";
+    };
+    
+    fluid.uploader.derivePercent = function (num, total) {
+        return Math.round((num * 100) / total);
+    };
+
+    fluid.defaults("fluid.uploader", {
+        demo: false,
+        
+        decorators: [{
+            type: "fluid.swfUploadSetupDecorator"
+        }, {
+            type: "fluid.manuallyDegrade",
+            options: {
+                selectors: {
+                    enhanceable: ".fl-uploader.fl-progEnhance-basic"
+                }
+            }
+        }],
+        
+        uploadManager: {
+            type: "fluid.swfUploadManager"
+        },
+        
+        fileQueueView: {
+            type: "fluid.fileQueueView"
+        },
+        
+        totalProgressBar: {
+            type: "fluid.progress",
+            options: {
+                selectors: {
+                    progressBar: ".flc-uploader-queue-footer",
+                    displayElement: ".flc-uploader-total-progress", 
+                    label: ".flc-uploader-total-progress-text",
+                    indicator: ".flc-uploader-total-progress",
+                    ariaElement: ".flc-uploader-total-progress"
+                }
+            }
+        },
+        
+        selectors: {
+            fileQueue: ".flc-uploader-queue",
+            browseButton: ".flc-uploader-button-browse",
+            uploadButton: ".flc-uploader-button-upload",
+            pauseButton: ".flc-uploader-button-pause",
+            totalFileStatusText: ".flc-uploader-total-progress-text",
+            instructions: ".flc-uploader-browse-instructions"
+        },
+ 
+        // Event listeners must already be implemented to use these options.
+        // At the moment, the following events are supported: 
+        //   afterFileDialog, afterUploadStart, and afterUploadStop.
+        focusWithEvent: {
+            afterFileDialog: "uploadButton",
+            afterUploadStart: "pauseButton",
+            afterUploadStop: "uploadButton"
+        },
+        
+        styles: {
+            disabled: "fl-uploader-disabled",
+            hidden: "fl-uploader-hidden",
+            dim: "fl-uploader-dim",
+            totalProgress: "fl-uploader-total-progress-okay",
+            totalProgressError: "fl-uploader-total-progress-errored"
+        },
+        
+        events: {
+            afterReady: null,
+            onFileDialog: null,
+            afterFileQueued: null,
+            afterFileRemoved: null,
+            onQueueError: null,
+            afterFileDialog: null,
+            onUploadStart: null,
+            onUploadStop: null,
+            onFileStart: null,
+            onFileProgress: null,
+            onFileError: null,
+            onFileSuccess: null,
+            afterFileComplete: null,
+            afterUploadComplete: null
+        },
+
+        strings: {
+            progress: {
+                toUploadLabel: "To upload: %fileCount %fileLabel (%totalBytes)", 
+                totalProgressLabel: "Uploading: %curFileN of %totalFilesN %fileLabel (%currBytes of %totalBytes)", 
+                completedLabel: "Uploaded: %curFileN of %totalFilesN %fileLabel (%totalCurrBytes)%errorString",
+                numberOfErrors: ", %errorsN %errorLabel",
+                singleFile: "file",
+                pluralFiles: "files",
+                singleError: "error",
+                pluralErrors: "errors"
+            },
+            buttons: {
+                browse: "Browse Files",
+                addMore: "Add More",
+                stopUpload: "Stop Upload",
+                cancelRemaning: "Cancel remaining Uploads",
+                resumeUpload: "Resume Upload"
+            }
+        }
+    });
+    
+    
+    fluid.uploader.errorConstants = {
+        HTTP_ERROR: -200,
+        MISSING_UPLOAD_URL: -210,
+        IO_ERROR: -220,
+        SECURITY_ERROR: -230,
+        UPLOAD_LIMIT_EXCEEDED: -240,
+        UPLOAD_FAILED: -250,
+        SPECIFIED_FILE_ID_NOT_FOUND: -260,
+        FILE_VALIDATION_FAILED: -270,
+        FILE_CANCELLED: -280,
+        UPLOAD_STOPPED: -290
+    };
+    
+    fluid.uploader.fileStatusConstants = {
+        QUEUED: -1,
+        IN_PROGRESS: -2,
+        ERROR: -3,
+        COMPLETE: -4,
+        CANCELLED: -5
+    };
+    
+    /*******************
+     * ManuallyDegrade *
+     *******************/
+    
+    var renderLink = function (renderLocation, text, classes, appendBeside) {
+        var link = $("<a href='#'>" + text + "</a>");
+        link.addClass(classes);
+        
+        if (renderLocation === "before") {
+            appendBeside.before(link);
+        } else {
+            appendBeside.after(link);
+        }
+        
+        return link;
+    };
+
+    var toggleVisibility = function (toShow, toHide) {
+        // For FLUID-2789: hide() doesn't work in Opera, so this check
+        // uses a style to hide if the browser is Opera
+        if (window.opera) { 
+            toShow.show().removeClass("hideUploaderForOpera");
+            toHide.show().addClass("hideUploaderForOpera");
+        } else {
+            toShow.show();
+            toHide.hide();
+        }
+    };
+    
+    var defaultControlRenderer = function (that) {
+        var degradeLink = renderLink(that.options.defaultRenderLocation,
+                   that.options.strings.degradeLinkText,
+                   that.options.styles.degradeLinkClass,
+                   that.enhancedContainer);
+        degradeLink.addClass("flc-manuallyDegrade-degrade");
+        
+        var enhanceLink = renderLink(that.options.defaultRenderLocation,
+                   that.options.strings.enhanceLinkText,
+                   that.options.styles.enhanceLinkClass,
+                   that.degradedContainer);
+        enhanceLink.addClass("flc-manuallyDegrade-enhance");
+    };
+    
+    var fetchControls = function (that) {
+        that.degradeControl = that.locate("degradeControl");
+        that.enhanceControl = that.locate("enhanceControl");
+    };
+    
+    var setupManuallyDegrade = function (that) {
+        // If we don't have anything to degrade to, stop right here.
+        if (!that.degradedContainer.length) {
+            return;
+        }
+        
+        // Render the controls if they're not already there.
+        fetchControls(that);
+        if (!that.degradeControl.length && !that.enhanceControl.length) {
+            that.options.controlRenderer(that);
+            fetchControls(that);
+        }
+        
+        // Bind click handlers to them.
+        that.degradeControl.click(that.degrade);
+        that.enhanceControl.click(that.enhance);
+        
+        // Hide the enhance link to start.
+        that.enhanceControl.hide();
+    };
+    
+    var determineContainer = function (options) {
+        var defaults = fluid.defaults("fluid.manuallyDegrade");
+        return (options && options.container) ? options.container : defaults.container;
+    };
+    
+    fluid.manuallyDegrade = function (component, options) {
+        var container = determineContainer(options);
+
+        var that = fluid.initView("fluid.manuallyDegrade", container, options);
+        var isDegraded = false;
+        that.enhancedContainer = component.container;
+        that.degradedContainer = that.locate("enhanceable");
+  
+        
+        that.degrade = function () {
+            toggleVisibility(that.enhanceControl, that.degradeControl);
+            toggleVisibility(that.degradedContainer, that.enhancedContainer);
+	        isDegraded = true;
+        };
+         
+	    that.enhance = function () {
+            toggleVisibility(that.degradeControl, that.enhanceControl);
+            toggleVisibility(that.enhancedContainer, that.degradedContainer);
+	        isDegraded = false;
+	    };
+         
+        that.isDegraded = function () {
+	        return isDegraded;
+	    };
+         
+        setupManuallyDegrade(that);
+        return that;
+    };
+     
+    fluid.defaults("fluid.manuallyDegrade", {
+        container: "body",
+        
+        controlRenderer: defaultControlRenderer,
+        
+        defaultRenderLocation: "before",
+        strings: {
+            degradeLinkText: "Switch to the standard single-file Uploader",
+            enhanceLinkText: "Switch to the Flash-based multi-file Uploader"
+	    },
+        selectors: {
+            enhanceable: ".fl-ProgEnhance-basic",
+            degradeControl: ".flc-manuallyDegrade-degrade",
+            enhanceControl: ".flc-manuallyDegrade-enhance"
+        },
+        
+        styles: {
+            degradeLinkClass: "fl-uploader-manually-degrade",
+            enhanceLinkClass: "fl-uploader-manually-enhance"
+        }
+	});
+
+})(jQuery, fluid_1_1);
 // =========================================================================
 //
 // tinyxmlsax.js - an XML SAX parser in JavaScript compressed for downloading
@@ -9703,2410 +17719,6 @@ fluid_1_1 = fluid_1_1 || {};
 
 })(jQuery, fluid_1_1);
 /*
- * jQuery UI Dialog 1.7
- *
- * Copyright (c) 2009 AUTHORS.txt (http://jqueryui.com/about)
- * Dual licensed under the MIT (MIT-LICENSE.txt)
- * and GPL (GPL-LICENSE.txt) licenses.
- *
- * http://docs.jquery.com/UI/Dialog
- *
- * Depends:
- *	ui.core.js
- *	ui.draggable.js
- *	ui.resizable.js
- */
-(function($) {
-
-var setDataSwitch = {
-		dragStart: "start.draggable",
-		drag: "drag.draggable",
-		dragStop: "stop.draggable",
-		maxHeight: "maxHeight.resizable",
-		minHeight: "minHeight.resizable",
-		maxWidth: "maxWidth.resizable",
-		minWidth: "minWidth.resizable",
-		resizeStart: "start.resizable",
-		resize: "drag.resizable",
-		resizeStop: "stop.resizable"
-	},
-	
-	uiDialogClasses =
-		'ui-dialog ' +
-		'ui-widget ' +
-		'ui-widget-content ' +
-		'ui-corner-all ';
-
-$.widget("ui.dialog", {
-
-	_init: function() {
-		this.originalTitle = this.element.attr('title');
-
-		var self = this,
-			options = this.options,
-
-			title = options.title || this.originalTitle || '&nbsp;',
-			titleId = $.ui.dialog.getTitleId(this.element),
-
-			uiDialog = (this.uiDialog = $('<div/>'))
-				.appendTo(document.body)
-				.hide()
-				.addClass(uiDialogClasses + options.dialogClass)
-				.css({
-					position: 'absolute',
-					overflow: 'hidden',
-					zIndex: options.zIndex
-				})
-				// setting tabIndex makes the div focusable
-				// setting outline to 0 prevents a border on focus in Mozilla
-				.attr('tabIndex', -1).css('outline', 0).keydown(function(event) {
-					(options.closeOnEscape && event.keyCode
-						&& event.keyCode == $.ui.keyCode.ESCAPE && self.close(event));
-				})
-				.attr({
-					role: 'dialog',
-					'aria-labelledby': titleId
-				})
-				.mousedown(function(event) {
-					self.moveToTop(false, event);
-				}),
-
-			uiDialogContent = this.element
-				.show()
-				.removeAttr('title')
-				.addClass(
-					'ui-dialog-content ' +
-					'ui-widget-content')
-				.appendTo(uiDialog),
-
-			uiDialogTitlebar = (this.uiDialogTitlebar = $('<div></div>'))
-				.addClass(
-					'ui-dialog-titlebar ' +
-					'ui-widget-header ' +
-					'ui-corner-all ' +
-					'ui-helper-clearfix'
-				)
-				.prependTo(uiDialog),
-
-			uiDialogTitlebarClose = $('<a href="#"/>')
-				.addClass(
-					'ui-dialog-titlebar-close ' +
-					'ui-corner-all'
-				)
-				.attr('role', 'button')
-				.hover(
-					function() {
-						uiDialogTitlebarClose.addClass('ui-state-hover');
-					},
-					function() {
-						uiDialogTitlebarClose.removeClass('ui-state-hover');
-					}
-				)
-				.focus(function() {
-					uiDialogTitlebarClose.addClass('ui-state-focus');
-				})
-				.blur(function() {
-					uiDialogTitlebarClose.removeClass('ui-state-focus');
-				})
-				.mousedown(function(ev) {
-					ev.stopPropagation();
-				})
-				.click(function(event) {
-					self.close(event);
-					return false;
-				})
-				.appendTo(uiDialogTitlebar),
-
-			uiDialogTitlebarCloseText = (this.uiDialogTitlebarCloseText = $('<span/>'))
-				.addClass(
-					'ui-icon ' +
-					'ui-icon-closethick'
-				)
-				.text(options.closeText)
-				.appendTo(uiDialogTitlebarClose),
-
-			uiDialogTitle = $('<span/>')
-				.addClass('ui-dialog-title')
-				.attr('id', titleId)
-				.html(title)
-				.prependTo(uiDialogTitlebar);
-
-		uiDialogTitlebar.find("*").add(uiDialogTitlebar).disableSelection();
-
-		(options.draggable && $.fn.draggable && this._makeDraggable());
-		(options.resizable && $.fn.resizable && this._makeResizable());
-
-		this._createButtons(options.buttons);
-		this._isOpen = false;
-
-		(options.bgiframe && $.fn.bgiframe && uiDialog.bgiframe());
-		(options.autoOpen && this.open());
-		
-	},
-
-	destroy: function() {
-		(this.overlay && this.overlay.destroy());
-		this.uiDialog.hide();
-		this.element
-			.unbind('.dialog')
-			.removeData('dialog')
-			.removeClass('ui-dialog-content ui-widget-content')
-			.hide().appendTo('body');
-		this.uiDialog.remove();
-
-		(this.originalTitle && this.element.attr('title', this.originalTitle));
-	},
-
-	close: function(event) {
-		var self = this;
-		
-		if (false === self._trigger('beforeclose', event)) {
-			return;
-		}
-
-		(self.overlay && self.overlay.destroy());
-		self.uiDialog.unbind('keypress.ui-dialog');
-
-		(self.options.hide
-			? self.uiDialog.hide(self.options.hide, function() {
-				self._trigger('close', event);
-			})
-			: self.uiDialog.hide() && self._trigger('close', event));
-
-		$.ui.dialog.overlay.resize();
-
-		self._isOpen = false;
-	},
-
-	isOpen: function() {
-		return this._isOpen;
-	},
-
-	// the force parameter allows us to move modal dialogs to their correct
-	// position on open
-	moveToTop: function(force, event) {
-
-		if ((this.options.modal && !force)
-			|| (!this.options.stack && !this.options.modal)) {
-			return this._trigger('focus', event);
-		}
-		
-		if (this.options.zIndex > $.ui.dialog.maxZ) {
-			$.ui.dialog.maxZ = this.options.zIndex;
-		}
-		(this.overlay && this.overlay.$el.css('z-index', $.ui.dialog.overlay.maxZ = ++$.ui.dialog.maxZ));
-
-		//Save and then restore scroll since Opera 9.5+ resets when parent z-Index is changed.
-		//  http://ui.jquery.com/bugs/ticket/3193
-		var saveScroll = { scrollTop: this.element.attr('scrollTop'), scrollLeft: this.element.attr('scrollLeft') };
-		this.uiDialog.css('z-index', ++$.ui.dialog.maxZ);
-		this.element.attr(saveScroll);
-		this._trigger('focus', event);
-	},
-
-	open: function() {
-		if (this._isOpen) { return; }
-
-		var options = this.options,
-			uiDialog = this.uiDialog;
-
-		this.overlay = options.modal ? new $.ui.dialog.overlay(this) : null;
-		(uiDialog.next().length && uiDialog.appendTo('body'));
-		this._size();
-		this._position(options.position);
-		uiDialog.show(options.show);
-		this.moveToTop(true);
-
-		// prevent tabbing out of modal dialogs
-		(options.modal && uiDialog.bind('keypress.ui-dialog', function(event) {
-			if (event.keyCode != $.ui.keyCode.TAB) {
-				return;
-			}
-
-			var tabbables = $(':tabbable', this),
-				first = tabbables.filter(':first')[0],
-				last  = tabbables.filter(':last')[0];
-
-			if (event.target == last && !event.shiftKey) {
-				setTimeout(function() {
-					first.focus();
-				}, 1);
-			} else if (event.target == first && event.shiftKey) {
-				setTimeout(function() {
-					last.focus();
-				}, 1);
-			}
-		}));
-
-		// set focus to the first tabbable element in the content area or the first button
-		// if there are no tabbable elements, set focus on the dialog itself
-		$([])
-			.add(uiDialog.find('.ui-dialog-content :tabbable:first'))
-			.add(uiDialog.find('.ui-dialog-buttonpane :tabbable:first'))
-			.add(uiDialog)
-			.filter(':first')
-			.focus();
-
-		this._trigger('open');
-		this._isOpen = true;
-	},
-
-	_createButtons: function(buttons) {
-		var self = this,
-			hasButtons = false,
-			uiDialogButtonPane = $('<div></div>')
-				.addClass(
-					'ui-dialog-buttonpane ' +
-					'ui-widget-content ' +
-					'ui-helper-clearfix'
-				);
-
-		// if we already have a button pane, remove it
-		this.uiDialog.find('.ui-dialog-buttonpane').remove();
-
-		(typeof buttons == 'object' && buttons !== null &&
-			$.each(buttons, function() { return !(hasButtons = true); }));
-		if (hasButtons) {
-			$.each(buttons, function(name, fn) {
-				$('<button type="button"></button>')
-					.addClass(
-						'ui-state-default ' +
-						'ui-corner-all'
-					)
-					.text(name)
-					.click(function() { fn.apply(self.element[0], arguments); })
-					.hover(
-						function() {
-							$(this).addClass('ui-state-hover');
-						},
-						function() {
-							$(this).removeClass('ui-state-hover');
-						}
-					)
-					.focus(function() {
-						$(this).addClass('ui-state-focus');
-					})
-					.blur(function() {
-						$(this).removeClass('ui-state-focus');
-					})
-					.appendTo(uiDialogButtonPane);
-			});
-			uiDialogButtonPane.appendTo(this.uiDialog);
-		}
-	},
-
-	_makeDraggable: function() {
-		var self = this,
-			options = this.options,
-			heightBeforeDrag;
-
-		this.uiDialog.draggable({
-			cancel: '.ui-dialog-content',
-			handle: '.ui-dialog-titlebar',
-			containment: 'document',
-			start: function() {
-				heightBeforeDrag = options.height;
-				$(this).height($(this).height()).addClass("ui-dialog-dragging");
-				(options.dragStart && options.dragStart.apply(self.element[0], arguments));
-			},
-			drag: function() {
-				(options.drag && options.drag.apply(self.element[0], arguments));
-			},
-			stop: function() {
-				$(this).removeClass("ui-dialog-dragging").height(heightBeforeDrag);
-				(options.dragStop && options.dragStop.apply(self.element[0], arguments));
-				$.ui.dialog.overlay.resize();
-			}
-		});
-	},
-
-	_makeResizable: function(handles) {
-		handles = (handles === undefined ? this.options.resizable : handles);
-		var self = this,
-			options = this.options,
-			resizeHandles = typeof handles == 'string'
-				? handles
-				: 'n,e,s,w,se,sw,ne,nw';
-
-		this.uiDialog.resizable({
-			cancel: '.ui-dialog-content',
-			alsoResize: this.element,
-			maxWidth: options.maxWidth,
-			maxHeight: options.maxHeight,
-			minWidth: options.minWidth,
-			minHeight: options.minHeight,
-			start: function() {
-				$(this).addClass("ui-dialog-resizing");
-				(options.resizeStart && options.resizeStart.apply(self.element[0], arguments));
-			},
-			resize: function() {
-				(options.resize && options.resize.apply(self.element[0], arguments));
-			},
-			handles: resizeHandles,
-			stop: function() {
-				$(this).removeClass("ui-dialog-resizing");
-				options.height = $(this).height();
-				options.width = $(this).width();
-				(options.resizeStop && options.resizeStop.apply(self.element[0], arguments));
-				$.ui.dialog.overlay.resize();
-			}
-		})
-		.find('.ui-resizable-se').addClass('ui-icon ui-icon-grip-diagonal-se');
-	},
-
-	_position: function(pos) {
-		var wnd = $(window), doc = $(document),
-			pTop = doc.scrollTop(), pLeft = doc.scrollLeft(),
-			minTop = pTop;
-
-		if ($.inArray(pos, ['center','top','right','bottom','left']) >= 0) {
-			pos = [
-				pos == 'right' || pos == 'left' ? pos : 'center',
-				pos == 'top' || pos == 'bottom' ? pos : 'middle'
-			];
-		}
-		if (pos.constructor != Array) {
-			pos = ['center', 'middle'];
-		}
-		if (pos[0].constructor == Number) {
-			pLeft += pos[0];
-		} else {
-			switch (pos[0]) {
-				case 'left':
-					pLeft += 0;
-					break;
-				case 'right':
-					pLeft += wnd.width() - this.uiDialog.outerWidth();
-					break;
-				default:
-				case 'center':
-					pLeft += (wnd.width() - this.uiDialog.outerWidth()) / 2;
-			}
-		}
-		if (pos[1].constructor == Number) {
-			pTop += pos[1];
-		} else {
-			switch (pos[1]) {
-				case 'top':
-					pTop += 0;
-					break;
-				case 'bottom':
-					pTop += wnd.height() - this.uiDialog.outerHeight();
-					break;
-				default:
-				case 'middle':
-					pTop += (wnd.height() - this.uiDialog.outerHeight()) / 2;
-			}
-		}
-
-		// prevent the dialog from being too high (make sure the titlebar
-		// is accessible)
-		pTop = Math.max(pTop, minTop);
-		this.uiDialog.css({top: pTop, left: pLeft});
-	},
-
-	_setData: function(key, value){
-		(setDataSwitch[key] && this.uiDialog.data(setDataSwitch[key], value));
-		switch (key) {
-			case "buttons":
-				this._createButtons(value);
-				break;
-			case "closeText":
-				this.uiDialogTitlebarCloseText.text(value);
-				break;
-			case "dialogClass":
-				this.uiDialog
-					.removeClass(this.options.dialogClass)
-					.addClass(uiDialogClasses + value);
-				break;
-			case "draggable":
-				(value
-					? this._makeDraggable()
-					: this.uiDialog.draggable('destroy'));
-				break;
-			case "height":
-				this.uiDialog.height(value);
-				break;
-			case "position":
-				this._position(value);
-				break;
-			case "resizable":
-				var uiDialog = this.uiDialog,
-					isResizable = this.uiDialog.is(':data(resizable)');
-
-				// currently resizable, becoming non-resizable
-				(isResizable && !value && uiDialog.resizable('destroy'));
-
-				// currently resizable, changing handles
-				(isResizable && typeof value == 'string' &&
-					uiDialog.resizable('option', 'handles', value));
-
-				// currently non-resizable, becoming resizable
-				(isResizable || this._makeResizable(value));
-				break;
-			case "title":
-				$(".ui-dialog-title", this.uiDialogTitlebar).html(value || '&nbsp;');
-				break;
-			case "width":
-				this.uiDialog.width(value);
-				break;
-		}
-
-		$.widget.prototype._setData.apply(this, arguments);
-	},
-
-	_size: function() {
-		/* If the user has resized the dialog, the .ui-dialog and .ui-dialog-content
-		 * divs will both have width and height set, so we need to reset them
-		 */
-		var options = this.options;
-
-		// reset content sizing
-		this.element.css({
-			height: 0,
-			minHeight: 0,
-			width: 'auto'
-		});
-
-		// reset wrapper sizing
-		// determine the height of all the non-content elements
-		var nonContentHeight = this.uiDialog.css({
-				height: 'auto',
-				width: options.width
-			})
-			.height();
-
-		this.element
-			.css({
-				minHeight: Math.max(options.minHeight - nonContentHeight, 0),
-				height: options.height == 'auto'
-					? 'auto'
-					: Math.max(options.height - nonContentHeight, 0)
-			});
-	}
-});
-
-$.extend($.ui.dialog, {
-	version: "1.7",
-	defaults: {
-		autoOpen: true,
-		bgiframe: false,
-		buttons: {},
-		closeOnEscape: true,
-		closeText: 'close',
-		dialogClass: '',
-		draggable: true,
-		hide: null,
-		height: 'auto',
-		maxHeight: false,
-		maxWidth: false,
-		minHeight: 150,
-		minWidth: 150,
-		modal: false,
-		position: 'center',
-		resizable: true,
-		show: null,
-		stack: true,
-		title: '',
-		width: 300,
-		zIndex: 1000
-	},
-
-	getter: 'isOpen',
-
-	uuid: 0,
-	maxZ: 0,
-
-	getTitleId: function($el) {
-		return 'ui-dialog-title-' + ($el.attr('id') || ++this.uuid);
-	},
-
-	overlay: function(dialog) {
-		this.$el = $.ui.dialog.overlay.create(dialog);
-	}
-});
-
-$.extend($.ui.dialog.overlay, {
-	instances: [],
-	maxZ: 0,
-	events: $.map('focus,mousedown,mouseup,keydown,keypress,click'.split(','),
-		function(event) { return event + '.dialog-overlay'; }).join(' '),
-	create: function(dialog) {
-		if (this.instances.length === 0) {
-			// prevent use of anchors and inputs
-			// we use a setTimeout in case the overlay is created from an
-			// event that we're going to be cancelling (see #2804)
-			setTimeout(function() {
-				$(document).bind($.ui.dialog.overlay.events, function(event) {
-					var dialogZ = $(event.target).parents('.ui-dialog').css('zIndex') || 0;
-					return (dialogZ > $.ui.dialog.overlay.maxZ);
-				});
-			}, 1);
-
-			// allow closing by pressing the escape key
-			$(document).bind('keydown.dialog-overlay', function(event) {
-				(dialog.options.closeOnEscape && event.keyCode
-						&& event.keyCode == $.ui.keyCode.ESCAPE && dialog.close(event));
-			});
-
-			// handle window resize
-			$(window).bind('resize.dialog-overlay', $.ui.dialog.overlay.resize);
-		}
-
-		var $el = $('<div></div>').appendTo(document.body)
-			.addClass('ui-widget-overlay').css({
-				width: this.width(),
-				height: this.height()
-			});
-
-		(dialog.options.bgiframe && $.fn.bgiframe && $el.bgiframe());
-
-		this.instances.push($el);
-		return $el;
-	},
-
-	destroy: function($el) {
-		this.instances.splice($.inArray(this.instances, $el), 1);
-
-		if (this.instances.length === 0) {
-			$([document, window]).unbind('.dialog-overlay');
-		}
-
-		$el.remove();
-	},
-
-	height: function() {
-		// handle IE 6
-		if ($.browser.msie && $.browser.version < 7) {
-			var scrollHeight = Math.max(
-				document.documentElement.scrollHeight,
-				document.body.scrollHeight
-			);
-			var offsetHeight = Math.max(
-				document.documentElement.offsetHeight,
-				document.body.offsetHeight
-			);
-
-			if (scrollHeight < offsetHeight) {
-				return $(window).height() + 'px';
-			} else {
-				return scrollHeight + 'px';
-			}
-		// handle "good" browsers
-		} else {
-			return $(document).height() + 'px';
-		}
-	},
-
-	width: function() {
-		// handle IE 6
-		if ($.browser.msie && $.browser.version < 7) {
-			var scrollWidth = Math.max(
-				document.documentElement.scrollWidth,
-				document.body.scrollWidth
-			);
-			var offsetWidth = Math.max(
-				document.documentElement.offsetWidth,
-				document.body.offsetWidth
-			);
-
-			if (scrollWidth < offsetWidth) {
-				return $(window).width() + 'px';
-			} else {
-				return scrollWidth + 'px';
-			}
-		// handle "good" browsers
-		} else {
-			return $(document).width() + 'px';
-		}
-	},
-
-	resize: function() {
-		/* If the dialog is draggable and the user drags it past the
-		 * right edge of the window, the document becomes wider so we
-		 * need to stretch the overlay. If the user then drags the
-		 * dialog back to the left, the document will become narrower,
-		 * so we need to shrink the overlay to the appropriate size.
-		 * This is handled by shrinking the overlay before setting it
-		 * to the full document size.
-		 */
-		var $overlays = $([]);
-		$.each($.ui.dialog.overlay.instances, function() {
-			$overlays = $overlays.add(this);
-		});
-
-		$overlays.css({
-			width: 0,
-			height: 0
-		}).css({
-			width: $.ui.dialog.overlay.width(),
-			height: $.ui.dialog.overlay.height()
-		});
-	}
-});
-
-$.extend($.ui.dialog.overlay.prototype, {
-	destroy: function() {
-		$.ui.dialog.overlay.destroy(this.$el);
-	}
-});
-
-})(jQuery);
-/*
- * jQuery UI Draggable 1.7
- *
- * Copyright (c) 2009 AUTHORS.txt (http://jqueryui.com/about)
- * Dual licensed under the MIT (MIT-LICENSE.txt)
- * and GPL (GPL-LICENSE.txt) licenses.
- *
- * http://docs.jquery.com/UI/Draggables
- *
- * Depends:
- *	ui.core.js
- */
-(function($) {
-
-$.widget("ui.draggable", $.extend({}, $.ui.mouse, {
-
-	_init: function() {
-
-		if (this.options.helper == 'original' && !(/^(?:r|a|f)/).test(this.element.css("position")))
-			this.element[0].style.position = 'relative';
-
-		(this.options.addClasses && this.element.addClass("ui-draggable"));
-		(this.options.disabled && this.element.addClass("ui-draggable-disabled"));
-
-		this._mouseInit();
-
-	},
-
-	destroy: function() {
-		if(!this.element.data('draggable')) return;
-		this.element
-			.removeData("draggable")
-			.unbind(".draggable")
-			.removeClass("ui-draggable"
-				+ " ui-draggable-dragging"
-				+ " ui-draggable-disabled");
-		this._mouseDestroy();
-	},
-
-	_mouseCapture: function(event) {
-
-		var o = this.options;
-
-		if (this.helper || o.disabled || $(event.target).is('.ui-resizable-handle'))
-			return false;
-
-		//Quit if we're not on a valid handle
-		this.handle = this._getHandle(event);
-		if (!this.handle)
-			return false;
-
-		return true;
-
-	},
-
-	_mouseStart: function(event) {
-
-		var o = this.options;
-
-		//Create and append the visible helper
-		this.helper = this._createHelper(event);
-
-		//Cache the helper size
-		this._cacheHelperProportions();
-
-		//If ddmanager is used for droppables, set the global draggable
-		if($.ui.ddmanager)
-			$.ui.ddmanager.current = this;
-
-		/*
-		 * - Position generation -
-		 * This block generates everything position related - it's the core of draggables.
-		 */
-
-		//Cache the margins of the original element
-		this._cacheMargins();
-
-		//Store the helper's css position
-		this.cssPosition = this.helper.css("position");
-		this.scrollParent = this.helper.scrollParent();
-
-		//The element's absolute position on the page minus margins
-		this.offset = this.element.offset();
-		this.offset = {
-			top: this.offset.top - this.margins.top,
-			left: this.offset.left - this.margins.left
-		};
-
-		$.extend(this.offset, {
-			click: { //Where the click happened, relative to the element
-				left: event.pageX - this.offset.left,
-				top: event.pageY - this.offset.top
-			},
-			parent: this._getParentOffset(),
-			relative: this._getRelativeOffset() //This is a relative to absolute position minus the actual position calculation - only used for relative positioned helper
-		});
-
-		//Generate the original position
-		this.originalPosition = this._generatePosition(event);
-		this.originalPageX = event.pageX;
-		this.originalPageY = event.pageY;
-
-		//Adjust the mouse offset relative to the helper if 'cursorAt' is supplied
-		if(o.cursorAt)
-			this._adjustOffsetFromHelper(o.cursorAt);
-
-		//Set a containment if given in the options
-		if(o.containment)
-			this._setContainment();
-
-		//Call plugins and callbacks
-		this._trigger("start", event);
-
-		//Recache the helper size
-		this._cacheHelperProportions();
-
-		//Prepare the droppable offsets
-		if ($.ui.ddmanager && !o.dropBehaviour)
-			$.ui.ddmanager.prepareOffsets(this, event);
-
-		this.helper.addClass("ui-draggable-dragging");
-		this._mouseDrag(event, true); //Execute the drag once - this causes the helper not to be visible before getting its correct position
-		return true;
-	},
-
-	_mouseDrag: function(event, noPropagation) {
-
-		//Compute the helpers position
-		this.position = this._generatePosition(event);
-		this.positionAbs = this._convertPositionTo("absolute");
-
-		//Call plugins and callbacks and use the resulting position if something is returned
-		if (!noPropagation) {
-			var ui = this._uiHash();
-			this._trigger('drag', event, ui);
-			this.position = ui.position;
-		}
-
-		if(!this.options.axis || this.options.axis != "y") this.helper[0].style.left = this.position.left+'px';
-		if(!this.options.axis || this.options.axis != "x") this.helper[0].style.top = this.position.top+'px';
-		if($.ui.ddmanager) $.ui.ddmanager.drag(this, event);
-
-		return false;
-	},
-
-	_mouseStop: function(event) {
-
-		//If we are using droppables, inform the manager about the drop
-		var dropped = false;
-		if ($.ui.ddmanager && !this.options.dropBehaviour)
-			dropped = $.ui.ddmanager.drop(this, event);
-
-		//if a drop comes from outside (a sortable)
-		if(this.dropped) {
-			dropped = this.dropped;
-			this.dropped = false;
-		}
-
-		if((this.options.revert == "invalid" && !dropped) || (this.options.revert == "valid" && dropped) || this.options.revert === true || ($.isFunction(this.options.revert) && this.options.revert.call(this.element, dropped))) {
-			var self = this;
-			$(this.helper).animate(this.originalPosition, parseInt(this.options.revertDuration, 10), function() {
-				self._trigger("stop", event);
-				self._clear();
-			});
-		} else {
-			this._trigger("stop", event);
-			this._clear();
-		}
-
-		return false;
-	},
-
-	_getHandle: function(event) {
-
-		var handle = !this.options.handle || !$(this.options.handle, this.element).length ? true : false;
-		$(this.options.handle, this.element)
-			.find("*")
-			.andSelf()
-			.each(function() {
-				if(this == event.target) handle = true;
-			});
-
-		return handle;
-
-	},
-
-	_createHelper: function(event) {
-
-		var o = this.options;
-		var helper = $.isFunction(o.helper) ? $(o.helper.apply(this.element[0], [event])) : (o.helper == 'clone' ? this.element.clone() : this.element);
-
-		if(!helper.parents('body').length)
-			helper.appendTo((o.appendTo == 'parent' ? this.element[0].parentNode : o.appendTo));
-
-		if(helper[0] != this.element[0] && !(/(fixed|absolute)/).test(helper.css("position")))
-			helper.css("position", "absolute");
-
-		return helper;
-
-	},
-
-	_adjustOffsetFromHelper: function(obj) {
-		if(obj.left != undefined) this.offset.click.left = obj.left + this.margins.left;
-		if(obj.right != undefined) this.offset.click.left = this.helperProportions.width - obj.right + this.margins.left;
-		if(obj.top != undefined) this.offset.click.top = obj.top + this.margins.top;
-		if(obj.bottom != undefined) this.offset.click.top = this.helperProportions.height - obj.bottom + this.margins.top;
-	},
-
-	_getParentOffset: function() {
-
-		//Get the offsetParent and cache its position
-		this.offsetParent = this.helper.offsetParent();
-		var po = this.offsetParent.offset();
-
-		// This is a special case where we need to modify a offset calculated on start, since the following happened:
-		// 1. The position of the helper is absolute, so it's position is calculated based on the next positioned parent
-		// 2. The actual offset parent is a child of the scroll parent, and the scroll parent isn't the document, which means that
-		//    the scroll is included in the initial calculation of the offset of the parent, and never recalculated upon drag
-		if(this.cssPosition == 'absolute' && this.scrollParent[0] != document && $.ui.contains(this.scrollParent[0], this.offsetParent[0])) {
-			po.left += this.scrollParent.scrollLeft();
-			po.top += this.scrollParent.scrollTop();
-		}
-
-		if((this.offsetParent[0] == document.body) //This needs to be actually done for all browsers, since pageX/pageY includes this information
-		|| (this.offsetParent[0].tagName && this.offsetParent[0].tagName.toLowerCase() == 'html' && $.browser.msie)) //Ugly IE fix
-			po = { top: 0, left: 0 };
-
-		return {
-			top: po.top + (parseInt(this.offsetParent.css("borderTopWidth"),10) || 0),
-			left: po.left + (parseInt(this.offsetParent.css("borderLeftWidth"),10) || 0)
-		};
-
-	},
-
-	_getRelativeOffset: function() {
-
-		if(this.cssPosition == "relative") {
-			var p = this.element.position();
-			return {
-				top: p.top - (parseInt(this.helper.css("top"),10) || 0) + this.scrollParent.scrollTop(),
-				left: p.left - (parseInt(this.helper.css("left"),10) || 0) + this.scrollParent.scrollLeft()
-			};
-		} else {
-			return { top: 0, left: 0 };
-		}
-
-	},
-
-	_cacheMargins: function() {
-		this.margins = {
-			left: (parseInt(this.element.css("marginLeft"),10) || 0),
-			top: (parseInt(this.element.css("marginTop"),10) || 0)
-		};
-	},
-
-	_cacheHelperProportions: function() {
-		this.helperProportions = {
-			width: this.helper.outerWidth(),
-			height: this.helper.outerHeight()
-		};
-	},
-
-	_setContainment: function() {
-
-		var o = this.options;
-		if(o.containment == 'parent') o.containment = this.helper[0].parentNode;
-		if(o.containment == 'document' || o.containment == 'window') this.containment = [
-			0 - this.offset.relative.left - this.offset.parent.left,
-			0 - this.offset.relative.top - this.offset.parent.top,
-			$(o.containment == 'document' ? document : window).width() - this.helperProportions.width - this.margins.left,
-			($(o.containment == 'document' ? document : window).height() || document.body.parentNode.scrollHeight) - this.helperProportions.height - this.margins.top
-		];
-
-		if(!(/^(document|window|parent)$/).test(o.containment) && o.containment.constructor != Array) {
-			var ce = $(o.containment)[0]; if(!ce) return;
-			var co = $(o.containment).offset();
-			var over = ($(ce).css("overflow") != 'hidden');
-
-			this.containment = [
-				co.left + (parseInt($(ce).css("borderLeftWidth"),10) || 0) + (parseInt($(ce).css("paddingLeft"),10) || 0) - this.margins.left,
-				co.top + (parseInt($(ce).css("borderTopWidth"),10) || 0) + (parseInt($(ce).css("paddingTop"),10) || 0) - this.margins.top,
-				co.left+(over ? Math.max(ce.scrollWidth,ce.offsetWidth) : ce.offsetWidth) - (parseInt($(ce).css("borderLeftWidth"),10) || 0) - (parseInt($(ce).css("paddingRight"),10) || 0) - this.helperProportions.width - this.margins.left,
-				co.top+(over ? Math.max(ce.scrollHeight,ce.offsetHeight) : ce.offsetHeight) - (parseInt($(ce).css("borderTopWidth"),10) || 0) - (parseInt($(ce).css("paddingBottom"),10) || 0) - this.helperProportions.height - this.margins.top
-			];
-		} else if(o.containment.constructor == Array) {
-			this.containment = o.containment;
-		}
-
-	},
-
-	_convertPositionTo: function(d, pos) {
-
-		if(!pos) pos = this.position;
-		var mod = d == "absolute" ? 1 : -1;
-		var o = this.options, scroll = this.cssPosition == 'absolute' && !(this.scrollParent[0] != document && $.ui.contains(this.scrollParent[0], this.offsetParent[0])) ? this.offsetParent : this.scrollParent, scrollIsRootNode = (/(html|body)/i).test(scroll[0].tagName);
-
-		return {
-			top: (
-				pos.top																	// The absolute mouse position
-				+ this.offset.relative.top * mod										// Only for relative positioned nodes: Relative offset from element to offset parent
-				+ this.offset.parent.top * mod											// The offsetParent's offset without borders (offset + border)
-				- ($.browser.safari && this.cssPosition == 'fixed' ? 0 : ( this.cssPosition == 'fixed' ? -this.scrollParent.scrollTop() : ( scrollIsRootNode ? 0 : scroll.scrollTop() ) ) * mod)
-			),
-			left: (
-				pos.left																// The absolute mouse position
-				+ this.offset.relative.left * mod										// Only for relative positioned nodes: Relative offset from element to offset parent
-				+ this.offset.parent.left * mod											// The offsetParent's offset without borders (offset + border)
-				- ($.browser.safari && this.cssPosition == 'fixed' ? 0 : ( this.cssPosition == 'fixed' ? -this.scrollParent.scrollLeft() : scrollIsRootNode ? 0 : scroll.scrollLeft() ) * mod)
-			)
-		};
-
-	},
-
-	_generatePosition: function(event) {
-
-		var o = this.options, scroll = this.cssPosition == 'absolute' && !(this.scrollParent[0] != document && $.ui.contains(this.scrollParent[0], this.offsetParent[0])) ? this.offsetParent : this.scrollParent, scrollIsRootNode = (/(html|body)/i).test(scroll[0].tagName);
-
-		// This is another very weird special case that only happens for relative elements:
-		// 1. If the css position is relative
-		// 2. and the scroll parent is the document or similar to the offset parent
-		// we have to refresh the relative offset during the scroll so there are no jumps
-		if(this.cssPosition == 'relative' && !(this.scrollParent[0] != document && this.scrollParent[0] != this.offsetParent[0])) {
-			this.offset.relative = this._getRelativeOffset();
-		}
-
-		var pageX = event.pageX;
-		var pageY = event.pageY;
-
-		/*
-		 * - Position constraining -
-		 * Constrain the position to a mix of grid, containment.
-		 */
-
-		if(this.originalPosition) { //If we are not dragging yet, we won't check for options
-
-			if(this.containment) {
-				if(event.pageX - this.offset.click.left < this.containment[0]) pageX = this.containment[0] + this.offset.click.left;
-				if(event.pageY - this.offset.click.top < this.containment[1]) pageY = this.containment[1] + this.offset.click.top;
-				if(event.pageX - this.offset.click.left > this.containment[2]) pageX = this.containment[2] + this.offset.click.left;
-				if(event.pageY - this.offset.click.top > this.containment[3]) pageY = this.containment[3] + this.offset.click.top;
-			}
-
-			if(o.grid) {
-				var top = this.originalPageY + Math.round((pageY - this.originalPageY) / o.grid[1]) * o.grid[1];
-				pageY = this.containment ? (!(top - this.offset.click.top < this.containment[1] || top - this.offset.click.top > this.containment[3]) ? top : (!(top - this.offset.click.top < this.containment[1]) ? top - o.grid[1] : top + o.grid[1])) : top;
-
-				var left = this.originalPageX + Math.round((pageX - this.originalPageX) / o.grid[0]) * o.grid[0];
-				pageX = this.containment ? (!(left - this.offset.click.left < this.containment[0] || left - this.offset.click.left > this.containment[2]) ? left : (!(left - this.offset.click.left < this.containment[0]) ? left - o.grid[0] : left + o.grid[0])) : left;
-			}
-
-		}
-
-		return {
-			top: (
-				pageY																// The absolute mouse position
-				- this.offset.click.top													// Click offset (relative to the element)
-				- this.offset.relative.top												// Only for relative positioned nodes: Relative offset from element to offset parent
-				- this.offset.parent.top												// The offsetParent's offset without borders (offset + border)
-				+ ($.browser.safari && this.cssPosition == 'fixed' ? 0 : ( this.cssPosition == 'fixed' ? -this.scrollParent.scrollTop() : ( scrollIsRootNode ? 0 : scroll.scrollTop() ) ))
-			),
-			left: (
-				pageX																// The absolute mouse position
-				- this.offset.click.left												// Click offset (relative to the element)
-				- this.offset.relative.left												// Only for relative positioned nodes: Relative offset from element to offset parent
-				- this.offset.parent.left												// The offsetParent's offset without borders (offset + border)
-				+ ($.browser.safari && this.cssPosition == 'fixed' ? 0 : ( this.cssPosition == 'fixed' ? -this.scrollParent.scrollLeft() : scrollIsRootNode ? 0 : scroll.scrollLeft() ))
-			)
-		};
-
-	},
-
-	_clear: function() {
-		this.helper.removeClass("ui-draggable-dragging");
-		if(this.helper[0] != this.element[0] && !this.cancelHelperRemoval) this.helper.remove();
-		//if($.ui.ddmanager) $.ui.ddmanager.current = null;
-		this.helper = null;
-		this.cancelHelperRemoval = false;
-	},
-
-	// From now on bulk stuff - mainly helpers
-
-	_trigger: function(type, event, ui) {
-		ui = ui || this._uiHash();
-		$.ui.plugin.call(this, type, [event, ui]);
-		if(type == "drag") this.positionAbs = this._convertPositionTo("absolute"); //The absolute position has to be recalculated after plugins
-		return $.widget.prototype._trigger.call(this, type, event, ui);
-	},
-
-	plugins: {},
-
-	_uiHash: function(event) {
-		return {
-			helper: this.helper,
-			position: this.position,
-			absolutePosition: this.positionAbs, //deprecated
-			offset: this.positionAbs
-		};
-	}
-
-}));
-
-$.extend($.ui.draggable, {
-	version: "1.7",
-	eventPrefix: "drag",
-	defaults: {
-		addClasses: true,
-		appendTo: "parent",
-		axis: false,
-		cancel: ":input,option",
-		connectToSortable: false,
-		containment: false,
-		cursor: "auto",
-		cursorAt: false,
-		delay: 0,
-		distance: 1,
-		grid: false,
-		handle: false,
-		helper: "original",
-		iframeFix: false,
-		opacity: false,
-		refreshPositions: false,
-		revert: false,
-		revertDuration: 500,
-		scope: "default",
-		scroll: true,
-		scrollSensitivity: 20,
-		scrollSpeed: 20,
-		snap: false,
-		snapMode: "both",
-		snapTolerance: 20,
-		stack: false,
-		zIndex: false
-	}
-});
-
-$.ui.plugin.add("draggable", "connectToSortable", {
-	start: function(event, ui) {
-
-		var inst = $(this).data("draggable"), o = inst.options,
-			uiSortable = $.extend({}, ui, { item: inst.element });
-		inst.sortables = [];
-		$(o.connectToSortable).each(function() {
-			var sortable = $.data(this, 'sortable');
-			if (sortable && !sortable.options.disabled) {
-				inst.sortables.push({
-					instance: sortable,
-					shouldRevert: sortable.options.revert
-				});
-				sortable._refreshItems();	//Do a one-time refresh at start to refresh the containerCache
-				sortable._trigger("activate", event, uiSortable);
-			}
-		});
-
-	},
-	stop: function(event, ui) {
-
-		//If we are still over the sortable, we fake the stop event of the sortable, but also remove helper
-		var inst = $(this).data("draggable"),
-			uiSortable = $.extend({}, ui, { item: inst.element });
-
-		$.each(inst.sortables, function() {
-			if(this.instance.isOver) {
-
-				this.instance.isOver = 0;
-
-				inst.cancelHelperRemoval = true; //Don't remove the helper in the draggable instance
-				this.instance.cancelHelperRemoval = false; //Remove it in the sortable instance (so sortable plugins like revert still work)
-
-				//The sortable revert is supported, and we have to set a temporary dropped variable on the draggable to support revert: 'valid/invalid'
-				if(this.shouldRevert) this.instance.options.revert = true;
-
-				//Trigger the stop of the sortable
-				this.instance._mouseStop(event);
-
-				this.instance.options.helper = this.instance.options._helper;
-
-				//If the helper has been the original item, restore properties in the sortable
-				if(inst.options.helper == 'original')
-					this.instance.currentItem.css({ top: 'auto', left: 'auto' });
-
-			} else {
-				this.instance.cancelHelperRemoval = false; //Remove the helper in the sortable instance
-				this.instance._trigger("deactivate", event, uiSortable);
-			}
-
-		});
-
-	},
-	drag: function(event, ui) {
-
-		var inst = $(this).data("draggable"), self = this;
-
-		var checkPos = function(o) {
-			var dyClick = this.offset.click.top, dxClick = this.offset.click.left;
-			var helperTop = this.positionAbs.top, helperLeft = this.positionAbs.left;
-			var itemHeight = o.height, itemWidth = o.width;
-			var itemTop = o.top, itemLeft = o.left;
-
-			return $.ui.isOver(helperTop + dyClick, helperLeft + dxClick, itemTop, itemLeft, itemHeight, itemWidth);
-		};
-
-		$.each(inst.sortables, function(i) {
-			
-			//Copy over some variables to allow calling the sortable's native _intersectsWith
-			this.instance.positionAbs = inst.positionAbs;
-			this.instance.helperProportions = inst.helperProportions;
-			this.instance.offset.click = inst.offset.click;
-			
-			if(this.instance._intersectsWith(this.instance.containerCache)) {
-
-				//If it intersects, we use a little isOver variable and set it once, so our move-in stuff gets fired only once
-				if(!this.instance.isOver) {
-
-					this.instance.isOver = 1;
-					//Now we fake the start of dragging for the sortable instance,
-					//by cloning the list group item, appending it to the sortable and using it as inst.currentItem
-					//We can then fire the start event of the sortable with our passed browser event, and our own helper (so it doesn't create a new one)
-					this.instance.currentItem = $(self).clone().appendTo(this.instance.element).data("sortable-item", true);
-					this.instance.options._helper = this.instance.options.helper; //Store helper option to later restore it
-					this.instance.options.helper = function() { return ui.helper[0]; };
-
-					event.target = this.instance.currentItem[0];
-					this.instance._mouseCapture(event, true);
-					this.instance._mouseStart(event, true, true);
-
-					//Because the browser event is way off the new appended portlet, we modify a couple of variables to reflect the changes
-					this.instance.offset.click.top = inst.offset.click.top;
-					this.instance.offset.click.left = inst.offset.click.left;
-					this.instance.offset.parent.left -= inst.offset.parent.left - this.instance.offset.parent.left;
-					this.instance.offset.parent.top -= inst.offset.parent.top - this.instance.offset.parent.top;
-
-					inst._trigger("toSortable", event);
-					inst.dropped = this.instance.element; //draggable revert needs that
-					//hack so receive/update callbacks work (mostly)
-					inst.currentItem = inst.element;
-					this.instance.fromOutside = inst;
-
-				}
-
-				//Provided we did all the previous steps, we can fire the drag event of the sortable on every draggable drag, when it intersects with the sortable
-				if(this.instance.currentItem) this.instance._mouseDrag(event);
-
-			} else {
-
-				//If it doesn't intersect with the sortable, and it intersected before,
-				//we fake the drag stop of the sortable, but make sure it doesn't remove the helper by using cancelHelperRemoval
-				if(this.instance.isOver) {
-
-					this.instance.isOver = 0;
-					this.instance.cancelHelperRemoval = true;
-					
-					//Prevent reverting on this forced stop
-					this.instance.options.revert = false;
-					
-					// The out event needs to be triggered independently
-					this.instance._trigger('out', event, this.instance._uiHash(this.instance));
-					
-					this.instance._mouseStop(event, true);
-					this.instance.options.helper = this.instance.options._helper;
-
-					//Now we remove our currentItem, the list group clone again, and the placeholder, and animate the helper back to it's original size
-					this.instance.currentItem.remove();
-					if(this.instance.placeholder) this.instance.placeholder.remove();
-
-					inst._trigger("fromSortable", event);
-					inst.dropped = false; //draggable revert needs that
-				}
-
-			};
-
-		});
-
-	}
-});
-
-$.ui.plugin.add("draggable", "cursor", {
-	start: function(event, ui) {
-		var t = $('body'), o = $(this).data('draggable').options;
-		if (t.css("cursor")) o._cursor = t.css("cursor");
-		t.css("cursor", o.cursor);
-	},
-	stop: function(event, ui) {
-		var o = $(this).data('draggable').options;
-		if (o._cursor) $('body').css("cursor", o._cursor);
-	}
-});
-
-$.ui.plugin.add("draggable", "iframeFix", {
-	start: function(event, ui) {
-		var o = $(this).data('draggable').options;
-		$(o.iframeFix === true ? "iframe" : o.iframeFix).each(function() {
-			$('<div class="ui-draggable-iframeFix" style="background: #fff;"></div>')
-			.css({
-				width: this.offsetWidth+"px", height: this.offsetHeight+"px",
-				position: "absolute", opacity: "0.001", zIndex: 1000
-			})
-			.css($(this).offset())
-			.appendTo("body");
-		});
-	},
-	stop: function(event, ui) {
-		$("div.ui-draggable-iframeFix").each(function() { this.parentNode.removeChild(this); }); //Remove frame helpers
-	}
-});
-
-$.ui.plugin.add("draggable", "opacity", {
-	start: function(event, ui) {
-		var t = $(ui.helper), o = $(this).data('draggable').options;
-		if(t.css("opacity")) o._opacity = t.css("opacity");
-		t.css('opacity', o.opacity);
-	},
-	stop: function(event, ui) {
-		var o = $(this).data('draggable').options;
-		if(o._opacity) $(ui.helper).css('opacity', o._opacity);
-	}
-});
-
-$.ui.plugin.add("draggable", "scroll", {
-	start: function(event, ui) {
-		var i = $(this).data("draggable");
-		if(i.scrollParent[0] != document && i.scrollParent[0].tagName != 'HTML') i.overflowOffset = i.scrollParent.offset();
-	},
-	drag: function(event, ui) {
-
-		var i = $(this).data("draggable"), o = i.options, scrolled = false;
-
-		if(i.scrollParent[0] != document && i.scrollParent[0].tagName != 'HTML') {
-
-			if(!o.axis || o.axis != 'x') {
-				if((i.overflowOffset.top + i.scrollParent[0].offsetHeight) - event.pageY < o.scrollSensitivity)
-					i.scrollParent[0].scrollTop = scrolled = i.scrollParent[0].scrollTop + o.scrollSpeed;
-				else if(event.pageY - i.overflowOffset.top < o.scrollSensitivity)
-					i.scrollParent[0].scrollTop = scrolled = i.scrollParent[0].scrollTop - o.scrollSpeed;
-			}
-
-			if(!o.axis || o.axis != 'y') {
-				if((i.overflowOffset.left + i.scrollParent[0].offsetWidth) - event.pageX < o.scrollSensitivity)
-					i.scrollParent[0].scrollLeft = scrolled = i.scrollParent[0].scrollLeft + o.scrollSpeed;
-				else if(event.pageX - i.overflowOffset.left < o.scrollSensitivity)
-					i.scrollParent[0].scrollLeft = scrolled = i.scrollParent[0].scrollLeft - o.scrollSpeed;
-			}
-
-		} else {
-
-			if(!o.axis || o.axis != 'x') {
-				if(event.pageY - $(document).scrollTop() < o.scrollSensitivity)
-					scrolled = $(document).scrollTop($(document).scrollTop() - o.scrollSpeed);
-				else if($(window).height() - (event.pageY - $(document).scrollTop()) < o.scrollSensitivity)
-					scrolled = $(document).scrollTop($(document).scrollTop() + o.scrollSpeed);
-			}
-
-			if(!o.axis || o.axis != 'y') {
-				if(event.pageX - $(document).scrollLeft() < o.scrollSensitivity)
-					scrolled = $(document).scrollLeft($(document).scrollLeft() - o.scrollSpeed);
-				else if($(window).width() - (event.pageX - $(document).scrollLeft()) < o.scrollSensitivity)
-					scrolled = $(document).scrollLeft($(document).scrollLeft() + o.scrollSpeed);
-			}
-
-		}
-
-		if(scrolled !== false && $.ui.ddmanager && !o.dropBehaviour)
-			$.ui.ddmanager.prepareOffsets(i, event);
-
-	}
-});
-
-$.ui.plugin.add("draggable", "snap", {
-	start: function(event, ui) {
-
-		var i = $(this).data("draggable"), o = i.options;
-		i.snapElements = [];
-
-		$(o.snap.constructor != String ? ( o.snap.items || ':data(draggable)' ) : o.snap).each(function() {
-			var $t = $(this); var $o = $t.offset();
-			if(this != i.element[0]) i.snapElements.push({
-				item: this,
-				width: $t.outerWidth(), height: $t.outerHeight(),
-				top: $o.top, left: $o.left
-			});
-		});
-
-	},
-	drag: function(event, ui) {
-
-		var inst = $(this).data("draggable"), o = inst.options;
-		var d = o.snapTolerance;
-
-		var x1 = ui.offset.left, x2 = x1 + inst.helperProportions.width,
-			y1 = ui.offset.top, y2 = y1 + inst.helperProportions.height;
-
-		for (var i = inst.snapElements.length - 1; i >= 0; i--){
-
-			var l = inst.snapElements[i].left, r = l + inst.snapElements[i].width,
-				t = inst.snapElements[i].top, b = t + inst.snapElements[i].height;
-
-			//Yes, I know, this is insane ;)
-			if(!((l-d < x1 && x1 < r+d && t-d < y1 && y1 < b+d) || (l-d < x1 && x1 < r+d && t-d < y2 && y2 < b+d) || (l-d < x2 && x2 < r+d && t-d < y1 && y1 < b+d) || (l-d < x2 && x2 < r+d && t-d < y2 && y2 < b+d))) {
-				if(inst.snapElements[i].snapping) (inst.options.snap.release && inst.options.snap.release.call(inst.element, event, $.extend(inst._uiHash(), { snapItem: inst.snapElements[i].item })));
-				inst.snapElements[i].snapping = false;
-				continue;
-			}
-
-			if(o.snapMode != 'inner') {
-				var ts = Math.abs(t - y2) <= d;
-				var bs = Math.abs(b - y1) <= d;
-				var ls = Math.abs(l - x2) <= d;
-				var rs = Math.abs(r - x1) <= d;
-				if(ts) ui.position.top = inst._convertPositionTo("relative", { top: t - inst.helperProportions.height, left: 0 }).top - inst.margins.top;
-				if(bs) ui.position.top = inst._convertPositionTo("relative", { top: b, left: 0 }).top - inst.margins.top;
-				if(ls) ui.position.left = inst._convertPositionTo("relative", { top: 0, left: l - inst.helperProportions.width }).left - inst.margins.left;
-				if(rs) ui.position.left = inst._convertPositionTo("relative", { top: 0, left: r }).left - inst.margins.left;
-			}
-
-			var first = (ts || bs || ls || rs);
-
-			if(o.snapMode != 'outer') {
-				var ts = Math.abs(t - y1) <= d;
-				var bs = Math.abs(b - y2) <= d;
-				var ls = Math.abs(l - x1) <= d;
-				var rs = Math.abs(r - x2) <= d;
-				if(ts) ui.position.top = inst._convertPositionTo("relative", { top: t, left: 0 }).top - inst.margins.top;
-				if(bs) ui.position.top = inst._convertPositionTo("relative", { top: b - inst.helperProportions.height, left: 0 }).top - inst.margins.top;
-				if(ls) ui.position.left = inst._convertPositionTo("relative", { top: 0, left: l }).left - inst.margins.left;
-				if(rs) ui.position.left = inst._convertPositionTo("relative", { top: 0, left: r - inst.helperProportions.width }).left - inst.margins.left;
-			}
-
-			if(!inst.snapElements[i].snapping && (ts || bs || ls || rs || first))
-				(inst.options.snap.snap && inst.options.snap.snap.call(inst.element, event, $.extend(inst._uiHash(), { snapItem: inst.snapElements[i].item })));
-			inst.snapElements[i].snapping = (ts || bs || ls || rs || first);
-
-		};
-
-	}
-});
-
-$.ui.plugin.add("draggable", "stack", {
-	start: function(event, ui) {
-
-		var o = $(this).data("draggable").options;
-
-		var group = $.makeArray($(o.stack.group)).sort(function(a,b) {
-			return (parseInt($(a).css("zIndex"),10) || o.stack.min) - (parseInt($(b).css("zIndex"),10) || o.stack.min);
-		});
-
-		$(group).each(function(i) {
-			this.style.zIndex = o.stack.min + i;
-		});
-
-		this[0].style.zIndex = o.stack.min + group.length;
-
-	}
-});
-
-$.ui.plugin.add("draggable", "zIndex", {
-	start: function(event, ui) {
-		var t = $(ui.helper), o = $(this).data("draggable").options;
-		if(t.css("zIndex")) o._zIndex = t.css("zIndex");
-		t.css('zIndex', o.zIndex);
-	},
-	stop: function(event, ui) {
-		var o = $(this).data("draggable").options;
-		if(o._zIndex) $(ui.helper).css('zIndex', o._zIndex);
-	}
-});
-
-})(jQuery);
-/*
- * jQuery UI Accordion 1.7
- *
- * Copyright (c) 2009 AUTHORS.txt (http://jqueryui.com/about)
- * Dual licensed under the MIT (MIT-LICENSE.txt)
- * and GPL (GPL-LICENSE.txt) licenses.
- *
- * http://docs.jquery.com/UI/Accordion
- *
- * Depends:
- *	ui.core.js
- */
-(function($) {
-
-$.widget("ui.accordion", {
-
-	_init: function() {
-
-		var o = this.options, self = this;
-		this.running = 0;
-
-		// if the user set the alwaysOpen option on init
-		// then we need to set the collapsible option
-		// if they set both on init, collapsible will take priority
-		if (o.collapsible == $.ui.accordion.defaults.collapsible &&
-			o.alwaysOpen != $.ui.accordion.defaults.alwaysOpen) {
-			o.collapsible = !o.alwaysOpen;
-		}
-
-		if ( o.navigation ) {
-			var current = this.element.find("a").filter(o.navigationFilter);
-			if ( current.length ) {
-				if ( current.filter(o.header).length ) {
-					this.active = current;
-				} else {
-					this.active = current.parent().parent().prev();
-					current.addClass("ui-accordion-content-active");
-				}
-			}
-		}
-
-		this.element.addClass("ui-accordion ui-widget ui-helper-reset");
-		
-		// in lack of child-selectors in CSS we need to mark top-LIs in a UL-accordion for some IE-fix
-		if (this.element[0].nodeName == "UL") {
-			this.element.children("li").addClass("ui-accordion-li-fix");
-		}
-
-		this.headers = this.element.find(o.header).addClass("ui-accordion-header ui-helper-reset ui-state-default ui-corner-all")
-			.bind("mouseenter.accordion", function(){ $(this).addClass('ui-state-hover'); })
-			.bind("mouseleave.accordion", function(){ $(this).removeClass('ui-state-hover'); })
-			.bind("focus.accordion", function(){ $(this).addClass('ui-state-focus'); })
-			.bind("blur.accordion", function(){ $(this).removeClass('ui-state-focus'); });
-
-		this.headers
-			.next()
-				.addClass("ui-accordion-content ui-helper-reset ui-widget-content ui-corner-bottom");
-
-		this.active = this._findActive(this.active || o.active).toggleClass("ui-state-default").toggleClass("ui-state-active").toggleClass("ui-corner-all").toggleClass("ui-corner-top");
-		this.active.next().addClass('ui-accordion-content-active');
-
-		//Append icon elements
-		$("<span/>").addClass("ui-icon " + o.icons.header).prependTo(this.headers);
-		this.active.find(".ui-icon").toggleClass(o.icons.header).toggleClass(o.icons.headerSelected);
-
-		// IE7-/Win - Extra vertical space in lists fixed
-		if ($.browser.msie) {
-			this.element.find('a').css('zoom', '1');
-		}
-
-		this.resize();
-
-		//ARIA
-		this.element.attr('role','tablist');
-
-		this.headers
-			.attr('role','tab')
-			.bind('keydown', function(event) { return self._keydown(event); })
-			.next()
-			.attr('role','tabpanel');
-
-		this.headers
-			.not(this.active || "")
-			.attr('aria-expanded','false')
-			.attr("tabIndex", "-1")
-			.next()
-			.hide();
-
-		// make sure at least one header is in the tab order
-		if (!this.active.length) {
-			this.headers.eq(0).attr('tabIndex','0');
-		} else {
-			this.active
-				.attr('aria-expanded','true')
-				.attr('tabIndex', '0');
-		}
-
-		// only need links in taborder for Safari
-		if (!$.browser.safari)
-			this.headers.find('a').attr('tabIndex','-1');
-
-		if (o.event) {
-			this.headers.bind((o.event) + ".accordion", function(event) { return self._clickHandler.call(self, event, this); });
-		}
-
-	},
-
-	destroy: function() {
-		var o = this.options;
-
-		this.element
-			.removeClass("ui-accordion ui-widget ui-helper-reset")
-			.removeAttr("role")
-			.unbind('.accordion')
-			.removeData('accordion');
-
-		this.headers
-			.unbind(".accordion")
-			.removeClass("ui-accordion-header ui-helper-reset ui-state-default ui-corner-all ui-state-active ui-corner-top")
-			.removeAttr("role").removeAttr("aria-expanded").removeAttr("tabindex");
-
-		this.headers.find("a").removeAttr("tabindex");
-		this.headers.children(".ui-icon").remove();
-		var contents = this.headers.next().css("display", "").removeAttr("role").removeClass("ui-helper-reset ui-widget-content ui-corner-bottom ui-accordion-content ui-accordion-content-active");
-		if (o.autoHeight || o.fillHeight) {
-			contents.css("height", "");
-		}
-	},
-	
-	_setData: function(key, value) {
-		if(key == 'alwaysOpen') { key = 'collapsible'; value = !value; }
-		$.widget.prototype._setData.apply(this, arguments);	
-	},
-
-	_keydown: function(event) {
-
-		var o = this.options, keyCode = $.ui.keyCode;
-
-		if (o.disabled || event.altKey || event.ctrlKey)
-			return;
-
-		var length = this.headers.length;
-		var currentIndex = this.headers.index(event.target);
-		var toFocus = false;
-
-		switch(event.keyCode) {
-			case keyCode.RIGHT:
-			case keyCode.DOWN:
-				toFocus = this.headers[(currentIndex + 1) % length];
-				break;
-			case keyCode.LEFT:
-			case keyCode.UP:
-				toFocus = this.headers[(currentIndex - 1 + length) % length];
-				break;
-			case keyCode.SPACE:
-			case keyCode.ENTER:
-				return this._clickHandler({ target: event.target }, event.target);
-		}
-
-		if (toFocus) {
-			$(event.target).attr('tabIndex','-1');
-			$(toFocus).attr('tabIndex','0');
-			toFocus.focus();
-			return false;
-		}
-
-		return true;
-
-	},
-
-	resize: function() {
-
-		var o = this.options, maxHeight;
-
-		if (o.fillSpace) {
-			
-			if($.browser.msie) { var defOverflow = this.element.parent().css('overflow'); this.element.parent().css('overflow', 'hidden'); }
-			maxHeight = this.element.parent().height();
-			if($.browser.msie) { this.element.parent().css('overflow', defOverflow); }
-	
-			this.headers.each(function() {
-				maxHeight -= $(this).outerHeight();
-			});
-
-			var maxPadding = 0;
-			this.headers.next().each(function() {
-				maxPadding = Math.max(maxPadding, $(this).innerHeight() - $(this).height());
-			}).height(Math.max(0, maxHeight - maxPadding))
-			.css('overflow', 'auto');
-
-		} else if ( o.autoHeight ) {
-			maxHeight = 0;
-			this.headers.next().each(function() {
-				maxHeight = Math.max(maxHeight, $(this).outerHeight());
-			}).height(maxHeight);
-		}
-
-	},
-
-	activate: function(index) {
-		// call clickHandler with custom event
-		var active = this._findActive(index)[0];
-		this._clickHandler({ target: active }, active);
-	},
-
-	_findActive: function(selector) {
-		return selector
-			? typeof selector == "number"
-				? this.headers.filter(":eq(" + selector + ")")
-				: this.headers.not(this.headers.not(selector))
-			: selector === false
-				? $([])
-				: this.headers.filter(":eq(0)");
-	},
-
-	_clickHandler: function(event, target) {
-
-		var o = this.options;
-		if (o.disabled) return false;
-
-		// called only when using activate(false) to close all parts programmatically
-		if (!event.target && o.collapsible) {
-			this.active.removeClass("ui-state-active ui-corner-top").addClass("ui-state-default ui-corner-all")
-				.find(".ui-icon").removeClass(o.icons.headerSelected).addClass(o.icons.header);
-			this.active.next().addClass('ui-accordion-content-active');
-			var toHide = this.active.next(),
-				data = {
-					options: o,
-					newHeader: $([]),
-					oldHeader: o.active,
-					newContent: $([]),
-					oldContent: toHide
-				},
-				toShow = (this.active = $([]));
-			this._toggle(toShow, toHide, data);
-			return false;
-		}
-
-		// get the click target
-		var clicked = $(event.currentTarget || target);
-		var clickedIsActive = clicked[0] == this.active[0];
-
-		// if animations are still active, or the active header is the target, ignore click
-		if (this.running || (!o.collapsible && clickedIsActive)) {
-			return false;
-		}
-
-		// switch classes
-		this.active.removeClass("ui-state-active ui-corner-top").addClass("ui-state-default ui-corner-all")
-			.find(".ui-icon").removeClass(o.icons.headerSelected).addClass(o.icons.header);
-		this.active.next().addClass('ui-accordion-content-active');
-		if (!clickedIsActive) {
-			clicked.removeClass("ui-state-default ui-corner-all").addClass("ui-state-active ui-corner-top")
-				.find(".ui-icon").removeClass(o.icons.header).addClass(o.icons.headerSelected);
-			clicked.next().addClass('ui-accordion-content-active');
-		}
-
-		// find elements to show and hide
-		var toShow = clicked.next(),
-			toHide = this.active.next(),
-			data = {
-				options: o,
-				newHeader: clickedIsActive && o.collapsible ? $([]) : clicked,
-				oldHeader: this.active,
-				newContent: clickedIsActive && o.collapsible ? $([]) : toShow.find('> *'),
-				oldContent: toHide.find('> *')
-			},
-			down = this.headers.index( this.active[0] ) > this.headers.index( clicked[0] );
-
-		this.active = clickedIsActive ? $([]) : clicked;
-		this._toggle(toShow, toHide, data, clickedIsActive, down);
-
-		return false;
-
-	},
-
-	_toggle: function(toShow, toHide, data, clickedIsActive, down) {
-
-		var o = this.options, self = this;
-
-		this.toShow = toShow;
-		this.toHide = toHide;
-		this.data = data;
-
-		var complete = function() { if(!self) return; return self._completed.apply(self, arguments); };
-
-		// trigger changestart event
-		this._trigger("changestart", null, this.data);
-
-		// count elements to animate
-		this.running = toHide.size() === 0 ? toShow.size() : toHide.size();
-
-		if (o.animated) {
-
-			var animOptions = {};
-
-			if ( o.collapsible && clickedIsActive ) {
-				animOptions = {
-					toShow: $([]),
-					toHide: toHide,
-					complete: complete,
-					down: down,
-					autoHeight: o.autoHeight || o.fillSpace
-				};
-			} else {
-				animOptions = {
-					toShow: toShow,
-					toHide: toHide,
-					complete: complete,
-					down: down,
-					autoHeight: o.autoHeight || o.fillSpace
-				};
-			}
-
-			if (!o.proxied) {
-				o.proxied = o.animated;
-			}
-
-			if (!o.proxiedDuration) {
-				o.proxiedDuration = o.duration;
-			}
-
-			o.animated = $.isFunction(o.proxied) ?
-				o.proxied(animOptions) : o.proxied;
-
-			o.duration = $.isFunction(o.proxiedDuration) ?
-				o.proxiedDuration(animOptions) : o.proxiedDuration;
-
-			var animations = $.ui.accordion.animations,
-				duration = o.duration,
-				easing = o.animated;
-
-			if (!animations[easing]) {
-				animations[easing] = function(options) {
-					this.slide(options, {
-						easing: easing,
-						duration: duration || 700
-					});
-				};
-			}
-
-			animations[easing](animOptions);
-
-		} else {
-
-			if (o.collapsible && clickedIsActive) {
-				toShow.toggle();
-			} else {
-				toHide.hide();
-				toShow.show();
-			}
-
-			complete(true);
-
-		}
-
-		toHide.prev().attr('aria-expanded','false').attr("tabIndex", "-1").blur();
-		toShow.prev().attr('aria-expanded','true').attr("tabIndex", "0").focus();
-
-	},
-
-	_completed: function(cancel) {
-
-		var o = this.options;
-
-		this.running = cancel ? 0 : --this.running;
-		if (this.running) return;
-
-		if (o.clearStyle) {
-			this.toShow.add(this.toHide).css({
-				height: "",
-				overflow: ""
-			});
-		}
-
-		this._trigger('change', null, this.data);
-	}
-
-});
-
-
-$.extend($.ui.accordion, {
-	version: "1.7",
-	defaults: {
-		active: null,
-		alwaysOpen: true, //deprecated, use collapsible
-		animated: 'slide',
-		autoHeight: true,
-		clearStyle: false,
-		collapsible: false,
-		event: "click",
-		fillSpace: false,
-		header: "> li > :first-child,> :not(li):even",
-		icons: {
-			header: "ui-icon-triangle-1-e",
-			headerSelected: "ui-icon-triangle-1-s"
-		},
-		navigation: false,
-		navigationFilter: function() {
-			return this.href.toLowerCase() == location.href.toLowerCase();
-		}
-	},
-	animations: {
-		slide: function(options, additions) {
-			options = $.extend({
-				easing: "swing",
-				duration: 300
-			}, options, additions);
-			if ( !options.toHide.size() ) {
-				options.toShow.animate({height: "show"}, options);
-				return;
-			}
-			if ( !options.toShow.size() ) {
-				options.toHide.animate({height: "hide"}, options);
-				return;
-			}
-			var overflow = options.toShow.css('overflow'),
-				percentDone,
-				showProps = {},
-				hideProps = {},
-				fxAttrs = [ "height", "paddingTop", "paddingBottom" ],
-				originalWidth;
-			// fix width before calculating height of hidden element
-			var s = options.toShow;
-			originalWidth = s[0].style.width;
-			s.width( parseInt(s.parent().width(),10) - parseInt(s.css("paddingLeft"),10) - parseInt(s.css("paddingRight"),10) - parseInt(s.css("borderLeftWidth"),10) - parseInt(s.css("borderRightWidth"),10) );
-			
-			$.each(fxAttrs, function(i, prop) {
-				hideProps[prop] = 'hide';
-				
-				var parts = ('' + $.css(options.toShow[0], prop)).match(/^([\d+-.]+)(.*)$/);
-				showProps[prop] = {
-					value: parts[1],
-					unit: parts[2] || 'px'
-				};
-			});
-			options.toShow.css({ height: 0, overflow: 'hidden' }).show();
-			options.toHide.filter(":hidden").each(options.complete).end().filter(":visible").animate(hideProps,{
-				step: function(now, settings) {
-					// only calculate the percent when animating height
-					// IE gets very inconsistent results when animating elements
-					// with small values, which is common for padding
-					if (settings.prop == 'height') {
-						percentDone = (settings.now - settings.start) / (settings.end - settings.start);
-					}
-					
-					options.toShow[0].style[settings.prop] =
-						(percentDone * showProps[settings.prop].value) + showProps[settings.prop].unit;
-				},
-				duration: options.duration,
-				easing: options.easing,
-				complete: function() {
-					if ( !options.autoHeight ) {
-						options.toShow.css("height", "");
-					}
-					options.toShow.css("width", originalWidth);
-					options.toShow.css({overflow: overflow});
-					options.complete();
-				}
-			});
-		},
-		bounceslide: function(options) {
-			this.slide(options, {
-				easing: options.down ? "easeOutBounce" : "swing",
-				duration: options.down ? 1000 : 200
-			});
-		},
-		easeslide: function(options) {
-			this.slide(options, {
-				easing: "easeinout",
-				duration: 700
-			});
-		}
-	}
-});
-
-})(jQuery);
-/*
- * jQuery UI Slider 1.7
- *
- * Copyright (c) 2009 AUTHORS.txt (http://jqueryui.com/about)
- * Dual licensed under the MIT (MIT-LICENSE.txt)
- * and GPL (GPL-LICENSE.txt) licenses.
- *
- * http://docs.jquery.com/UI/Slider
- *
- * Depends:
- *	ui.core.js
- */
-
-(function($) {
-
-$.widget("ui.slider", $.extend({}, $.ui.mouse, {
-
-	_init: function() {
-
-		var self = this, o = this.options;
-		this._keySliding = false;
-		this._handleIndex = null;
-		this._detectOrientation();
-		this._mouseInit();
-
-		this.element
-			.addClass("ui-slider"
-				+ " ui-slider-" + this.orientation
-				+ " ui-widget"
-				+ " ui-widget-content"
-				+ " ui-corner-all");
-
-		this.range = $([]);
-
-		if (o.range) {
-
-			if (o.range === true) {
-				this.range = $('<div></div>');
-				if (!o.values) o.values = [this._valueMin(), this._valueMin()];
-				if (o.values.length && o.values.length != 2) {
-					o.values = [o.values[0], o.values[0]];
-				}
-			} else {
-				this.range = $('<div></div>');
-			}
-
-			this.range
-				.appendTo(this.element)
-				.addClass("ui-slider-range");
-
-			if (o.range == "min" || o.range == "max") {
-				this.range.addClass("ui-slider-range-" + o.range);
-			}
-
-			// note: this isn't the most fittingly semantic framework class for this element,
-			// but worked best visually with a variety of themes
-			this.range.addClass("ui-widget-header");
-
-		}
-
-		if ($(".ui-slider-handle", this.element).length == 0)
-			$('<a href="#"></a>')
-				.appendTo(this.element)
-				.addClass("ui-slider-handle");
-
-		if (o.values && o.values.length) {
-			while ($(".ui-slider-handle", this.element).length < o.values.length)
-				$('<a href="#"></a>')
-					.appendTo(this.element)
-					.addClass("ui-slider-handle");
-		}
-
-		this.handles = $(".ui-slider-handle", this.element)
-			.addClass("ui-state-default"
-				+ " ui-corner-all");
-
-		this.handle = this.handles.eq(0);
-
-		this.handles.add(this.range).filter("a")
-			.click(function(event) { event.preventDefault(); })
-			.hover(function() { $(this).addClass('ui-state-hover'); }, function() { $(this).removeClass('ui-state-hover'); })
-			.focus(function() { $(".ui-slider .ui-state-focus").removeClass('ui-state-focus'); $(this).addClass('ui-state-focus'); })
-			.blur(function() { $(this).removeClass('ui-state-focus'); });
-
-		this.handles.each(function(i) {
-			$(this).data("index.ui-slider-handle", i);
-		});
-
-		this.handles.keydown(function(event) {
-
-			var ret = true;
-
-			var index = $(this).data("index.ui-slider-handle");
-
-			if (self.options.disabled)
-				return;
-
-			switch (event.keyCode) {
-				case $.ui.keyCode.HOME:
-				case $.ui.keyCode.END:
-				case $.ui.keyCode.UP:
-				case $.ui.keyCode.RIGHT:
-				case $.ui.keyCode.DOWN:
-				case $.ui.keyCode.LEFT:
-					ret = false;
-					if (!self._keySliding) {
-						self._keySliding = true;
-						$(this).addClass("ui-state-active");
-						self._start(event, index);
-					}
-					break;
-			}
-
-			var curVal, newVal, step = self._step();
-			if (self.options.values && self.options.values.length) {
-				curVal = newVal = self.values(index);
-			} else {
-				curVal = newVal = self.value();
-			}
-
-			switch (event.keyCode) {
-				case $.ui.keyCode.HOME:
-					newVal = self._valueMin();
-					break;
-				case $.ui.keyCode.END:
-					newVal = self._valueMax();
-					break;
-				case $.ui.keyCode.UP:
-				case $.ui.keyCode.RIGHT:
-					if(curVal == self._valueMax()) return;
-					newVal = curVal + step;
-					break;
-				case $.ui.keyCode.DOWN:
-				case $.ui.keyCode.LEFT:
-					if(curVal == self._valueMin()) return;
-					newVal = curVal - step;
-					break;
-			}
-
-			self._slide(event, index, newVal);
-
-			return ret;
-
-		}).keyup(function(event) {
-
-			var index = $(this).data("index.ui-slider-handle");
-
-			if (self._keySliding) {
-				self._stop(event, index);
-				self._change(event, index);
-				self._keySliding = false;
-				$(this).removeClass("ui-state-active");
-			}
-
-		});
-
-		this._refreshValue();
-
-	},
-
-	destroy: function() {
-
-		this.handles.remove();
-
-		this.element
-			.removeClass("ui-slider"
-				+ " ui-slider-horizontal"
-				+ " ui-slider-vertical"
-				+ " ui-slider-disabled"
-				+ " ui-widget"
-				+ " ui-widget-content"
-				+ " ui-corner-all")
-			.removeData("slider")
-			.unbind(".slider");
-
-		this._mouseDestroy();
-
-	},
-
-	_mouseCapture: function(event) {
-
-		var o = this.options;
-
-		if (o.disabled)
-			return false;
-
-		this.elementSize = {
-			width: this.element.outerWidth(),
-			height: this.element.outerHeight()
-		};
-		this.elementOffset = this.element.offset();
-
-		var position = { x: event.pageX, y: event.pageY };
-		var normValue = this._normValueFromMouse(position);
-
-		var distance = this._valueMax() + 1, closestHandle;
-		var self = this, index;
-		this.handles.each(function(i) {
-			var thisDistance = Math.abs(normValue - self.values(i));
-			if (distance > thisDistance) {
-				distance = thisDistance;
-				closestHandle = $(this);
-				index = i;
-			}
-		});
-
-		// workaround for bug #3736 (if both handles of a range are at 0,
-		// the first is always used as the one with least distance,
-		// and moving it is obviously prevented by preventing negative ranges)
-		if(o.range == true && this.values(1) == o.min) {
-			closestHandle = $(this.handles[++index]);
-		}
-
-		this._start(event, index);
-
-		self._handleIndex = index;
-
-		closestHandle
-			.addClass("ui-state-active")
-			.focus();
-		
-		var offset = closestHandle.offset();
-		var mouseOverHandle = !$(event.target).parents().andSelf().is('.ui-slider-handle');
-		this._clickOffset = mouseOverHandle ? { left: 0, top: 0 } : {
-			left: event.pageX - offset.left - (closestHandle.width() / 2),
-			top: event.pageY - offset.top
-				- (closestHandle.height() / 2)
-				- (parseInt(closestHandle.css('borderTopWidth'),10) || 0)
-				- (parseInt(closestHandle.css('borderBottomWidth'),10) || 0)
-				+ (parseInt(closestHandle.css('marginTop'),10) || 0)
-		};
-
-		normValue = this._normValueFromMouse(position);
-		this._slide(event, index, normValue);
-		return true;
-
-	},
-
-	_mouseStart: function(event) {
-		return true;
-	},
-
-	_mouseDrag: function(event) {
-
-		var position = { x: event.pageX, y: event.pageY };
-		var normValue = this._normValueFromMouse(position);
-		
-		this._slide(event, this._handleIndex, normValue);
-
-		return false;
-
-	},
-
-	_mouseStop: function(event) {
-
-		this.handles.removeClass("ui-state-active");
-		this._stop(event, this._handleIndex);
-		this._change(event, this._handleIndex);
-		this._handleIndex = null;
-		this._clickOffset = null;
-
-		return false;
-
-	},
-	
-	_detectOrientation: function() {
-		this.orientation = this.options.orientation == 'vertical' ? 'vertical' : 'horizontal';
-	},
-
-	_normValueFromMouse: function(position) {
-
-		var pixelTotal, pixelMouse;
-		if ('horizontal' == this.orientation) {
-			pixelTotal = this.elementSize.width;
-			pixelMouse = position.x - this.elementOffset.left - (this._clickOffset ? this._clickOffset.left : 0);
-		} else {
-			pixelTotal = this.elementSize.height;
-			pixelMouse = position.y - this.elementOffset.top - (this._clickOffset ? this._clickOffset.top : 0);
-		}
-
-		var percentMouse = (pixelMouse / pixelTotal);
-		if (percentMouse > 1) percentMouse = 1;
-		if (percentMouse < 0) percentMouse = 0;
-		if ('vertical' == this.orientation)
-			percentMouse = 1 - percentMouse;
-
-		var valueTotal = this._valueMax() - this._valueMin(),
-			valueMouse = percentMouse * valueTotal,
-			valueMouseModStep = valueMouse % this.options.step,
-			normValue = this._valueMin() + valueMouse - valueMouseModStep;
-
-		if (valueMouseModStep > (this.options.step / 2))
-			normValue += this.options.step;
-
-		// Since JavaScript has problems with large floats, round
-		// the final value to 5 digits after the decimal point (see #4124)
-		return parseFloat(normValue.toFixed(5));
-
-	},
-
-	_start: function(event, index) {
-		this._trigger("start", event, this._uiHash(index));
-	},
-
-	_slide: function(event, index, newVal) {
-
-		var handle = this.handles[index];
-
-		if (this.options.values && this.options.values.length) {
-
-			var otherVal = this.values(index ? 0 : 1);
-
-			if ((index == 0 && newVal >= otherVal) || (index == 1 && newVal <= otherVal))
-				newVal = otherVal;
-
-			if (newVal != this.values(index)) {
-				var newValues = this.values();
-				newValues[index] = newVal;
-				// A slide can be canceled by returning false from the slide callback
-				var allowed = this._trigger("slide", event, this._uiHash(index, newVal, newValues));
-				var otherVal = this.values(index ? 0 : 1);
-				if (allowed !== false) {
-					this.values(index, newVal, ( event.type == 'mousedown' && this.options.animate ), true);
-				}
-			}
-
-		} else {
-
-			if (newVal != this.value()) {
-				// A slide can be canceled by returning false from the slide callback
-				var allowed = this._trigger("slide", event, this._uiHash(index, newVal));
-				if (allowed !== false) {
-					this._setData('value', newVal, ( event.type == 'mousedown' && this.options.animate ));
-				}
-					
-			}
-
-		}
-
-	},
-
-	_stop: function(event, index) {
-		this._trigger("stop", event, this._uiHash(index));
-	},
-
-	_change: function(event, index) {
-		this._trigger("change", event, this._uiHash(index));
-	},
-
-	value: function(newValue) {
-
-		if (arguments.length) {
-			this._setData("value", newValue);
-			this._change(null, 0);
-		}
-
-		return this._value();
-
-	},
-
-	values: function(index, newValue, animated, noPropagation) {
-
-		if (arguments.length > 1) {
-			this.options.values[index] = newValue;
-			this._refreshValue(animated);
-			if(!noPropagation) this._change(null, index);
-		}
-
-		if (arguments.length) {
-			if (this.options.values && this.options.values.length) {
-				return this._values(index);
-			} else {
-				return this.value();
-			}
-		} else {
-			return this._values();
-		}
-
-	},
-
-	_setData: function(key, value, animated) {
-
-		$.widget.prototype._setData.apply(this, arguments);
-
-		switch (key) {
-			case 'orientation':
-
-				this._detectOrientation();
-				
-				this.element
-					.removeClass("ui-slider-horizontal ui-slider-vertical")
-					.addClass("ui-slider-" + this.orientation);
-				this._refreshValue(animated);
-				break;
-			case 'value':
-				this._refreshValue(animated);
-				break;
-		}
-
-	},
-
-	_step: function() {
-		var step = this.options.step;
-		return step;
-	},
-
-	_value: function() {
-
-		var val = this.options.value;
-		if (val < this._valueMin()) val = this._valueMin();
-		if (val > this._valueMax()) val = this._valueMax();
-
-		return val;
-
-	},
-
-	_values: function(index) {
-
-		if (arguments.length) {
-			var val = this.options.values[index];
-			if (val < this._valueMin()) val = this._valueMin();
-			if (val > this._valueMax()) val = this._valueMax();
-
-			return val;
-		} else {
-			return this.options.values;
-		}
-
-	},
-
-	_valueMin: function() {
-		var valueMin = this.options.min;
-		return valueMin;
-	},
-
-	_valueMax: function() {
-		var valueMax = this.options.max;
-		return valueMax;
-	},
-
-	_refreshValue: function(animate) {
-
-		var oRange = this.options.range, o = this.options, self = this;
-
-		if (this.options.values && this.options.values.length) {
-			var vp0, vp1;
-			this.handles.each(function(i, j) {
-				var valPercent = (self.values(i) - self._valueMin()) / (self._valueMax() - self._valueMin()) * 100;
-				var _set = {}; _set[self.orientation == 'horizontal' ? 'left' : 'bottom'] = valPercent + '%';
-				$(this).stop(1,1)[animate ? 'animate' : 'css'](_set, o.animate);
-				if (self.options.range === true) {
-					if (self.orientation == 'horizontal') {
-						(i == 0) && self.range.stop(1,1)[animate ? 'animate' : 'css']({ left: valPercent + '%' }, o.animate);
-						(i == 1) && self.range[animate ? 'animate' : 'css']({ width: (valPercent - lastValPercent) + '%' }, { queue: false, duration: o.animate });
-					} else {
-						(i == 0) && self.range.stop(1,1)[animate ? 'animate' : 'css']({ bottom: (valPercent) + '%' }, o.animate);
-						(i == 1) && self.range[animate ? 'animate' : 'css']({ height: (valPercent - lastValPercent) + '%' }, { queue: false, duration: o.animate });
-					}
-				}
-				lastValPercent = valPercent;
-			});
-		} else {
-			var value = this.value(),
-				valueMin = this._valueMin(),
-				valueMax = this._valueMax(),
-				valPercent = valueMax != valueMin
-					? (value - valueMin) / (valueMax - valueMin) * 100
-					: 0;
-			var _set = {}; _set[self.orientation == 'horizontal' ? 'left' : 'bottom'] = valPercent + '%';
-			this.handle.stop(1,1)[animate ? 'animate' : 'css'](_set, o.animate);
-
-			(oRange == "min") && (this.orientation == "horizontal") && this.range.stop(1,1)[animate ? 'animate' : 'css']({ width: valPercent + '%' }, o.animate);
-			(oRange == "max") && (this.orientation == "horizontal") && this.range[animate ? 'animate' : 'css']({ width: (100 - valPercent) + '%' }, { queue: false, duration: o.animate });
-			(oRange == "min") && (this.orientation == "vertical") && this.range.stop(1,1)[animate ? 'animate' : 'css']({ height: valPercent + '%' }, o.animate);
-			(oRange == "max") && (this.orientation == "vertical") && this.range[animate ? 'animate' : 'css']({ height: (100 - valPercent) + '%' }, { queue: false, duration: o.animate });
-		}
-
-	},
-	
-	_uiHash: function(index, value, values) {
-		
-		var multiple = this.options.values && this.options.values.length;
-		return {
-			handle: this.handles[index],
-			value: value || (multiple ? this.values(index) : this.value()),
-			values: values || (multiple && this.values())
-		};
-
-	}
-
-}));
-
-$.extend($.ui.slider, {
-	getter: "value values",
-	version: "1.7",
-	eventPrefix: "slide",
-	defaults: {
-		animate: false,
-		delay: 0,
-		distance: 0,
-		max: 100,
-		min: 0,
-		orientation: 'horizontal',
-		range: false,
-		step: 1,
-		value: 0,
-		values: null
-	}
-});
-
-})(jQuery);
-/*
 Copyright 2008-2009 University of Cambridge
 Copyright 2008-2009 University of Toronto
 Copyright 2007-2009 University of California, Berkeley
@@ -12278,6 +17890,402 @@ fluid_1_1 = fluid_1_1 || {};
         levels: ["H1", "H2", "H3", "H4", "H5", "H6"]
     });
 
+})(jQuery, fluid_1_1);
+/*
+ * jQuery Tooltip plugin 1.2
+ *
+ * http://bassistance.de/jquery-plugins/jquery-plugin-tooltip/
+ * http://docs.jquery.com/Plugins/Tooltip
+ *
+ * Copyright (c) 2006 - 2008 JÃ¶rn Zaefferer
+ *
+ * $Id: jquery.tooltip.js 6846 2009-03-26 21:03:37Z a.cheetham@utoronto.ca $
+ * 
+ * Dual licensed under the MIT and GPL licenses:
+ *   http://www.opensource.org/licenses/mit-license.php
+ *   http://www.gnu.org/licenses/gpl.html
+ */
+ 
+;(function($) {
+	
+		// the tooltip element
+	var helper = {},
+		// the current tooltipped element
+		current,
+		// the title of the current element, used for restoring
+		title,
+		// timeout id for delayed tooltips
+		tID,
+		// IE 5.5 or 6
+		IE = $.browser.msie && /MSIE\s(5\.5|6\.)/.test(navigator.userAgent),
+		// flag for mouse tracking
+		track = false;
+	
+	$.tooltip = {
+		blocked: false,
+		defaults: {
+			delay: 200,
+			showURL: true,
+			extraClass: "",
+			top: 15,
+			left: 15,
+			id: "tooltip"
+		},
+		block: function() {
+			$.tooltip.blocked = !$.tooltip.blocked;
+		}
+	};
+	
+	$.fn.extend({
+		tooltip: function(settings) {
+			settings = $.extend({}, $.tooltip.defaults, settings);
+			createHelper(settings);
+			return this.each(function() {
+					$.data(this, "tooltip-settings", settings);
+					// copy tooltip into its own expando and remove the title
+					this.tooltipText = this.title;
+					$(this).removeAttr("title");
+					// also remove alt attribute to prevent default tooltip in IE
+					this.alt = "";
+				})
+				.hover(save, hide)
+				.click(hide);
+		},
+		fixPNG: IE ? function() {
+			return this.each(function () {
+				var image = $(this).css('backgroundImage');
+				if (image.match(/^url\(["']?(.*\.png)["']?\)$/i)) {
+					image = RegExp.$1;
+					$(this).css({
+						'backgroundImage': 'none',
+						'filter': "progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true, sizingMethod=crop, src='" + image + "')"
+					}).each(function () {
+						var position = $(this).css('position');
+						if (position != 'absolute' && position != 'relative')
+							$(this).css('position', 'relative');
+					});
+				}
+			});
+		} : function() { return this; },
+		unfixPNG: IE ? function() {
+			return this.each(function () {
+				$(this).css({'filter': '', backgroundImage: ''});
+			});
+		} : function() { return this; },
+		hideWhenEmpty: function() {
+			return this.each(function() {
+				$(this)[ $(this).html() ? "show" : "hide" ]();
+			});
+		},
+		url: function() {
+			return this.attr('href') || this.attr('src');
+		}
+	});
+	
+	function createHelper(settings) {
+		// there can be only one tooltip helper
+		if( helper.parent )
+			return;
+		// create the helper, h3 for title, div for url
+		helper.parent = $('<div id="' + settings.id + '"><h3></h3><div class="body"></div><div class="url"></div></div>')
+			// add to document
+			.appendTo(document.body)
+			// hide it at first
+			.hide();
+			
+		// apply bgiframe if available
+		if ( $.fn.bgiframe )
+			helper.parent.bgiframe();
+		
+		// save references to title and url elements
+		helper.title = $('h3', helper.parent);
+		helper.body = $('div.body', helper.parent);
+		helper.url = $('div.url', helper.parent);
+	}
+	
+	function settings(element) {
+		return $.data(element, "tooltip-settings");
+	}
+	
+	// main event handler to start showing tooltips
+	function handle(event) {
+		// show helper, either with timeout or on instant
+		if( settings(this).delay )
+			tID = setTimeout(show, settings(this).delay);
+		else
+			show();
+		
+		// if selected, update the helper position when the mouse moves
+		track = !!settings(this).track;
+		$(document.body).bind('mousemove', update);
+			
+		// update at least once
+		update(event);
+	}
+	
+	// save elements title before the tooltip is displayed
+	function save() {
+		// if this is the current source, or it has no title (occurs with click event), stop
+		if ( $.tooltip.blocked || this == current || (!this.tooltipText && !settings(this).bodyHandler) )
+			return;
+
+		// save current
+		current = this;
+		title = this.tooltipText;
+		
+		if ( settings(this).bodyHandler ) {
+			helper.title.hide();
+			var bodyContent = settings(this).bodyHandler.call(this);
+			if (bodyContent.nodeType || bodyContent.jquery) {
+				helper.body.empty().append(bodyContent)
+			} else {
+				helper.body.html( bodyContent );
+			}
+			helper.body.show();
+		} else if ( settings(this).showBody ) {
+			var parts = title.split(settings(this).showBody);
+			helper.title.html(parts.shift()).show();
+			helper.body.empty();
+			for(var i = 0, part; part = parts[i]; i++) {
+				if(i > 0)
+					helper.body.append("<br/>");
+				helper.body.append(part);
+			}
+			helper.body.hideWhenEmpty();
+		} else {
+			helper.title.html(title).show();
+			helper.body.hide();
+		}
+		
+		// if element has href or src, add and show it, otherwise hide it
+		if( settings(this).showURL && $(this).url() )
+			helper.url.html( $(this).url().replace('http://', '') ).show();
+		else 
+			helper.url.hide();
+		
+		// add an optional class for this tip
+		helper.parent.addClass(settings(this).extraClass);
+
+		// fix PNG background for IE
+		if (settings(this).fixPNG )
+			helper.parent.fixPNG();
+			
+		handle.apply(this, arguments);
+	}
+	
+	// delete timeout and show helper
+	function show() {
+		tID = null;
+		helper.parent.show();
+		update();
+	}
+	
+	/**
+	 * callback for mousemove
+	 * updates the helper position
+	 * removes itself when no current element
+	 */
+	function update(event)	{
+		if($.tooltip.blocked)
+			return;
+		
+		// stop updating when tracking is disabled and the tooltip is visible
+		if ( !track && helper.parent.is(":visible")) {
+			$(document.body).unbind('mousemove', update)
+		}
+		
+    // if no current element is available, remove this listener
+    // AMB temp proximate fix for FLUID-2323
+    if( current == null || !settings(current) ) {
+      //$(document.body).unbind('mousemove', update);
+      return; 
+    }
+		
+		// remove position helper classes
+		helper.parent.removeClass("viewport-right").removeClass("viewport-bottom");
+		
+		var left = helper.parent[0].offsetLeft;
+		var top = helper.parent[0].offsetTop;
+		if(event) {
+			// position the helper 15 pixel to bottom right, starting from mouse position
+			left = event.pageX + settings(current).left;
+			top = event.pageY + settings(current).top;
+			helper.parent.css({
+				left: left + 'px',
+				top: top + 'px'
+			});
+		}
+		
+		var v = viewport(),
+			h = helper.parent[0];
+		// check horizontal position
+		if(v.x + v.cx < h.offsetLeft + h.offsetWidth) {
+			left -= h.offsetWidth + 20 + settings(current).left;
+			helper.parent.css({left: left + 'px'}).addClass("viewport-right");
+		}
+		// check vertical position
+		if(v.y + v.cy < h.offsetTop + h.offsetHeight) {
+			top -= h.offsetHeight + 20 + settings(current).top;
+			helper.parent.css({top: top + 'px'}).addClass("viewport-bottom");
+		}
+	}
+	
+	function viewport() {
+		return {
+			x: $(window).scrollLeft(),
+			y: $(window).scrollTop(),
+			cx: $(window).width(),
+			cy: $(window).height()
+		};
+	}
+	
+	// hide helper and restore added classes and the title
+	function hide(event) {
+		if($.tooltip.blocked)
+			return;
+		// clear timeout if possible
+		if(tID)
+			clearTimeout(tID);
+		// no more current element
+		current = null;
+		
+		helper.parent.hide().removeClass( settings(this).extraClass );
+		
+		if( settings(this).fixPNG )
+			helper.parent.unfixPNG();
+	}
+	
+	$.fn.Tooltip = $.fn.tooltip;
+	
+})(jQuery);
+/*
+Copyright 2008-2009 University of Cambridge
+Copyright 2008-2009 University of Toronto
+Copyright 2007-2009 University of California, Berkeley
+
+Licensed under the Educational Community License (ECL), Version 2.0 or the New
+BSD license. You may not use this file except in compliance with one these
+Licenses.
+
+You may obtain a copy of the ECL 2.0 License and BSD License at
+https://source.fluidproject.org/svn/LICENSE.txt
+*/
+
+/*global jQuery*/
+/*global fluid_1_1*/
+
+fluid_1_1 = fluid_1_1 || {};
+
+(function ($, fluid) {
+    
+  // The three states of the undo component
+    var STATE_INITIAL = "state_initial", 
+        STATE_CHANGED = "state_changed",
+        STATE_REVERTED = "state_reverted";
+  
+    function defaultRenderer(that, targetContainer) {
+        var markup = "<span class='flc-undo'>" + 
+          "<span class='flc-undo-undoContainer'>[<a href='#' class='flc-undo-undoControl'>undo</a>]</span>" + 
+          "<span class='flc-undo-redoContainer'>[<a href='#' class='flc-undo-redoControl'>redo</a>]</span>" + 
+        "</span>";
+        var markupNode = $(markup);
+        targetContainer.append(markupNode);
+        return markupNode;
+    }
+  
+    function refreshView(that) {
+        if (that.state === STATE_INITIAL) {
+            that.locate("undoContainer").hide();
+            that.locate("redoContainer").hide();
+        }
+        else if (that.state === STATE_CHANGED) {
+            that.locate("undoContainer").show();
+            that.locate("redoContainer").hide();
+        }
+        else if (that.state === STATE_REVERTED) {
+            that.locate("undoContainer").hide();
+            that.locate("redoContainer").show();          
+        }
+    }
+   
+    
+    var bindHandlers = function (that) { 
+        that.locate("undoControl").click( 
+            function () {
+                if (that.state !== STATE_REVERTED) {
+                    fluid.model.copyModel(that.extremalModel, that.component.model);
+                    that.component.updateModel(that.initialModel, that);
+                    that.state = STATE_REVERTED;
+                    refreshView(that);
+                    that.locate("redoControl").focus();
+                }
+				return false;
+            }
+        );
+        that.locate("redoControl").click( 
+            function () {
+                if (that.state !== STATE_CHANGED) {
+                    that.component.updateModel(that.extremalModel, that);
+                    that.state = STATE_CHANGED;
+                    refreshView(that);
+                    that.locate("undoControl").focus();
+                }
+				return false;
+            }
+        );
+        return {
+            modelChanged: function (newModel, oldModel, source) {
+                if (source !== that) {
+                    that.state = STATE_CHANGED;
+                
+                    fluid.model.copyModel(that.initialModel, oldModel);
+                
+                    refreshView(that);
+                }
+            }
+        };
+    };
+    
+    /**
+     * Decorates a target component with the function of "undoability"
+     * 
+     * @param {Object} component a "model-bearing" standard Fluid component to receive the "undo" functionality
+     * @param {Object} options a collection of options settings
+     */
+    fluid.undoDecorator = function (component, userOptions) {
+        var that = fluid.initView("undo", null, userOptions);
+        that.container = that.options.renderer(that, component.container);
+        fluid.initDomBinder(that);
+        fluid.tabindex(that.locate("undoControl"), 0);
+        fluid.tabindex(that.locate("redoControl"), 0);
+        
+        that.component = component;
+        that.initialModel = {};
+        that.extremalModel = {};
+        fluid.model.copyModel(that.initialModel, component.model);
+        fluid.model.copyModel(that.extremalModel, component.model);
+        
+        that.state = STATE_INITIAL;
+        refreshView(that);
+        var listeners = bindHandlers(that);
+        
+        that.returnedOptions = {
+            listeners: listeners
+        };
+        return that;
+    };
+  
+    fluid.defaults("undo", {  
+        selectors: {
+            undoContainer: ".flc-undo-undoContainer",
+            undoControl: ".flc-undo-undoControl",
+            redoContainer: ".flc-undo-redoContainer",
+            redoControl: ".flc-undo-redoControl"
+        },
+                    
+        renderer: defaultRenderer
+    });
+        
 })(jQuery, fluid_1_1);
 /*
     json2.js
@@ -13428,1717 +19436,6 @@ fluid_1_1 = fluid_1_1 || {};
     });
 
 })(jQuery, fluid_1_1);
-/*! SWFObject v2.1 <http://code.google.com/p/swfobject/>
-	Copyright (c) 2007-2008 Geoff Stearns, Michael Williams, and Bobby van der Sluis
-	This software is released under the MIT License <http://www.opensource.org/licenses/mit-license.php>
-*/
-
-var swfobject = function() {
-	
-	var UNDEF = "undefined",
-		OBJECT = "object",
-		SHOCKWAVE_FLASH = "Shockwave Flash",
-		SHOCKWAVE_FLASH_AX = "ShockwaveFlash.ShockwaveFlash",
-		FLASH_MIME_TYPE = "application/x-shockwave-flash",
-		EXPRESS_INSTALL_ID = "SWFObjectExprInst",
-		
-		win = window,
-		doc = document,
-		nav = navigator,
-		
-		domLoadFnArr = [],
-		regObjArr = [],
-		objIdArr = [],
-		listenersArr = [],
-		script,
-		timer = null,
-		storedAltContent = null,
-		storedAltContentId = null,
-		isDomLoaded = false,
-		isExpressInstallActive = false;
-	
-	/* Centralized function for browser feature detection
-		- Proprietary feature detection (conditional compiling) is used to detect Internet Explorer's features
-		- User agent string detection is only used when no alternative is possible
-		- Is executed directly for optimal performance
-	*/	
-	var ua = function() {
-		var w3cdom = typeof doc.getElementById != UNDEF && typeof doc.getElementsByTagName != UNDEF && typeof doc.createElement != UNDEF,
-			playerVersion = [0,0,0],
-			d = null;
-		if (typeof nav.plugins != UNDEF && typeof nav.plugins[SHOCKWAVE_FLASH] == OBJECT) {
-			d = nav.plugins[SHOCKWAVE_FLASH].description;
-			if (d && !(typeof nav.mimeTypes != UNDEF && nav.mimeTypes[FLASH_MIME_TYPE] && !nav.mimeTypes[FLASH_MIME_TYPE].enabledPlugin)) { // navigator.mimeTypes["application/x-shockwave-flash"].enabledPlugin indicates whether plug-ins are enabled or disabled in Safari 3+
-				d = d.replace(/^.*\s+(\S+\s+\S+$)/, "$1");
-				playerVersion[0] = parseInt(d.replace(/^(.*)\..*$/, "$1"), 10);
-				playerVersion[1] = parseInt(d.replace(/^.*\.(.*)\s.*$/, "$1"), 10);
-				playerVersion[2] = /r/.test(d) ? parseInt(d.replace(/^.*r(.*)$/, "$1"), 10) : 0;
-			}
-		}
-		else if (typeof win.ActiveXObject != UNDEF) {
-			var a = null, fp6Crash = false;
-			try {
-				a = new ActiveXObject(SHOCKWAVE_FLASH_AX + ".7");
-			}
-			catch(e) {
-				try { 
-					a = new ActiveXObject(SHOCKWAVE_FLASH_AX + ".6");
-					playerVersion = [6,0,21];
-					a.AllowScriptAccess = "always";	 // Introduced in fp6.0.47
-				}
-				catch(e) {
-					if (playerVersion[0] == 6) {
-						fp6Crash = true;
-					}
-				}
-				if (!fp6Crash) {
-					try {
-						a = new ActiveXObject(SHOCKWAVE_FLASH_AX);
-					}
-					catch(e) {}
-				}
-			}
-			if (!fp6Crash && a) { // a will return null when ActiveX is disabled
-				try {
-					d = a.GetVariable("$version");	// Will crash fp6.0.21/23/29
-					if (d) {
-						d = d.split(" ")[1].split(",");
-						playerVersion = [parseInt(d[0], 10), parseInt(d[1], 10), parseInt(d[2], 10)];
-					}
-				}
-				catch(e) {}
-			}
-		}
-		var u = nav.userAgent.toLowerCase(),
-			p = nav.platform.toLowerCase(),
-			webkit = /webkit/.test(u) ? parseFloat(u.replace(/^.*webkit\/(\d+(\.\d+)?).*$/, "$1")) : false, // returns either the webkit version or false if not webkit
-			ie = false,
-			windows = p ? /win/.test(p) : /win/.test(u),
-			mac = p ? /mac/.test(p) : /mac/.test(u);
-		/*@cc_on
-			ie = true;
-			@if (@_win32)
-				windows = true;
-			@elif (@_mac)
-				mac = true;
-			@end
-		@*/
-		return { w3cdom:w3cdom, pv:playerVersion, webkit:webkit, ie:ie, win:windows, mac:mac };
-	}();
-
-	/* Cross-browser onDomLoad
-		- Based on Dean Edwards' solution: http://dean.edwards.name/weblog/2006/06/again/
-		- Will fire an event as soon as the DOM of a page is loaded (supported by Gecko based browsers - like Firefox -, IE, Opera9+, Safari)
-	*/ 
-	var onDomLoad = function() {
-		if (!ua.w3cdom) {
-			return;
-		}
-		addDomLoadEvent(main);
-		if (ua.ie && ua.win) {
-			try {	 // Avoid a possible Operation Aborted error
-				doc.write("<scr" + "ipt id=__ie_ondomload defer=true src=//:></scr" + "ipt>"); // String is split into pieces to avoid Norton AV to add code that can cause errors 
-				script = getElementById("__ie_ondomload");
-				if (script) {
-					addListener(script, "onreadystatechange", checkReadyState);
-				}
-			}
-			catch(e) {}
-		}
-		if (ua.webkit && typeof doc.readyState != UNDEF) {
-			timer = setInterval(function() { if (/loaded|complete/.test(doc.readyState)) { callDomLoadFunctions(); }}, 10);
-		}
-		if (typeof doc.addEventListener != UNDEF) {
-			doc.addEventListener("DOMContentLoaded", callDomLoadFunctions, null);
-		}
-		addLoadEvent(callDomLoadFunctions);
-	}();
-	
-	function checkReadyState() {
-		if (script.readyState == "complete") {
-			script.parentNode.removeChild(script);
-			callDomLoadFunctions();
-		}
-	}
-	
-	function callDomLoadFunctions() {
-		if (isDomLoaded) {
-			return;
-		}
-		if (ua.ie && ua.win) { // Test if we can really add elements to the DOM; we don't want to fire it too early
-			var s = createElement("span");
-			try { // Avoid a possible Operation Aborted error
-				var t = doc.getElementsByTagName("body")[0].appendChild(s);
-				t.parentNode.removeChild(t);
-			}
-			catch (e) {
-				return;
-			}
-		}
-		isDomLoaded = true;
-		if (timer) {
-			clearInterval(timer);
-			timer = null;
-		}
-		var dl = domLoadFnArr.length;
-		for (var i = 0; i < dl; i++) {
-			domLoadFnArr[i]();
-		}
-	}
-	
-	function addDomLoadEvent(fn) {
-		if (isDomLoaded) {
-			fn();
-		}
-		else { 
-			domLoadFnArr[domLoadFnArr.length] = fn; // Array.push() is only available in IE5.5+
-		}
-	}
-	
-	/* Cross-browser onload
-		- Based on James Edwards' solution: http://brothercake.com/site/resources/scripts/onload/
-		- Will fire an event as soon as a web page including all of its assets are loaded 
-	 */
-	function addLoadEvent(fn) {
-		if (typeof win.addEventListener != UNDEF) {
-			win.addEventListener("load", fn, false);
-		}
-		else if (typeof doc.addEventListener != UNDEF) {
-			doc.addEventListener("load", fn, false);
-		}
-		else if (typeof win.attachEvent != UNDEF) {
-			addListener(win, "onload", fn);
-		}
-		else if (typeof win.onload == "function") {
-			var fnOld = win.onload;
-			win.onload = function() {
-				fnOld();
-				fn();
-			};
-		}
-		else {
-			win.onload = fn;
-		}
-	}
-	
-	/* Main function
-		- Will preferably execute onDomLoad, otherwise onload (as a fallback)
-	*/
-	function main() { // Static publishing only
-		var rl = regObjArr.length;
-		for (var i = 0; i < rl; i++) { // For each registered object element
-			var id = regObjArr[i].id;
-			if (ua.pv[0] > 0) {
-				var obj = getElementById(id);
-				if (obj) {
-					regObjArr[i].width = obj.getAttribute("width") ? obj.getAttribute("width") : "0";
-					regObjArr[i].height = obj.getAttribute("height") ? obj.getAttribute("height") : "0";
-					if (hasPlayerVersion(regObjArr[i].swfVersion)) { // Flash plug-in version >= Flash content version: Houston, we have a match!
-						if (ua.webkit && ua.webkit < 312) { // Older webkit engines ignore the object element's nested param elements
-							fixParams(obj);
-						}
-						setVisibility(id, true);
-					}
-					else if (regObjArr[i].expressInstall && !isExpressInstallActive && hasPlayerVersion("6.0.65") && (ua.win || ua.mac)) { // Show the Adobe Express Install dialog if set by the web page author and if supported (fp6.0.65+ on Win/Mac OS only)
-						showExpressInstall(regObjArr[i]);
-					}
-					else { // Flash plug-in and Flash content version mismatch: display alternative content instead of Flash content
-						displayAltContent(obj);
-					}
-				}
-			}
-			else {	// If no fp is installed, we let the object element do its job (show alternative content)
-				setVisibility(id, true);
-			}
-		}
-	}
-	
-	/* Fix nested param elements, which are ignored by older webkit engines
-		- This includes Safari up to and including version 1.2.2 on Mac OS 10.3
-		- Fall back to the proprietary embed element
-	*/
-	function fixParams(obj) {
-		var nestedObj = obj.getElementsByTagName(OBJECT)[0];
-		if (nestedObj) {
-			var e = createElement("embed"), a = nestedObj.attributes;
-			if (a) {
-				var al = a.length;
-				for (var i = 0; i < al; i++) {
-					if (a[i].nodeName == "DATA") {
-						e.setAttribute("src", a[i].nodeValue);
-					}
-					else {
-						e.setAttribute(a[i].nodeName, a[i].nodeValue);
-					}
-				}
-			}
-			var c = nestedObj.childNodes;
-			if (c) {
-				var cl = c.length;
-				for (var j = 0; j < cl; j++) {
-					if (c[j].nodeType == 1 && c[j].nodeName == "PARAM") {
-						e.setAttribute(c[j].getAttribute("name"), c[j].getAttribute("value"));
-					}
-				}
-			}
-			obj.parentNode.replaceChild(e, obj);
-		}
-	}
-	
-	/* Show the Adobe Express Install dialog
-		- Reference: http://www.adobe.com/cfusion/knowledgebase/index.cfm?id=6a253b75
-	*/
-	function showExpressInstall(regObj) {
-		isExpressInstallActive = true;
-		var obj = getElementById(regObj.id);
-		if (obj) {
-			if (regObj.altContentId) {
-				var ac = getElementById(regObj.altContentId);
-				if (ac) {
-					storedAltContent = ac;
-					storedAltContentId = regObj.altContentId;
-				}
-			}
-			else {
-				storedAltContent = abstractAltContent(obj);
-			}
-			if (!(/%$/.test(regObj.width)) && parseInt(regObj.width, 10) < 310) {
-				regObj.width = "310";
-			}
-			if (!(/%$/.test(regObj.height)) && parseInt(regObj.height, 10) < 137) {
-				regObj.height = "137";
-			}
-			doc.title = doc.title.slice(0, 47) + " - Flash Player Installation";
-			var pt = ua.ie && ua.win ? "ActiveX" : "PlugIn",
-				dt = doc.title,
-				fv = "MMredirectURL=" + win.location + "&MMplayerType=" + pt + "&MMdoctitle=" + dt,
-				replaceId = regObj.id;
-			// For IE when a SWF is loading (AND: not available in cache) wait for the onload event to fire to remove the original object element
-			// In IE you cannot properly cancel a loading SWF file without breaking browser load references, also obj.onreadystatechange doesn't work
-			if (ua.ie && ua.win && obj.readyState != 4) {
-				var newObj = createElement("div");
-				replaceId += "SWFObjectNew";
-				newObj.setAttribute("id", replaceId);
-				obj.parentNode.insertBefore(newObj, obj); // Insert placeholder div that will be replaced by the object element that loads expressinstall.swf
-				obj.style.display = "none";
-				var fn = function() {
-					obj.parentNode.removeChild(obj);
-				};
-				addListener(win, "onload", fn);
-			}
-			createSWF({ data:regObj.expressInstall, id:EXPRESS_INSTALL_ID, width:regObj.width, height:regObj.height }, { flashvars:fv }, replaceId);
-		}
-	}
-	
-	/* Functions to abstract and display alternative content
-	*/
-	function displayAltContent(obj) {
-		if (ua.ie && ua.win && obj.readyState != 4) {
-			// For IE when a SWF is loading (AND: not available in cache) wait for the onload event to fire to remove the original object element
-			// In IE you cannot properly cancel a loading SWF file without breaking browser load references, also obj.onreadystatechange doesn't work
-			var el = createElement("div");
-			obj.parentNode.insertBefore(el, obj); // Insert placeholder div that will be replaced by the alternative content
-			el.parentNode.replaceChild(abstractAltContent(obj), el);
-			obj.style.display = "none";
-			var fn = function() {
-				obj.parentNode.removeChild(obj);
-			};
-			addListener(win, "onload", fn);
-		}
-		else {
-			obj.parentNode.replaceChild(abstractAltContent(obj), obj);
-		}
-	} 
-
-	function abstractAltContent(obj) {
-		var ac = createElement("div");
-		if (ua.win && ua.ie) {
-			ac.innerHTML = obj.innerHTML;
-		}
-		else {
-			var nestedObj = obj.getElementsByTagName(OBJECT)[0];
-			if (nestedObj) {
-				var c = nestedObj.childNodes;
-				if (c) {
-					var cl = c.length;
-					for (var i = 0; i < cl; i++) {
-						if (!(c[i].nodeType == 1 && c[i].nodeName == "PARAM") && !(c[i].nodeType == 8)) {
-							ac.appendChild(c[i].cloneNode(true));
-						}
-					}
-				}
-			}
-		}
-		return ac;
-	}
-	
-	/* Cross-browser dynamic SWF creation
-	*/
-	function createSWF(attObj, parObj, id) {
-		var r, el = getElementById(id);
-		if (el) {
-			if (typeof attObj.id == UNDEF) { // if no 'id' is defined for the object element, it will inherit the 'id' from the alternative content
-				attObj.id = id;
-			}
-			if (ua.ie && ua.win) { // IE, the object element and W3C DOM methods do not combine: fall back to outerHTML
-				var att = "";
-				for (var i in attObj) {
-					if (attObj[i] != Object.prototype[i]) { // Filter out prototype additions from other potential libraries, like Object.prototype.toJSONString = function() {}
-						if (i.toLowerCase() == "data") {
-							parObj.movie = attObj[i];
-						}
-						else if (i.toLowerCase() == "styleclass") { // 'class' is an ECMA4 reserved keyword
-							att += ' class="' + attObj[i] + '"';
-						}
-						else if (i.toLowerCase() != "classid") {
-							att += ' ' + i + '="' + attObj[i] + '"';
-						}
-					}
-				}
-				var par = "";
-				for (var j in parObj) {
-					if (parObj[j] != Object.prototype[j]) { // Filter out prototype additions from other potential libraries
-						par += '<param name="' + j + '" value="' + parObj[j] + '" />';
-					}
-				}
-				el.outerHTML = '<object classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000"' + att + '>' + par + '</object>';
-				objIdArr[objIdArr.length] = attObj.id; // Stored to fix object 'leaks' on unload (dynamic publishing only)
-				r = getElementById(attObj.id);	
-			}
-			else if (ua.webkit && ua.webkit < 312) { // Older webkit engines ignore the object element's nested param elements: fall back to the proprietary embed element
-				var e = createElement("embed");
-				e.setAttribute("type", FLASH_MIME_TYPE);
-				for (var k in attObj) {
-					if (attObj[k] != Object.prototype[k]) { // Filter out prototype additions from other potential libraries
-						if (k.toLowerCase() == "data") {
-							e.setAttribute("src", attObj[k]);
-						}
-						else if (k.toLowerCase() == "styleclass") { // 'class' is an ECMA4 reserved keyword
-							e.setAttribute("class", attObj[k]);
-						}
-						else if (k.toLowerCase() != "classid") { // Filter out IE specific attribute
-							e.setAttribute(k, attObj[k]);
-						}
-					}
-				}
-				for (var l in parObj) {
-					if (parObj[l] != Object.prototype[l]) { // Filter out prototype additions from other potential libraries
-						if (l.toLowerCase() != "movie") { // Filter out IE specific param element
-							e.setAttribute(l, parObj[l]);
-						}
-					}
-				}
-				el.parentNode.replaceChild(e, el);
-				r = e;
-			}
-			else { // Well-behaving browsers
-				var o = createElement(OBJECT);
-				o.setAttribute("type", FLASH_MIME_TYPE);
-				for (var m in attObj) {
-					if (attObj[m] != Object.prototype[m]) { // Filter out prototype additions from other potential libraries
-						if (m.toLowerCase() == "styleclass") { // 'class' is an ECMA4 reserved keyword
-							o.setAttribute("class", attObj[m]);
-						}
-						else if (m.toLowerCase() != "classid") { // Filter out IE specific attribute
-							o.setAttribute(m, attObj[m]);
-						}
-					}
-				}
-				for (var n in parObj) {
-					if (parObj[n] != Object.prototype[n] && n.toLowerCase() != "movie") { // Filter out prototype additions from other potential libraries and IE specific param element
-						createObjParam(o, n, parObj[n]);
-					}
-				}
-				el.parentNode.replaceChild(o, el);
-				r = o;
-			}
-		}
-		return r;
-	}
-	
-	function createObjParam(el, pName, pValue) {
-		var p = createElement("param");
-		p.setAttribute("name", pName);	
-		p.setAttribute("value", pValue);
-		el.appendChild(p);
-	}
-	
-	/* Cross-browser SWF removal
-		- Especially needed to safely and completely remove a SWF in Internet Explorer
-	*/
-	function removeSWF(id) {
-		var obj = getElementById(id);
-		if (obj && (obj.nodeName == "OBJECT" || obj.nodeName == "EMBED")) {
-			if (ua.ie && ua.win) {
-				if (obj.readyState == 4) {
-					removeObjectInIE(id);
-				}
-				else {
-					win.attachEvent("onload", function() {
-						removeObjectInIE(id);
-					});
-				}
-			}
-			else {
-				obj.parentNode.removeChild(obj);
-			}
-		}
-	}
-	
-	function removeObjectInIE(id) {
-		var obj = getElementById(id);
-		if (obj) {
-			for (var i in obj) {
-				if (typeof obj[i] == "function") {
-					obj[i] = null;
-				}
-			}
-			obj.parentNode.removeChild(obj);
-		}
-	}
-	
-	/* Functions to optimize JavaScript compression
-	*/
-	function getElementById(id) {
-		var el = null;
-		try {
-			el = doc.getElementById(id);
-		}
-		catch (e) {}
-		return el;
-	}
-	
-	function createElement(el) {
-		return doc.createElement(el);
-	}
-	
-	/* Updated attachEvent function for Internet Explorer
-		- Stores attachEvent information in an Array, so on unload the detachEvent functions can be called to avoid memory leaks
-	*/	
-	function addListener(target, eventType, fn) {
-		target.attachEvent(eventType, fn);
-		listenersArr[listenersArr.length] = [target, eventType, fn];
-	}
-	
-	/* Flash Player and SWF content version matching
-	*/
-	function hasPlayerVersion(rv) {
-		var pv = ua.pv, v = rv.split(".");
-		v[0] = parseInt(v[0], 10);
-		v[1] = parseInt(v[1], 10) || 0; // supports short notation, e.g. "9" instead of "9.0.0"
-		v[2] = parseInt(v[2], 10) || 0;
-		return (pv[0] > v[0] || (pv[0] == v[0] && pv[1] > v[1]) || (pv[0] == v[0] && pv[1] == v[1] && pv[2] >= v[2])) ? true : false;
-	}
-	
-	/* Cross-browser dynamic CSS creation
-		- Based on Bobby van der Sluis' solution: http://www.bobbyvandersluis.com/articles/dynamicCSS.php
-	*/	
-	function createCSS(sel, decl) {
-		if (ua.ie && ua.mac) {
-			return;
-		}
-		var h = doc.getElementsByTagName("head")[0], s = createElement("style");
-		s.setAttribute("type", "text/css");
-		s.setAttribute("media", "screen");
-		if (!(ua.ie && ua.win) && typeof doc.createTextNode != UNDEF) {
-			s.appendChild(doc.createTextNode(sel + " {" + decl + "}"));
-		}
-		h.appendChild(s);
-		if (ua.ie && ua.win && typeof doc.styleSheets != UNDEF && doc.styleSheets.length > 0) {
-			var ls = doc.styleSheets[doc.styleSheets.length - 1];
-			if (typeof ls.addRule == OBJECT) {
-				ls.addRule(sel, decl);
-			}
-		}
-	}
-	
-	function setVisibility(id, isVisible) {
-		var v = isVisible ? "visible" : "hidden";
-		if (isDomLoaded && getElementById(id)) {
-			getElementById(id).style.visibility = v;
-		}
-		else {
-			createCSS("#" + id, "visibility:" + v);
-		}
-	}
-
-	/* Filter to avoid XSS attacks 
-	*/
-	function urlEncodeIfNecessary(s) {
-		var regex = /[\\\"<>\.;]/;
-		var hasBadChars = regex.exec(s) != null;
-		return hasBadChars ? encodeURIComponent(s) : s;
-	}
-	
-	/* Release memory to avoid memory leaks caused by closures, fix hanging audio/video threads and force open sockets/NetConnections to disconnect (Internet Explorer only)
-	*/
-	var cleanup = function() {
-		if (ua.ie && ua.win) {
-			window.attachEvent("onunload", function() {
-				// remove listeners to avoid memory leaks
-				var ll = listenersArr.length;
-				for (var i = 0; i < ll; i++) {
-					listenersArr[i][0].detachEvent(listenersArr[i][1], listenersArr[i][2]);
-				}
-				// cleanup dynamically embedded objects to fix audio/video threads and force open sockets and NetConnections to disconnect
-				var il = objIdArr.length;
-				for (var j = 0; j < il; j++) {
-					removeSWF(objIdArr[j]);
-				}
-				// cleanup library's main closures to avoid memory leaks
-				for (var k in ua) {
-					ua[k] = null;
-				}
-				ua = null;
-				for (var l in swfobject) {
-					swfobject[l] = null;
-				}
-				swfobject = null;
-			});
-		}
-	}();
-	
-	
-	return {
-		/* Public API
-			- Reference: http://code.google.com/p/swfobject/wiki/SWFObject_2_0_documentation
-		*/ 
-		registerObject: function(objectIdStr, swfVersionStr, xiSwfUrlStr) {
-			if (!ua.w3cdom || !objectIdStr || !swfVersionStr) {
-				return;
-			}
-			var regObj = {};
-			regObj.id = objectIdStr;
-			regObj.swfVersion = swfVersionStr;
-			regObj.expressInstall = xiSwfUrlStr ? xiSwfUrlStr : false;
-			regObjArr[regObjArr.length] = regObj;
-			setVisibility(objectIdStr, false);
-		},
-		
-		getObjectById: function(objectIdStr) {
-			var r = null;
-			if (ua.w3cdom) {
-				var o = getElementById(objectIdStr);
-				if (o) {
-					var n = o.getElementsByTagName(OBJECT)[0];
-					if (!n || (n && typeof o.SetVariable != UNDEF)) {
-							r = o;
-					}
-					else if (typeof n.SetVariable != UNDEF) {
-						r = n;
-					}
-				}
-			}
-			return r;
-		},
-		
-		embedSWF: function(swfUrlStr, replaceElemIdStr, widthStr, heightStr, swfVersionStr, xiSwfUrlStr, flashvarsObj, parObj, attObj) {
-			if (!ua.w3cdom || !swfUrlStr || !replaceElemIdStr || !widthStr || !heightStr || !swfVersionStr) {
-				return;
-			}
-			widthStr += ""; // Auto-convert to string
-			heightStr += "";
-			if (hasPlayerVersion(swfVersionStr)) {
-				setVisibility(replaceElemIdStr, false);
-				var att = {};
-				if (attObj && typeof attObj === OBJECT) {
-					for (var i in attObj) {
-						if (attObj[i] != Object.prototype[i]) { // Filter out prototype additions from other potential libraries
-							att[i] = attObj[i];
-						}
-					}
-				}
-				att.data = swfUrlStr;
-				att.width = widthStr;
-				att.height = heightStr;
-				var par = {}; 
-				if (parObj && typeof parObj === OBJECT) {
-					for (var j in parObj) {
-						if (parObj[j] != Object.prototype[j]) { // Filter out prototype additions from other potential libraries
-							par[j] = parObj[j];
-						}
-					}
-				}
-				if (flashvarsObj && typeof flashvarsObj === OBJECT) {
-					for (var k in flashvarsObj) {
-						if (flashvarsObj[k] != Object.prototype[k]) { // Filter out prototype additions from other potential libraries
-							if (typeof par.flashvars != UNDEF) {
-								par.flashvars += "&" + k + "=" + flashvarsObj[k];
-							}
-							else {
-								par.flashvars = k + "=" + flashvarsObj[k];
-							}
-						}
-					}
-				}
-				addDomLoadEvent(function() {
-					createSWF(att, par, replaceElemIdStr);
-					if (att.id == replaceElemIdStr) {
-						setVisibility(replaceElemIdStr, true);
-					}
-				});
-			}
-			else if (xiSwfUrlStr && !isExpressInstallActive && hasPlayerVersion("6.0.65") && (ua.win || ua.mac)) {
-				isExpressInstallActive = true; // deferred execution
-				setVisibility(replaceElemIdStr, false);
-				addDomLoadEvent(function() {
-					var regObj = {};
-					regObj.id = regObj.altContentId = replaceElemIdStr;
-					regObj.width = widthStr;
-					regObj.height = heightStr;
-					regObj.expressInstall = xiSwfUrlStr;
-					showExpressInstall(regObj);
-				});
-			}
-		},
-		
-		getFlashPlayerVersion: function() {
-			return { major:ua.pv[0], minor:ua.pv[1], release:ua.pv[2] };
-		},
-		
-		hasFlashPlayerVersion: hasPlayerVersion,
-		
-		createSWF: function(attObj, parObj, replaceElemIdStr) {
-			if (ua.w3cdom) {
-				return createSWF(attObj, parObj, replaceElemIdStr);
-			}
-			else {
-				return undefined;
-			}
-		},
-		
-		removeSWF: function(objElemIdStr) {
-			if (ua.w3cdom) {
-				removeSWF(objElemIdStr);
-			}
-		},
-		
-		createCSS: function(sel, decl) {
-			if (ua.w3cdom) {
-				createCSS(sel, decl);
-			}
-		},
-		
-		addDomLoadEvent: addDomLoadEvent,
-		
-		addLoadEvent: addLoadEvent,
-		
-		getQueryParamValue: function(param) {
-			var q = doc.location.search || doc.location.hash;
-			if (param == null) {
-				return urlEncodeIfNecessary(q);
-			}
-			if (q) {
-				var pairs = q.substring(1).split("&");
-				for (var i = 0; i < pairs.length; i++) {
-					if (pairs[i].substring(0, pairs[i].indexOf("=")) == param) {
-						return urlEncodeIfNecessary(pairs[i].substring((pairs[i].indexOf("=") + 1)));
-					}
-				}
-			}
-			return "";
-		},
-		
-		// For internal usage only
-		expressInstallCallback: function() {
-			if (isExpressInstallActive && storedAltContent) {
-				var obj = getElementById(EXPRESS_INSTALL_ID);
-				if (obj) {
-					obj.parentNode.replaceChild(storedAltContent, obj);
-					if (storedAltContentId) {
-						setVisibility(storedAltContentId, true);
-						if (ua.ie && ua.win) {
-							storedAltContent.style.display = "block";
-						}
-					}
-					storedAltContent = null;
-					storedAltContentId = null;
-					isExpressInstallActive = false;
-				}
-			} 
-		}
-	};
-}();
-/**
- * SWFUpload: http://www.swfupload.org, http://swfupload.googlecode.com
- *
- * mmSWFUpload 1.0: Flash upload dialog - http://profandesign.se/swfupload/,  http://www.vinterwebb.se/
- *
- * SWFUpload is (c) 2006-2007 Lars Huring, Olov Nilzén and Mammon Media and is released under the MIT License:
- * http://www.opensource.org/licenses/mit-license.php
- *
- * SWFUpload 2 is (c) 2007-2008 Jake Roberts and is released under the MIT License:
- * http://www.opensource.org/licenses/mit-license.php
- *
- */
-
-
-/* ******************* */
-/* Constructor & Init  */
-/* ******************* */
-var SWFUpload;
-
-if (SWFUpload == undefined) {
-	SWFUpload = function (settings) {
-		this.initSWFUpload(settings);
-	};
-}
-
-SWFUpload.prototype.initSWFUpload = function (settings) {
-	try {
-		this.customSettings = {};	// A container where developers can place their own settings associated with this instance.
-		this.settings = settings;
-		this.eventQueue = [];
-		this.movieName = "SWFUpload_" + SWFUpload.movieCount++;
-		this.movieElement = null;
-
-
-		// Setup global control tracking
-		SWFUpload.instances[this.movieName] = this;
-
-		// Load the settings.  Load the Flash movie.
-		this.initSettings();
-		this.loadFlash();
-		this.displayDebugInfo();
-	} catch (ex) {
-		delete SWFUpload.instances[this.movieName];
-		throw ex;
-	}
-};
-
-/* *************** */
-/* Static Members  */
-/* *************** */
-SWFUpload.instances = {};
-SWFUpload.movieCount = 0;
-SWFUpload.version = "2.2.0 2009-03-25";
-SWFUpload.QUEUE_ERROR = {
-	QUEUE_LIMIT_EXCEEDED	  		: -100,
-	FILE_EXCEEDS_SIZE_LIMIT  		: -110,
-	ZERO_BYTE_FILE			  		: -120,
-	INVALID_FILETYPE		  		: -130
-};
-SWFUpload.UPLOAD_ERROR = {
-	HTTP_ERROR				  		: -200,
-	MISSING_UPLOAD_URL	      		: -210,
-	IO_ERROR				  		: -220,
-	SECURITY_ERROR			  		: -230,
-	UPLOAD_LIMIT_EXCEEDED	  		: -240,
-	UPLOAD_FAILED			  		: -250,
-	SPECIFIED_FILE_ID_NOT_FOUND		: -260,
-	FILE_VALIDATION_FAILED	  		: -270,
-	FILE_CANCELLED			  		: -280,
-	UPLOAD_STOPPED					: -290
-};
-SWFUpload.FILE_STATUS = {
-	QUEUED		 : -1,
-	IN_PROGRESS	 : -2,
-	ERROR		 : -3,
-	COMPLETE	 : -4,
-	CANCELLED	 : -5
-};
-SWFUpload.BUTTON_ACTION = {
-	SELECT_FILE  : -100,
-	SELECT_FILES : -110,
-	START_UPLOAD : -120
-};
-SWFUpload.CURSOR = {
-	ARROW : -1,
-	HAND : -2
-};
-SWFUpload.WINDOW_MODE = {
-	WINDOW : "window",
-	TRANSPARENT : "transparent",
-	OPAQUE : "opaque"
-};
-
-// Private: takes a URL, determines if it is relative and converts to an absolute URL
-// using the current site. Only processes the URL if it can, otherwise returns the URL untouched
-SWFUpload.completeURL = function(url) {
-	if (typeof(url) !== "string" || url.match(/^https?:\/\//i) || url.match(/^\//)) {
-		return url;
-	}
-	
-	var currentURL = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");
-	
-	var indexSlash = window.location.pathname.lastIndexOf("/");
-	if (indexSlash <= 0) {
-		path = "/";
-	} else {
-		path = window.location.pathname.substr(0, indexSlash) + "/";
-	}
-	
-	return /*currentURL +*/ path + url;
-	
-};
-
-
-/* ******************** */
-/* Instance Members  */
-/* ******************** */
-
-// Private: initSettings ensures that all the
-// settings are set, getting a default value if one was not assigned.
-SWFUpload.prototype.initSettings = function () {
-	this.ensureDefault = function (settingName, defaultValue) {
-		this.settings[settingName] = (this.settings[settingName] == undefined) ? defaultValue : this.settings[settingName];
-	};
-	
-	// Upload backend settings
-	this.ensureDefault("upload_url", "");
-	this.ensureDefault("preserve_relative_urls", false);
-	this.ensureDefault("file_post_name", "Filedata");
-	this.ensureDefault("post_params", {});
-	this.ensureDefault("use_query_string", false);
-	this.ensureDefault("requeue_on_error", false);
-	this.ensureDefault("http_success", []);
-	this.ensureDefault("assume_success_timeout", 0);
-	
-	// File Settings
-	this.ensureDefault("file_types", "*.*");
-	this.ensureDefault("file_types_description", "All Files");
-	this.ensureDefault("file_size_limit", 0);	// Default zero means "unlimited"
-	this.ensureDefault("file_upload_limit", 0);
-	this.ensureDefault("file_queue_limit", 0);
-
-	// Flash Settings
-	this.ensureDefault("flash_url", "swfupload.swf");
-	this.ensureDefault("prevent_swf_caching", true);
-	
-	// Button Settings
-	this.ensureDefault("button_image_url", "");
-	this.ensureDefault("button_width", 1);
-	this.ensureDefault("button_height", 1);
-	this.ensureDefault("button_text", "");
-	this.ensureDefault("button_text_style", "color: #000000; font-size: 16pt;");
-	this.ensureDefault("button_text_top_padding", 0);
-	this.ensureDefault("button_text_left_padding", 0);
-	this.ensureDefault("button_action", SWFUpload.BUTTON_ACTION.SELECT_FILES);
-	this.ensureDefault("button_disabled", false);
-	this.ensureDefault("button_placeholder_id", "");
-	this.ensureDefault("button_placeholder", null);
-	this.ensureDefault("button_cursor", SWFUpload.CURSOR.ARROW);
-	this.ensureDefault("button_window_mode", SWFUpload.WINDOW_MODE.WINDOW);
-	
-	// Debug Settings
-	this.ensureDefault("debug", false);
-	this.settings.debug_enabled = this.settings.debug;	// Here to maintain v2 API
-	
-	// Event Handlers
-	this.settings.return_upload_start_handler = this.returnUploadStart;
-	this.ensureDefault("swfupload_loaded_handler", null);
-	this.ensureDefault("file_dialog_start_handler", null);
-	this.ensureDefault("file_queued_handler", null);
-	this.ensureDefault("file_queue_error_handler", null);
-	this.ensureDefault("file_dialog_complete_handler", null);
-	
-	this.ensureDefault("upload_start_handler", null);
-	this.ensureDefault("upload_progress_handler", null);
-	this.ensureDefault("upload_error_handler", null);
-	this.ensureDefault("upload_success_handler", null);
-	this.ensureDefault("upload_complete_handler", null);
-	
-	this.ensureDefault("debug_handler", this.debugMessage);
-
-	this.ensureDefault("custom_settings", {});
-
-	// Other settings
-	this.customSettings = this.settings.custom_settings;
-	
-	// Update the flash url if needed
-	if (!!this.settings.prevent_swf_caching) {
-		this.settings.flash_url = this.settings.flash_url + (this.settings.flash_url.indexOf("?") < 0 ? "?" : "&") + "preventswfcaching=" + new Date().getTime();
-	}
-	
-	if (!this.settings.preserve_relative_urls) {
-		//this.settings.flash_url = SWFUpload.completeURL(this.settings.flash_url);	// Don't need to do this one since flash doesn't look at it
-		this.settings.upload_url = SWFUpload.completeURL(this.settings.upload_url);
-		this.settings.button_image_url = SWFUpload.completeURL(this.settings.button_image_url);
-	}
-	
-	delete this.ensureDefault;
-};
-
-// Private: loadFlash replaces the button_placeholder element with the flash movie.
-SWFUpload.prototype.loadFlash = function () {
-	var targetElement, tempParent;
-
-	// Make sure an element with the ID we are going to use doesn't already exist
-	if (document.getElementById(this.movieName) !== null) {
-		throw "ID " + this.movieName + " is already in use. The Flash Object could not be added";
-	}
-
-	// Get the element where we will be placing the flash movie
-	targetElement = document.getElementById(this.settings.button_placeholder_id) || this.settings.button_placeholder;
-
-	if (targetElement == undefined) {
-		throw "Could not find the placeholder element: " + this.settings.button_placeholder_id;
-	}
-
-	// Append the container and load the flash
-	tempParent = document.createElement("div");
-	tempParent.innerHTML = this.getFlashHTML();	// Using innerHTML is non-standard but the only sensible way to dynamically add Flash in IE (and maybe other browsers)
-	targetElement.parentNode.replaceChild(tempParent.firstChild, targetElement);
-
-	// Fix IE Flash/Form bug
-	if (window[this.movieName] == undefined) {
-		window[this.movieName] = this.getMovieElement();
-	}
-	
-};
-
-// Private: getFlashHTML generates the object tag needed to embed the flash in to the document
-SWFUpload.prototype.getFlashHTML = function () {
-	// Flash Satay object syntax: http://www.alistapart.com/articles/flashsatay
-	return ['<object id="', this.movieName, '" type="application/x-shockwave-flash" data="', this.settings.flash_url, '" width="', this.settings.button_width, '" height="', this.settings.button_height, '" class="swfupload">',
-				'<param name="wmode" value="', this.settings.button_window_mode, '" />',
-				'<param name="movie" value="', this.settings.flash_url, '" />',
-				'<param name="quality" value="high" />',
-				'<param name="menu" value="false" />',
-				'<param name="allowScriptAccess" value="always" />',
-				'<param name="flashvars" value="' + this.getFlashVars() + '" />',
-				'</object>'].join("");
-};
-
-// Private: getFlashVars builds the parameter string that will be passed
-// to flash in the flashvars param.
-SWFUpload.prototype.getFlashVars = function () {
-	// Build a string from the post param object
-	var paramString = this.buildParamString();
-	var httpSuccessString = this.settings.http_success.join(",");
-	
-	// Build the parameter string
-	return ["movieName=", encodeURIComponent(this.movieName),
-			"&amp;uploadURL=", encodeURIComponent(this.settings.upload_url),
-			"&amp;useQueryString=", encodeURIComponent(this.settings.use_query_string),
-			"&amp;requeueOnError=", encodeURIComponent(this.settings.requeue_on_error),
-			"&amp;httpSuccess=", encodeURIComponent(httpSuccessString),
-			"&amp;assumeSuccessTimeout=", encodeURIComponent(this.settings.assume_success_timeout),
-			"&amp;params=", encodeURIComponent(paramString),
-			"&amp;filePostName=", encodeURIComponent(this.settings.file_post_name),
-			"&amp;fileTypes=", encodeURIComponent(this.settings.file_types),
-			"&amp;fileTypesDescription=", encodeURIComponent(this.settings.file_types_description),
-			"&amp;fileSizeLimit=", encodeURIComponent(this.settings.file_size_limit),
-			"&amp;fileUploadLimit=", encodeURIComponent(this.settings.file_upload_limit),
-			"&amp;fileQueueLimit=", encodeURIComponent(this.settings.file_queue_limit),
-			"&amp;debugEnabled=", encodeURIComponent(this.settings.debug_enabled),
-			"&amp;buttonImageURL=", encodeURIComponent(this.settings.button_image_url),
-			"&amp;buttonWidth=", encodeURIComponent(this.settings.button_width),
-			"&amp;buttonHeight=", encodeURIComponent(this.settings.button_height),
-			"&amp;buttonText=", encodeURIComponent(this.settings.button_text),
-			"&amp;buttonTextTopPadding=", encodeURIComponent(this.settings.button_text_top_padding),
-			"&amp;buttonTextLeftPadding=", encodeURIComponent(this.settings.button_text_left_padding),
-			"&amp;buttonTextStyle=", encodeURIComponent(this.settings.button_text_style),
-			"&amp;buttonAction=", encodeURIComponent(this.settings.button_action),
-			"&amp;buttonDisabled=", encodeURIComponent(this.settings.button_disabled),
-			"&amp;buttonCursor=", encodeURIComponent(this.settings.button_cursor)
-		].join("");
-};
-
-// Public: getMovieElement retrieves the DOM reference to the Flash element added by SWFUpload
-// The element is cached after the first lookup
-SWFUpload.prototype.getMovieElement = function () {
-	if (this.movieElement == undefined) {
-		this.movieElement = document.getElementById(this.movieName);
-	}
-
-	if (this.movieElement === null) {
-		throw "Could not find Flash element";
-	}
-	
-	return this.movieElement;
-};
-
-// Private: buildParamString takes the name/value pairs in the post_params setting object
-// and joins them up in to a string formatted "name=value&amp;name=value"
-SWFUpload.prototype.buildParamString = function () {
-	var postParams = this.settings.post_params; 
-	var paramStringPairs = [];
-
-	if (typeof(postParams) === "object") {
-		for (var name in postParams) {
-			if (postParams.hasOwnProperty(name)) {
-				paramStringPairs.push(encodeURIComponent(name.toString()) + "=" + encodeURIComponent(postParams[name].toString()));
-			}
-		}
-	}
-
-	return paramStringPairs.join("&amp;");
-};
-
-// Public: Used to remove a SWFUpload instance from the page. This method strives to remove
-// all references to the SWF, and other objects so memory is properly freed.
-// Returns true if everything was destroyed. Returns a false if a failure occurs leaving SWFUpload in an inconsistant state.
-// Credits: Major improvements provided by steffen
-SWFUpload.prototype.destroy = function () {
-	try {
-		// Make sure Flash is done before we try to remove it
-		this.cancelUpload(null, false);
-		
-
-		// Remove the SWFUpload DOM nodes
-		var movieElement = null;
-		movieElement = this.getMovieElement();
-		
-		if (movieElement && typeof(movieElement.CallFunction) === "unknown") { // We only want to do this in IE
-			// Loop through all the movie's properties and remove all function references (DOM/JS IE 6/7 memory leak workaround)
-			for (var i in movieElement) {
-				try {
-					if (typeof(movieElement[i]) === "function") {
-						movieElement[i] = null;
-					}
-				} catch (ex1) {}
-			}
-
-			// Remove the Movie Element from the page
-			try {
-				movieElement.parentNode.removeChild(movieElement);
-			} catch (ex) {}
-		}
-		
-		// Remove IE form fix reference
-		window[this.movieName] = null;
-
-		// Destroy other references
-		SWFUpload.instances[this.movieName] = null;
-		delete SWFUpload.instances[this.movieName];
-
-		this.movieElement = null;
-		this.settings = null;
-		this.customSettings = null;
-		this.eventQueue = null;
-		this.movieName = null;
-		
-		
-		return true;
-	} catch (ex2) {
-		return false;
-	}
-};
-
-
-// Public: displayDebugInfo prints out settings and configuration
-// information about this SWFUpload instance.
-// This function (and any references to it) can be deleted when placing
-// SWFUpload in production.
-SWFUpload.prototype.displayDebugInfo = function () {
-	this.debug(
-		[
-			"---SWFUpload Instance Info---\n",
-			"Version: ", SWFUpload.version, "\n",
-			"Movie Name: ", this.movieName, "\n",
-			"Settings:\n",
-			"\t", "upload_url:               ", this.settings.upload_url, "\n",
-			"\t", "flash_url:                ", this.settings.flash_url, "\n",
-			"\t", "use_query_string:         ", this.settings.use_query_string.toString(), "\n",
-			"\t", "requeue_on_error:         ", this.settings.requeue_on_error.toString(), "\n",
-			"\t", "http_success:             ", this.settings.http_success.join(", "), "\n",
-			"\t", "assume_success_timeout:   ", this.settings.assume_success_timeout, "\n",
-			"\t", "file_post_name:           ", this.settings.file_post_name, "\n",
-			"\t", "post_params:              ", this.settings.post_params.toString(), "\n",
-			"\t", "file_types:               ", this.settings.file_types, "\n",
-			"\t", "file_types_description:   ", this.settings.file_types_description, "\n",
-			"\t", "file_size_limit:          ", this.settings.file_size_limit, "\n",
-			"\t", "file_upload_limit:        ", this.settings.file_upload_limit, "\n",
-			"\t", "file_queue_limit:         ", this.settings.file_queue_limit, "\n",
-			"\t", "debug:                    ", this.settings.debug.toString(), "\n",
-
-			"\t", "prevent_swf_caching:      ", this.settings.prevent_swf_caching.toString(), "\n",
-
-			"\t", "button_placeholder_id:    ", this.settings.button_placeholder_id.toString(), "\n",
-			"\t", "button_placeholder:       ", (this.settings.button_placeholder ? "Set" : "Not Set"), "\n",
-			"\t", "button_image_url:         ", this.settings.button_image_url.toString(), "\n",
-			"\t", "button_width:             ", this.settings.button_width.toString(), "\n",
-			"\t", "button_height:            ", this.settings.button_height.toString(), "\n",
-			"\t", "button_text:              ", this.settings.button_text.toString(), "\n",
-			"\t", "button_text_style:        ", this.settings.button_text_style.toString(), "\n",
-			"\t", "button_text_top_padding:  ", this.settings.button_text_top_padding.toString(), "\n",
-			"\t", "button_text_left_padding: ", this.settings.button_text_left_padding.toString(), "\n",
-			"\t", "button_action:            ", this.settings.button_action.toString(), "\n",
-			"\t", "button_disabled:          ", this.settings.button_disabled.toString(), "\n",
-
-			"\t", "custom_settings:          ", this.settings.custom_settings.toString(), "\n",
-			"Event Handlers:\n",
-			"\t", "swfupload_loaded_handler assigned:  ", (typeof this.settings.swfupload_loaded_handler === "function").toString(), "\n",
-			"\t", "file_dialog_start_handler assigned: ", (typeof this.settings.file_dialog_start_handler === "function").toString(), "\n",
-			"\t", "file_queued_handler assigned:       ", (typeof this.settings.file_queued_handler === "function").toString(), "\n",
-			"\t", "file_queue_error_handler assigned:  ", (typeof this.settings.file_queue_error_handler === "function").toString(), "\n",
-			"\t", "upload_start_handler assigned:      ", (typeof this.settings.upload_start_handler === "function").toString(), "\n",
-			"\t", "upload_progress_handler assigned:   ", (typeof this.settings.upload_progress_handler === "function").toString(), "\n",
-			"\t", "upload_error_handler assigned:      ", (typeof this.settings.upload_error_handler === "function").toString(), "\n",
-			"\t", "upload_success_handler assigned:    ", (typeof this.settings.upload_success_handler === "function").toString(), "\n",
-			"\t", "upload_complete_handler assigned:   ", (typeof this.settings.upload_complete_handler === "function").toString(), "\n",
-			"\t", "debug_handler assigned:             ", (typeof this.settings.debug_handler === "function").toString(), "\n"
-		].join("")
-	);
-};
-
-/* Note: addSetting and getSetting are no longer used by SWFUpload but are included
-	the maintain v2 API compatibility
-*/
-// Public: (Deprecated) addSetting adds a setting value. If the value given is undefined or null then the default_value is used.
-SWFUpload.prototype.addSetting = function (name, value, default_value) {
-    if (value == undefined) {
-        return (this.settings[name] = default_value);
-    } else {
-        return (this.settings[name] = value);
-	}
-};
-
-// Public: (Deprecated) getSetting gets a setting. Returns an empty string if the setting was not found.
-SWFUpload.prototype.getSetting = function (name) {
-    if (this.settings[name] != undefined) {
-        return this.settings[name];
-	}
-
-    return "";
-};
-
-
-
-// Private: callFlash handles function calls made to the Flash element.
-// Calls are made with a setTimeout for some functions to work around
-// bugs in the ExternalInterface library.
-SWFUpload.prototype.callFlash = function (functionName, argumentArray) {
-	argumentArray = argumentArray || [];
-	
-	var movieElement = this.getMovieElement();
-	var returnValue, returnString;
-
-	// Flash's method if calling ExternalInterface methods (code adapted from MooTools).
-	try {
-		returnString = movieElement.CallFunction('<invoke name="' + functionName + '" returntype="javascript">' + __flash__argumentsToXML(argumentArray, 0) + '</invoke>');
-		returnValue = eval(returnString);
-	} catch (ex) {
-		throw "Call to " + functionName + " failed";
-	}
-	
-	// Unescape file post param values
-	if (returnValue != undefined && typeof returnValue.post === "object") {
-		returnValue = this.unescapeFilePostParams(returnValue);
-	}
-
-	return returnValue;
-};
-
-/* *****************************
-	-- Flash control methods --
-	Your UI should use these
-	to operate SWFUpload
-   ***************************** */
-
-// WARNING: this function does not work in Flash Player 10
-// Public: selectFile causes a File Selection Dialog window to appear.  This
-// dialog only allows 1 file to be selected.
-SWFUpload.prototype.selectFile = function () {
-	this.callFlash("SelectFile");
-};
-
-// WARNING: this function does not work in Flash Player 10
-// Public: selectFiles causes a File Selection Dialog window to appear/ This
-// dialog allows the user to select any number of files
-// Flash Bug Warning: Flash limits the number of selectable files based on the combined length of the file names.
-// If the selection name length is too long the dialog will fail in an unpredictable manner.  There is no work-around
-// for this bug.
-SWFUpload.prototype.selectFiles = function () {
-	this.callFlash("SelectFiles");
-};
-
-
-// Public: startUpload starts uploading the first file in the queue unless
-// the optional parameter 'fileID' specifies the ID 
-SWFUpload.prototype.startUpload = function (fileID) {
-	this.callFlash("StartUpload", [fileID]);
-};
-
-// Public: cancelUpload cancels any queued file.  The fileID parameter may be the file ID or index.
-// If you do not specify a fileID the current uploading file or first file in the queue is cancelled.
-// If you do not want the uploadError event to trigger you can specify false for the triggerErrorEvent parameter.
-SWFUpload.prototype.cancelUpload = function (fileID, triggerErrorEvent) {
-	if (triggerErrorEvent !== false) {
-		triggerErrorEvent = true;
-	}
-	this.callFlash("CancelUpload", [fileID, triggerErrorEvent]);
-};
-
-// Public: stopUpload stops the current upload and requeues the file at the beginning of the queue.
-// If nothing is currently uploading then nothing happens.
-SWFUpload.prototype.stopUpload = function () {
-	this.callFlash("StopUpload");
-};
-
-/* ************************
- * Settings methods
- *   These methods change the SWFUpload settings.
- *   SWFUpload settings should not be changed directly on the settings object
- *   since many of the settings need to be passed to Flash in order to take
- *   effect.
- * *********************** */
-
-// Public: getStats gets the file statistics object.
-SWFUpload.prototype.getStats = function () {
-	return this.callFlash("GetStats");
-};
-
-// Public: setStats changes the SWFUpload statistics.  You shouldn't need to 
-// change the statistics but you can.  Changing the statistics does not
-// affect SWFUpload accept for the successful_uploads count which is used
-// by the upload_limit setting to determine how many files the user may upload.
-SWFUpload.prototype.setStats = function (statsObject) {
-	this.callFlash("SetStats", [statsObject]);
-};
-
-// Public: getFile retrieves a File object by ID or Index.  If the file is
-// not found then 'null' is returned.
-SWFUpload.prototype.getFile = function (fileID) {
-	if (typeof(fileID) === "number") {
-		return this.callFlash("GetFileByIndex", [fileID]);
-	} else {
-		return this.callFlash("GetFile", [fileID]);
-	}
-};
-
-// Public: addFileParam sets a name/value pair that will be posted with the
-// file specified by the Files ID.  If the name already exists then the
-// exiting value will be overwritten.
-SWFUpload.prototype.addFileParam = function (fileID, name, value) {
-	return this.callFlash("AddFileParam", [fileID, name, value]);
-};
-
-// Public: removeFileParam removes a previously set (by addFileParam) name/value
-// pair from the specified file.
-SWFUpload.prototype.removeFileParam = function (fileID, name) {
-	this.callFlash("RemoveFileParam", [fileID, name]);
-};
-
-// Public: setUploadUrl changes the upload_url setting.
-SWFUpload.prototype.setUploadURL = function (url) {
-	this.settings.upload_url = url.toString();
-	this.callFlash("SetUploadURL", [url]);
-};
-
-// Public: setPostParams changes the post_params setting
-SWFUpload.prototype.setPostParams = function (paramsObject) {
-	this.settings.post_params = paramsObject;
-	this.callFlash("SetPostParams", [paramsObject]);
-};
-
-// Public: addPostParam adds post name/value pair.  Each name can have only one value.
-SWFUpload.prototype.addPostParam = function (name, value) {
-	this.settings.post_params[name] = value;
-	this.callFlash("SetPostParams", [this.settings.post_params]);
-};
-
-// Public: removePostParam deletes post name/value pair.
-SWFUpload.prototype.removePostParam = function (name) {
-	delete this.settings.post_params[name];
-	this.callFlash("SetPostParams", [this.settings.post_params]);
-};
-
-// Public: setFileTypes changes the file_types setting and the file_types_description setting
-SWFUpload.prototype.setFileTypes = function (types, description) {
-	this.settings.file_types = types;
-	this.settings.file_types_description = description;
-	this.callFlash("SetFileTypes", [types, description]);
-};
-
-// Public: setFileSizeLimit changes the file_size_limit setting
-SWFUpload.prototype.setFileSizeLimit = function (fileSizeLimit) {
-	this.settings.file_size_limit = fileSizeLimit;
-	this.callFlash("SetFileSizeLimit", [fileSizeLimit]);
-};
-
-// Public: setFileUploadLimit changes the file_upload_limit setting
-SWFUpload.prototype.setFileUploadLimit = function (fileUploadLimit) {
-	this.settings.file_upload_limit = fileUploadLimit;
-	this.callFlash("SetFileUploadLimit", [fileUploadLimit]);
-};
-
-// Public: setFileQueueLimit changes the file_queue_limit setting
-SWFUpload.prototype.setFileQueueLimit = function (fileQueueLimit) {
-	this.settings.file_queue_limit = fileQueueLimit;
-	this.callFlash("SetFileQueueLimit", [fileQueueLimit]);
-};
-
-// Public: setFilePostName changes the file_post_name setting
-SWFUpload.prototype.setFilePostName = function (filePostName) {
-	this.settings.file_post_name = filePostName;
-	this.callFlash("SetFilePostName", [filePostName]);
-};
-
-// Public: setUseQueryString changes the use_query_string setting
-SWFUpload.prototype.setUseQueryString = function (useQueryString) {
-	this.settings.use_query_string = useQueryString;
-	this.callFlash("SetUseQueryString", [useQueryString]);
-};
-
-// Public: setRequeueOnError changes the requeue_on_error setting
-SWFUpload.prototype.setRequeueOnError = function (requeueOnError) {
-	this.settings.requeue_on_error = requeueOnError;
-	this.callFlash("SetRequeueOnError", [requeueOnError]);
-};
-
-// Public: setHTTPSuccess changes the http_success setting
-SWFUpload.prototype.setHTTPSuccess = function (http_status_codes) {
-	if (typeof http_status_codes === "string") {
-		http_status_codes = http_status_codes.replace(" ", "").split(",");
-	}
-	
-	this.settings.http_success = http_status_codes;
-	this.callFlash("SetHTTPSuccess", [http_status_codes]);
-};
-
-// Public: setHTTPSuccess changes the http_success setting
-SWFUpload.prototype.setAssumeSuccessTimeout = function (timeout_seconds) {
-	this.settings.assume_success_timeout = timeout_seconds;
-	this.callFlash("SetAssumeSuccessTimeout", [timeout_seconds]);
-};
-
-// Public: setDebugEnabled changes the debug_enabled setting
-SWFUpload.prototype.setDebugEnabled = function (debugEnabled) {
-	this.settings.debug_enabled = debugEnabled;
-	this.callFlash("SetDebugEnabled", [debugEnabled]);
-};
-
-// Public: setButtonImageURL loads a button image sprite
-SWFUpload.prototype.setButtonImageURL = function (buttonImageURL) {
-	if (buttonImageURL == undefined) {
-		buttonImageURL = "";
-	}
-	
-	this.settings.button_image_url = buttonImageURL;
-	this.callFlash("SetButtonImageURL", [buttonImageURL]);
-};
-
-// Public: setButtonDimensions resizes the Flash Movie and button
-SWFUpload.prototype.setButtonDimensions = function (width, height) {
-	this.settings.button_width = width;
-	this.settings.button_height = height;
-	
-	var movie = this.getMovieElement();
-	if (movie != undefined) {
-		movie.style.width = width + "px";
-		movie.style.height = height + "px";
-	}
-	
-	this.callFlash("SetButtonDimensions", [width, height]);
-};
-// Public: setButtonText Changes the text overlaid on the button
-SWFUpload.prototype.setButtonText = function (html) {
-	this.settings.button_text = html;
-	this.callFlash("SetButtonText", [html]);
-};
-// Public: setButtonTextPadding changes the top and left padding of the text overlay
-SWFUpload.prototype.setButtonTextPadding = function (left, top) {
-	this.settings.button_text_top_padding = top;
-	this.settings.button_text_left_padding = left;
-	this.callFlash("SetButtonTextPadding", [left, top]);
-};
-
-// Public: setButtonTextStyle changes the CSS used to style the HTML/Text overlaid on the button
-SWFUpload.prototype.setButtonTextStyle = function (css) {
-	this.settings.button_text_style = css;
-	this.callFlash("SetButtonTextStyle", [css]);
-};
-// Public: setButtonDisabled disables/enables the button
-SWFUpload.prototype.setButtonDisabled = function (isDisabled) {
-	this.settings.button_disabled = isDisabled;
-	this.callFlash("SetButtonDisabled", [isDisabled]);
-};
-// Public: setButtonAction sets the action that occurs when the button is clicked
-SWFUpload.prototype.setButtonAction = function (buttonAction) {
-	this.settings.button_action = buttonAction;
-	this.callFlash("SetButtonAction", [buttonAction]);
-};
-
-// Public: setButtonCursor changes the mouse cursor displayed when hovering over the button
-SWFUpload.prototype.setButtonCursor = function (cursor) {
-	this.settings.button_cursor = cursor;
-	this.callFlash("SetButtonCursor", [cursor]);
-};
-
-/* *******************************
-	Flash Event Interfaces
-	These functions are used by Flash to trigger the various
-	events.
-	
-	All these functions a Private.
-	
-	Because the ExternalInterface library is buggy the event calls
-	are added to a queue and the queue then executed by a setTimeout.
-	This ensures that events are executed in a determinate order and that
-	the ExternalInterface bugs are avoided.
-******************************* */
-
-SWFUpload.prototype.queueEvent = function (handlerName, argumentArray) {
-	// Warning: Don't call this.debug inside here or you'll create an infinite loop
-	
-	if (argumentArray == undefined) {
-		argumentArray = [];
-	} else if (!(argumentArray instanceof Array)) {
-		argumentArray = [argumentArray];
-	}
-	
-	var self = this;
-	if (typeof this.settings[handlerName] === "function") {
-		// Queue the event
-		this.eventQueue.push(function () {
-			this.settings[handlerName].apply(this, argumentArray);
-		});
-		
-		// Execute the next queued event
-		setTimeout(function () {
-			self.executeNextEvent();
-		}, 0);
-		
-	} else if (this.settings[handlerName] !== null) {
-		throw "Event handler " + handlerName + " is unknown or is not a function";
-	}
-};
-
-// Private: Causes the next event in the queue to be executed.  Since events are queued using a setTimeout
-// we must queue them in order to garentee that they are executed in order.
-SWFUpload.prototype.executeNextEvent = function () {
-	// Warning: Don't call this.debug inside here or you'll create an infinite loop
-
-	var  f = this.eventQueue ? this.eventQueue.shift() : null;
-	if (typeof(f) === "function") {
-		f.apply(this);
-	}
-};
-
-// Private: unescapeFileParams is part of a workaround for a flash bug where objects passed through ExternalInterface cannot have
-// properties that contain characters that are not valid for JavaScript identifiers. To work around this
-// the Flash Component escapes the parameter names and we must unescape again before passing them along.
-SWFUpload.prototype.unescapeFilePostParams = function (file) {
-	var reg = /[$]([0-9a-f]{4})/i;
-	var unescapedPost = {};
-	var uk;
-
-	if (file != undefined) {
-		for (var k in file.post) {
-			if (file.post.hasOwnProperty(k)) {
-				uk = k;
-				var match;
-				while ((match = reg.exec(uk)) !== null) {
-					uk = uk.replace(match[0], String.fromCharCode(parseInt("0x" + match[1], 16)));
-				}
-				unescapedPost[uk] = file.post[k];
-			}
-		}
-
-		file.post = unescapedPost;
-	}
-
-	return file;
-};
-
-// Private: Called by Flash to see if JS can call in to Flash (test if External Interface is working)
-SWFUpload.prototype.testExternalInterface = function () {
-	try {
-		return this.callFlash("TestExternalInterface");
-	} catch (ex) {
-		return false;
-	}
-};
-
-// Private: This event is called by Flash when it has finished loading. Don't modify this.
-// Use the swfupload_loaded_handler event setting to execute custom code when SWFUpload has loaded.
-SWFUpload.prototype.flashReady = function () {
-	// Check that the movie element is loaded correctly with its ExternalInterface methods defined
-	var movieElement = this.getMovieElement();
-
-	if (!movieElement) {
-		this.debug("Flash called back ready but the flash movie can't be found.");
-		return;
-	}
-
-	this.cleanUp(movieElement);
-	
-	this.queueEvent("swfupload_loaded_handler");
-};
-
-// Private: removes Flash added fuctions to the DOM node to prevent memory leaks in IE.
-// This function is called by Flash each time the ExternalInterface functions are created.
-SWFUpload.prototype.cleanUp = function (movieElement) {
-	// Pro-actively unhook all the Flash functions
-	try {
-		if (this.movieElement && typeof(movieElement.CallFunction) === "unknown") { // We only want to do this in IE
-			this.debug("Removing Flash functions hooks (this should only run in IE and should prevent memory leaks)");
-			for (var key in movieElement) {
-				try {
-					if (typeof(movieElement[key]) === "function") {
-						movieElement[key] = null;
-					}
-				} catch (ex) {
-				}
-			}
-		}
-	} catch (ex1) {
-	
-	}
-
-	// Fix Flashes own cleanup code so if the SWFMovie was removed from the page
-	// it doesn't display errors.
-	window["__flash__removeCallback"] = function (instance, name) {
-		try {
-			if (instance) {
-				instance[name] = null;
-			}
-		} catch (flashEx) {
-		
-		}
-	};
-
-};
-
-
-/* This is a chance to do something before the browse window opens */
-SWFUpload.prototype.fileDialogStart = function () {
-	this.queueEvent("file_dialog_start_handler");
-};
-
-
-/* Called when a file is successfully added to the queue. */
-SWFUpload.prototype.fileQueued = function (file) {
-	file = this.unescapeFilePostParams(file);
-	this.queueEvent("file_queued_handler", file);
-};
-
-
-/* Handle errors that occur when an attempt to queue a file fails. */
-SWFUpload.prototype.fileQueueError = function (file, errorCode, message) {
-	file = this.unescapeFilePostParams(file);
-	this.queueEvent("file_queue_error_handler", [file, errorCode, message]);
-};
-
-/* Called after the file dialog has closed and the selected files have been queued.
-	You could call startUpload here if you want the queued files to begin uploading immediately. */
-SWFUpload.prototype.fileDialogComplete = function (numFilesSelected, numFilesQueued, numFilesInQueue) {
-	this.queueEvent("file_dialog_complete_handler", [numFilesSelected, numFilesQueued, numFilesInQueue]);
-};
-
-SWFUpload.prototype.uploadStart = function (file) {
-	file = this.unescapeFilePostParams(file);
-	this.queueEvent("return_upload_start_handler", file);
-};
-
-SWFUpload.prototype.returnUploadStart = function (file) {
-	var returnValue;
-	if (typeof this.settings.upload_start_handler === "function") {
-		file = this.unescapeFilePostParams(file);
-		returnValue = this.settings.upload_start_handler.call(this, file);
-	} else if (this.settings.upload_start_handler != undefined) {
-		throw "upload_start_handler must be a function";
-	}
-
-	// Convert undefined to true so if nothing is returned from the upload_start_handler it is
-	// interpretted as 'true'.
-	if (returnValue === undefined) {
-		returnValue = true;
-	}
-	
-	returnValue = !!returnValue;
-	
-	this.callFlash("ReturnUploadStart", [returnValue]);
-};
-
-
-
-SWFUpload.prototype.uploadProgress = function (file, bytesComplete, bytesTotal) {
-	file = this.unescapeFilePostParams(file);
-	this.queueEvent("upload_progress_handler", [file, bytesComplete, bytesTotal]);
-};
-
-SWFUpload.prototype.uploadError = function (file, errorCode, message) {
-	file = this.unescapeFilePostParams(file);
-	this.queueEvent("upload_error_handler", [file, errorCode, message]);
-};
-
-SWFUpload.prototype.uploadSuccess = function (file, serverData, responseReceived) {
-	file = this.unescapeFilePostParams(file);
-	this.queueEvent("upload_success_handler", [file, serverData, responseReceived]);
-};
-
-SWFUpload.prototype.uploadComplete = function (file) {
-	file = this.unescapeFilePostParams(file);
-	this.queueEvent("upload_complete_handler", file);
-};
-
-/* Called by SWFUpload JavaScript and Flash functions when debug is enabled. By default it writes messages to the
-   internal debug console.  You can override this event and have messages written where you want. */
-SWFUpload.prototype.debug = function (message) {
-	this.queueEvent("debug_handler", message);
-};
-
-
-/* **********************************
-	Debug Console
-	The debug console is a self contained, in page location
-	for debug message to be sent.  The Debug Console adds
-	itself to the body if necessary.
-
-	The console is automatically scrolled as messages appear.
-	
-	If you are using your own debug handler or when you deploy to production and
-	have debug disabled you can remove these functions to reduce the file size
-	and complexity.
-********************************** */
-   
-// Private: debugMessage is the default debug_handler.  If you want to print debug messages
-// call the debug() function.  When overriding the function your own function should
-// check to see if the debug setting is true before outputting debug information.
-SWFUpload.prototype.debugMessage = function (message) {
-	if (this.settings.debug) {
-		var exceptionMessage, exceptionValues = [];
-
-		// Check for an exception object and print it nicely
-		if (typeof message === "object" && typeof message.name === "string" && typeof message.message === "string") {
-			for (var key in message) {
-				if (message.hasOwnProperty(key)) {
-					exceptionValues.push(key + ": " + message[key]);
-				}
-			}
-			exceptionMessage = exceptionValues.join("\n") || "";
-			exceptionValues = exceptionMessage.split("\n");
-			exceptionMessage = "EXCEPTION: " + exceptionValues.join("\nEXCEPTION: ");
-			SWFUpload.Console.writeLine(exceptionMessage);
-		} else {
-			SWFUpload.Console.writeLine(message);
-		}
-	}
-};
-
-SWFUpload.Console = {};
-SWFUpload.Console.writeLine = function (message) {
-	var console, documentForm;
-
-	try {
-		console = document.getElementById("SWFUpload_Console");
-
-		if (!console) {
-			documentForm = document.createElement("form");
-			document.getElementsByTagName("body")[0].appendChild(documentForm);
-
-			console = document.createElement("textarea");
-			console.id = "SWFUpload_Console";
-			console.style.fontFamily = "monospace";
-			console.setAttribute("wrap", "off");
-			console.wrap = "off";
-			console.style.overflow = "auto";
-			console.style.width = "700px";
-			console.style.height = "350px";
-			console.style.margin = "5px";
-			documentForm.appendChild(console);
-		}
-
-		console.value += message + "\n";
-
-		console.scrollTop = console.scrollHeight - console.clientHeight;
-	} catch (ex) {
-		alert("Exception: " + ex.name + " Message: " + ex.message);
-	}
-};
 /*
 Copyright 2008-2009 University of Cambridge
 Copyright 2008-2009 University of Toronto
@@ -15158,2577 +19455,800 @@ https://source.fluidproject.org/svn/LICENSE.txt
 fluid_1_1 = fluid_1_1 || {};
 
 (function ($, fluid) {
+
+    /******************
+     * Pager Bar View *
+     ******************/
+
     
-    var animateDisplay = function (elm, animation, defaultAnimation) {
-        animation = (animation) ? animation : defaultAnimation;
-        elm.animate(animation.params, animation.duration, animation.callback);
-    };
-    
-    var animateProgress = function (elm, width, speed) {
-        // de-queue any left over animations
-        elm.queue("fx", []); 
-        
-        elm.animate({ 
-            width: width,
-            queue: false
-        }, 
-        speed);
-    };
-    
-    var showProgress = function (that, animation) {
-        if (animation === false) {
-            that.displayElement.show();
-        } else {
-            animateDisplay(that.displayElement, animation, that.options.showAnimation);
+    function updateStyles(pageListThat, newModel, oldModel) {
+        if (!pageListThat.pageLinks) {
+            return;
         }
+        if (oldModel.pageIndex !== undefined) {
+            var oldLink = pageListThat.pageLinks.eq(oldModel.pageIndex);
+            oldLink.removeClass(pageListThat.options.styles.currentPage);
+        }
+        var pageLink = pageListThat.pageLinks.eq(newModel.pageIndex);
+        pageLink.addClass(pageListThat.options.styles.currentPage); 
+
+
+    }
+    
+    function bindLinkClick(link, events, eventArg) {
+        link.unbind("click.fluid.pager");
+        link.bind("click.fluid.pager", function () {events.initiatePageChange.fire(eventArg); });
+    }
+    
+    // 10 -> 1, 11 -> 2
+    function computePageCount(model) {
+        model.pageCount = Math.max(1, Math.floor((model.totalRange - 1) / model.pageSize) + 1);
+    }
+    
+    function computePageLimit(model) {
+        return Math.min(model.totalRange, (model.pageIndex + 1) * model.pageSize);
+    }
+
+    fluid.pager = function () {
+        return fluid.pagerImpl.apply(null, arguments);
     };
     
-    var hideProgress = function (that, delay, animation) {
-        
-        delay = (delay === null || isNaN(delay)) ? that.options.delay : delay;
-        
-        if (delay) {
-            // use a setTimeout to delay the hide for n millies, note use of recursion
-            var timeOut = setTimeout(function () {
-                hideProgress(that, 0, animation);
-            }, delay);
-        } else {
-            if (animation === false) {
-                that.displayElement.hide();
-            } else {
-                animateDisplay(that.displayElement, animation, that.options.hideAnimation);
+    fluid.pager.directPageList = function (container, events, options) {
+        var that = fluid.initView("fluid.pager.directPageList", container, options);
+        that.pageLinks = that.locate("pageLinks");
+        for (var i = 0; i < that.pageLinks.length; ++ i) {
+            var pageLink = that.pageLinks.eq(i);
+            bindLinkClick(pageLink, events, {pageIndex: i});
+        }
+        events.onModelChange.addListener(
+            function (newModel, oldModel) {
+                updateStyles(that, newModel, oldModel);
             }
-        }   
-    };
-    
-    var updateWidth = function (that, newWidth, dontAnimate) {
-        dontAnimate  = dontAnimate || false;
-        var currWidth = that.indicator.width();
-        var direction = that.options.animate;
-        if ((newWidth > currWidth) && (direction === "both" || direction === "forward") && !dontAnimate) {
-            animateProgress(that.indicator, newWidth, that.options.speed);
-        } else if ((newWidth < currWidth) && (direction === "both" || direction === "backward") && !dontAnimate) {
-            animateProgress(that.indicator, newWidth, that.options.speed);
-        } else {
-            that.indicator.width(newWidth);
-        }
-    };
-         
-    var percentToPixels = function (that, percent) {
-        // progress does not support percents over 100, also all numbers are rounded to integers
-        return Math.round((Math.min(percent, 100) * that.progressBar.width()) / 100);
-    };
-    
-    var refreshRelativeWidth = function (that)  {
-        var pixels = Math.max(percentToPixels(that, parseFloat(that.storedPercent)), that.options.minWidth);
-        updateWidth(that, pixels, true);
-    };
-        
-    var initARIA = function (ariaElement) {
-        ariaElement.attr("role", "progressbar");
-        ariaElement.attr("aria-valuemin", "0");
-        ariaElement.attr("aria-valuemax", "100");
-        ariaElement.attr("aria-live", "assertive");
-        ariaElement.attr("aria-busy", "false");
-        ariaElement.attr("aria-valuenow", "0");
-        ariaElement.attr("aria-valuetext", "");
-    };
-    
-    var updateARIA = function (that, percent) {
-        var busy = percent < 100 && percent > 0;
-        that.ariaElement.attr("aria-busy", busy);
-        that.ariaElement.attr("aria-valuenow", percent);    
-        if (busy) {
-            var busyString = fluid.stringTemplate(that.options.ariaBusyText, {percentComplete : percent});                  
-            that.ariaElement.attr("aria-valuetext", busyString);
-        } else if (percent === 100) {
-            that.ariaElement.attr("aria-valuetext", that.options.ariaDoneText);
-        }
-    };
-        
-    var updateText = function (label, value) {
-        label.html(value);
-    };
-    
-    var repositionIndicator = function (that) {
-        that.indicator.css("top", that.progressBar.position().top)
-            .css("left", 0)
-            .height(that.progressBar.height());
-        refreshRelativeWidth(that);
-    };
-        
-    var updateProgress = function (that, percent, labelText, animationForShow) {
-        
-        // show progress before updating, jQuery will handle the case if the object is already displayed
-        showProgress(that, animationForShow);
-            
-        // do not update if the value of percent is falsey
-        if (percent !== null) {
-            that.storedPercent = percent;
-        
-            var pixels = Math.max(percentToPixels(that, parseFloat(percent)), that.options.minWidth);   
-            updateWidth(that, pixels);
-        }
-        
-        if (labelText !== null) {
-            updateText(that.label, labelText);
-        }
-        
-        // update ARIA
-        if (that.ariaElement) {
-            updateARIA(that, percent);
-        }
-    };
-        
-    var setupProgress = function (that) {
-        that.displayElement = that.locate("displayElement");
-
-        // hide file progress in case it is showing
-        if (that.options.initiallyHidden) {
-            that.displayElement.hide();
-        }
-
-        that.progressBar = that.locate("progressBar");
-        that.label = that.locate("label");
-        that.indicator = that.locate("indicator");
-        that.ariaElement = that.locate("ariaElement");
-        
-        that.indicator.width(that.options.minWidth);
-
-        that.storedPercent = 0;
-                
-        // initialize ARIA
-        if (that.ariaElement) {
-            initARIA(that.ariaElement);
-        }
-
-    };
-           
-    /**
-    * Instantiates a new Progress component.
-    * 
-    * @param {jQuery|Selector|Element} container the DOM element in which the Uploader lives
-    * @param {Object} options configuration options for the component.
-    */
-    fluid.progress = function (container, options) {
-        var that = fluid.initView("fluid.progress", container, options);
-        setupProgress(that);
-        
-        /**
-         * Shows the progress bar if is currently hidden.
-         * 
-         * @param {Object} animation a custom animation used when showing the progress bar
-         */
-        that.show = function (animation) {
-            showProgress(that, animation);
+        );
+        that.defaultModel = {
+            pageIndex: undefined,
+            pageSize: 1,
+            totalRange: that.pageLinks.length
         };
-        
-        /**
-         * Hides the progress bar if it is visible.
-         * 
-         * @param {Number} delay the amount of time to wait before hiding
-         * @param {Object} animation a custom animation used when hiding the progress bar
-         */
-        that.hide = function (delay, animation) {
-            hideProgress(that, delay, animation);
-        };
-        
-        /**
-         * Updates the state of the progress bar.
-         * This will automatically show the progress bar if it is currently hidden.
-         * Percentage is specified as a decimal value, but will be automatically converted if needed.
-         * 
-         * 
-         * @param {Number|String} percentage the current percentage, specified as a "float-ish" value 
-         * @param {String} labelValue the value to set for the label; this can be an HTML string
-         * @param {Object} animationForShow the animation to use when showing the progress bar if it is hidden
-         */
-        that.update = function (percentage, labelValue, animationForShow) {
-            updateProgress(that, percentage, labelValue, animationForShow);
-        };
-        
-        that.refreshView = function () {
-            repositionIndicator(that);
-        };
-                        
-        return that;  
-    };
-      
-    fluid.defaults("fluid.progress", {  
-        selectors: {
-            displayElement: ".flc-progress", // required, the element that gets displayed when progress is displayed, could be the indicator or bar or some larger outer wrapper as in an overlay effect
-            progressBar: ".flc-progress-bar", //required
-            indicator: ".flc-progress-indicator", //required
-            label: ".flc-progress-label", //optional
-            ariaElement: ".flc-progress-bar" // usually required, except in cases where there are more than one progressor for the same data such as a total and a sub-total
-        },
-        
-        // progress display and hide animations, use the jQuery animation primatives, set to false to use no animation
-        // animations must be symetrical (if you hide with width, you'd better show with width) or you get odd effects
-        // see jQuery docs about animations to customize
-        showAnimation: {
-            params: {
-                opacity: "show"
-            }, 
-            duration: "slow", 
-            callback: null
-        }, // equivalent of $().fadeIn("slow")
-        
-        hideAnimation: {
-            params: {
-                opacity: "hide"
-            }, 
-            duration: "slow", 
-            callback: null
-        }, // equivalent of $().fadeOut("slow")
-
-        minWidth: 5, // 0 length indicators can look broken if there is a long pause between updates
-        delay: 0, // the amount to delay the fade out of the progress
-        speed: 200, // default speed for animations, pretty fast
-        animate: "forward", // suppport "forward", "backward", and "both", any other value is no animation either way
-        initiallyHidden: true, // supports progress indicators which may always be present
-        updatePosition: false,
-        
-        ariaBusyText: "Progress is %percentComplete percent complete",
-        ariaDoneText: "Progress is complete."
-    });
-    
-})(jQuery, fluid_1_1);
-/*
-Copyright 2008-2009 University of Cambridge
-Copyright 2008-2009 University of Toronto
-Copyright 2007-2009 University of California, Berkeley
-
-Licensed under the Educational Community License (ECL), Version 2.0 or the New
-BSD license. You may not use this file except in compliance with one these
-Licenses.
-
-You may obtain a copy of the ECL 2.0 License and BSD License at
-https://source.fluidproject.org/svn/LICENSE.txt
-*/
-
-/*global jQuery*/
-/*global fluid_1_1*/
-
-fluid_1_1 = fluid_1_1 || {};
-
-/***********************
- * Demo Upload Manager *
- ***********************/
-
-(function ($, fluid) {
-    
-    var updateProgress = function (file, events, demoState, isUploading) {
-        if (!isUploading) {
-            return;
-        }
-        
-        var chunk = Math.min(demoState.chunkSize, file.size);
-        demoState.bytesUploaded = Math.min(demoState.bytesUploaded + chunk, file.size);
-        events.onFileProgress.fire(file, demoState.bytesUploaded, file.size);
-    };
-    
-        
-    var fireAfterFileComplete = function (that, file) {
-        // this is a horrible hack that needs to be addressed.
-        if (that.swfUploadSettings) {
-            that.swfUploadSettings.upload_complete_handler(file); 
-        } else {
-            that.events.afterFileComplete.fire(file);
-        }
-    };
-    
-    var finishAndContinueOrCleanup = function (that, file) {
-        that.queueManager.finishFile(file);
-        if (that.queueManager.shouldUploadNextFile()) {
-            startUploading(that);
-        } else {
-            that.queueManager.complete();
-        }
-    };
-    
-    var finishUploading = function (that) {
-        if (!that.queue.isUploading) {
-            return;
-        }
-        
-        var file = that.demoState.currentFile;
-        file.filestatus = fluid.uploader.fileStatusConstants.COMPLETE;
-        that.events.onFileSuccess.fire(file);
-        that.demoState.fileIdx++;
-        finishAndContinueOrCleanup(that, file);
-    };
-    
-    var simulateUpload = function (that) {
-        if (!that.queue.isUploading) {
-            return;
-        }
-        
-        var file = that.demoState.currentFile;
-        if (that.demoState.bytesUploaded < file.size) {
-            that.invokeAfterRandomDelay(function () {
-                updateProgress(file, that.events, that.demoState, that.queue.isUploading);
-                simulateUpload(that);
-            });
-        } else {
-            finishUploading(that);
-        } 
-    };
-    
-    var startUploading = function (that) {
-        // Reset our upload stats for each new file.
-        that.demoState.currentFile = that.queue.files[that.demoState.fileIdx];
-        that.demoState.chunksForCurrentFile = Math.ceil(that.demoState.currentFile / that.demoState.chunkSize);
-        that.demoState.bytesUploaded = 0;
-        that.queue.isUploading = true;
-        
-        that.events.onFileStart.fire(that.demoState.currentFile);
-        that.demoState.currentFile.filestatus = fluid.uploader.fileStatusConstants.IN_PROGRESS;
-        simulateUpload(that);
-    };
-
-    var stopDemo = function (that) {
-        var file = that.demoState.currentFile;
-        file.filestatus = fluid.uploader.fileStatusConstants.CANCELLED;
-        that.queue.shouldStop = true;
-        
-        // In SWFUpload's world, pausing is a combinination of an UPLOAD_STOPPED error and a complete.
-        that.events.onFileError.fire(file, 
-                                     fluid.uploader.errorConstants.UPLOAD_STOPPED, 
-                                     "The demo upload was paused by the user.");
-        finishAndContinueOrCleanup(that, file);
-        that.events.onUploadStop.fire();
-    };
-    
-    var setupDemoUploadManager = function (that) {
-        if (that.options.simulateDelay === undefined || that.options.simulateDelay === null) {
-            that.options.simulateDelay = true;
-        }
-          
-        // Initialize state for our upload simulation.
-        that.demoState = {
-            fileIdx: 0,
-            chunkSize: 200000
-        };
-        
         return that;
     };
-       
-    /**
-     * The Demo Upload Manager wraps a standard upload manager and simulates the upload process.
-     * 
-     * @param {UploadManager} uploadManager the upload manager to wrap
+    
+    /** Returns an array of size count, filled with increasing integers, 
+     *  starting at 0 or at the index specified by first. 
      */
-    fluid.demoUploadManager = function (uploadManager) {
-        var that = uploadManager;
-        
-        that.start = function () {
-            that.queueManager.start();
-            startUploading(that);   
-        };
-        
-        /**
-         * Cancels a simulated upload.
-         * This method overrides the default behaviour in SWFUploadManager.
-         */
-        that.stop = function () {
-            stopDemo(that);
-        };
-        
-        /**
-         * Invokes a function after a random delay by using setTimeout.
-         * If the simulateDelay option is false, the function is invoked immediately.
-         * 
-         * @param {Object} fn the function to invoke
-         */
-        that.invokeAfterRandomDelay = function (fn) {
-            var delay;
-            
-            if (that.options.simulateDelay) {
-                delay = Math.floor(Math.random() * 1000 + 100);
-                setTimeout(fn, delay);
-            } else {
-                fn();
-            }
-        };
-        
-        setupDemoUploadManager(that);
-        return that;
-    };
-})(jQuery, fluid_1_1);
-/*
-Copyright 2008-2009 University of Cambridge
-Copyright 2008-2009 University of Toronto
-Copyright 2007-2009 University of California, Berkeley
-
-Licensed under the Educational Community License (ECL), Version 2.0 or the New
-BSD license. You may not use this file except in compliance with one these
-Licenses.
-
-You may obtain a copy of the ECL 2.0 License and BSD License at
-https://source.fluidproject.org/svn/LICENSE.txt
-*/
-
-/*global SWFUpload*/
-/*global jQuery*/
-/*global fluid_1_1*/
-
-fluid_1_1 = fluid_1_1 || {};
-
-(function ($, fluid) {
     
-    var filterFiles = function (files, filterFn) {
-        var filteredFiles = [];
-        for (var i = 0; i < files.length; i++) {
-            var file = files[i];
-            if (filterFn(file) === true) {
-                filteredFiles.push(file);
-            }
+    fluid.iota = function (count, first) {
+        first = first || 0;
+        var togo = [];
+        for (var i = 0; i < count; ++ i) {
+            togo[togo.length] = first++;
         }
-        
-        return filteredFiles;
+        return togo;
     };
     
-    var getUploadedFiles = function (that) {
-        return filterFiles(that.files, function (file) {
-            return (file.filestatus === fluid.uploader.fileStatusConstants.COMPLETE);
-        });
-    };
+    fluid.pager.everyPageStrategy = fluid.iota;
     
-    var getReadyFiles = function (that) {
-        return filterFiles(that.files, function (file) {
-            return (file.filestatus === fluid.uploader.fileStatusConstants.QUEUED || file.filestatus === fluid.uploader.fileStatusConstants.CANCELLED);
-        });
-    };
-    
-    var getErroredFiles = function (that) {
-        return filterFiles(that.files, function (file) {
-            return (file.filestatus === fluid.uploader.fileStatusConstants.ERROR);
-        });
-    };
-
-    var removeFile = function (that, file) {
-        // Remove the file from the collection and tell the world about it.
-        var idx = $.inArray(file, that.files);
-        that.files.splice(idx, 1);
-    };
-    
-    var clearCurrentBatch = function (that) {
-        that.currentBatch = {
-            fileIdx: -1,
-            files: [],
-            totalBytes: 0,
-            numFilesCompleted: 0,
-            numFilesErrored: 0,
-            bytesUploadedForFile: 0,
-            previousBytesUploadedForFile: 0,
-            totalBytesUploaded: 0
-        };
-    };
-    
-    var updateCurrentBatch = function (that) {
-        var readyFiles = that.getReadyFiles();
-        that.currentBatch.files = readyFiles;
-        that.currentBatch.totalBytes = fluid.fileQueue.sizeOfFiles(readyFiles);
-    };
-    
-    var setupCurrentBatch = function (that) {
-        clearCurrentBatch(that);
-        updateCurrentBatch(that);
-    };
-     
-    fluid.fileQueue = function () {
-        var that = {};
-        that.files = [];
-        that.isUploading = false;
-        
-        that.addFile = function (file) {
-            that.files.push(file);    
-        };
-        
-        that.removeFile = function (file) {
-            removeFile(that, file);
-        };
-        
-        that.totalBytes = function () {
-            return fluid.fileQueue.sizeOfFiles(that.files);
-        };
-        
-        that.getReadyFiles = function () {
-            return getReadyFiles(that);
-        };
-        
-        that.getErroredFiles = function () {
-            return getErroredFiles(that);
-        };
-        
-        that.sizeOfReadyFiles = function () {
-            return fluid.fileQueue.sizeOfFiles(that.getReadyFiles());
-        };
-        
-        that.getUploadedFiles = function () {
-            return getUploadedFiles(that);
-        };
-
-        that.sizeOfUploadedFiles = function () {
-            return fluid.fileQueue.sizeOfFiles(that.getUploadedFiles());
-        };
-
-        that.setupCurrentBatch = function () {
-            setupCurrentBatch(that);
-        };
-        
-        that.clearCurrentBatch = function () {
-            clearCurrentBatch(that);
-        };
-        
-        that.updateCurrentBatch = function () {
-            updateCurrentBatch(that);
-        };
-                
-        return that;
-    };
-    
-    fluid.fileQueue.sizeOfFiles = function (files) {
-        var totalBytes = 0;
-        for (var i = 0; i < files.length; i++) {
-            var file = files[i];
-            totalBytes += file.size;
-        }        
-        return totalBytes;
-    };
-    
-    fluid.fileQueue.manager = function (queue, events) {
-        var that = {};
-        that.queue = queue;
-        that.events = events;
-        
-        that.start = function () {
-            that.queue.setupCurrentBatch();
-            that.queue.isUploading = true;
-            that.queue.shouldStop = false;
-            that.events.onUploadStart.fire(that.queue.currentBatch.files); 
-        };
-        
-        that.startFile = function () {
-            that.queue.currentBatch.fileIdx++;
-            that.queue.currentBatch.bytesUploadedForFile = 0;
-            that.queue.currentBatch.previousBytesUploadedForFile = 0; 
-        };
-                
-        that.finishFile = function (file) {
-            var batch = that.queue.currentBatch;
-            batch.numFilesCompleted++;
-            that.events.afterFileComplete.fire(file); 
-        };
-        
-        that.shouldUploadNextFile = function () {
-            return !that.queue.shouldStop && that.queue.isUploading && that.queue.currentBatch.numFilesCompleted < that.queue.currentBatch.files.length;
-        };
-        
-        that.complete = function () {
-            that.events.afterUploadComplete.fire(that.queue.currentBatch.files);
-            that.queue.clearCurrentBatch();
-        };
-        
-        return that;
-    };
-          
-})(jQuery, fluid_1_1);
-/*
-Copyright 2008-2009 University of Cambridge
-Copyright 2008-2009 University of Toronto
-Copyright 2007-2009 University of California, Berkeley
-
-Licensed under the Educational Community License (ECL), Version 2.0 or the New
-BSD license. You may not use this file except in compliance with one these
-Licenses.
-
-You may obtain a copy of the ECL 2.0 License and BSD License at
-https://source.fluidproject.org/svn/LICENSE.txt
-*/
-
-/*global jQuery*/
-/*global fluid_1_1*/
-
-fluid_1_1 = fluid_1_1 || {};
-
-(function ($, fluid) {
-    
-    var refreshView = function (that) {
-        var maxHeight = that.options.maxHeight;
-        var isOverMaxHeight = (that.scrollingElm.children().eq(0).height() > maxHeight);
-        var setHeight = (isOverMaxHeight) ? maxHeight : "";
-        that.scrollingElm.height(setHeight);
-    };
-    
-    var scrollBottom = function (that) {
-        that.scrollingElm[0].scrollTop = that.scrollingElm[0].scrollHeight;
-    };
-    
-    var scrollTo = function (that, element) {
-        if (!element || element.length < 1) {
-            return;
+    fluid.pager.gappedPageStrategy = function (locality, midLocality) {
+        if (!locality) {
+            locality = 3;
         }
-        
-        var padTop = 0;
-        var padBottom = 0;
-        
-        var elmPosTop = element[0].offsetTop;
-        var elmHeight = element.height();
-        var containerScrollTop = that.scrollingElm[0].scrollTop;
-        var containerHeight = that.scrollingElm.height();
-        
-        if (that.options.padScroll) {
-            // if the combined height of the elements is greater than the 
-            // viewport then then scrollTo element would not be in view
-            var prevElmHeight = element.prev().height();
-            padTop = (prevElmHeight + elmHeight <= containerHeight) ? prevElmHeight : 0;
-            var nextElmHeight = element.next().height();
-            padBottom =  (nextElmHeight + elmHeight <= containerHeight) ? nextElmHeight : 0;
+        if (!midLocality) {
+            midLocality = locality;
         }
-        
-        // if the top of the row is ABOVE the view port move the row into position
-        if ((elmPosTop - padTop) < containerScrollTop) {
-            that.scrollingElm[0].scrollTop = elmPosTop - padTop;
-        }
-        
-        // if the bottom of the row is BELOW the viewport then scroll it into position
-        if (((elmPosTop + elmHeight) + padBottom) > (containerScrollTop + containerHeight)) {
-            elmHeight = (elmHeight < containerHeight) ? elmHeight : containerHeight;
-            that.scrollingElm[0].scrollTop = (elmPosTop - containerHeight + elmHeight + padBottom);
-        }
-    };
-    
-    var setupScroller = function (that) {
-        that.scrollingElm = that.container.parents(that.options.selectors.wrapper);
-        
-        // We should render our own sensible default if the scrolling element is missing.
-        if (!that.scrollingElm.length) {
-            fluid.fail({
-                name: "Missing Scroller",
-                message: "The scroller wrapper element was not found."
-            });
-        }
-        
-        // set the height of the scroller unless this is IE6
-        if (!$.browser.msie || $.browser.version > 6) {
-            that.scrollingElm.css("max-height", that.options.maxHeight);
-        }
-    };
-    
-    /**
-     * Creates a new Scroller component.
-     * 
-     * @param {Object} container the element containing the collection of things to make scrollable 
-     * @param {Object} options configuration options for the component
-     */
-    fluid.scroller = function (container, options) {
-        var that = fluid.initView("fluid.scroller", container, options);
-        setupScroller(that);
-
-        /**
-         * Scrolls the specified element into view
-         * 
-         * @param {jQuery} element the element to scroll into view
-         */
-        that.scrollTo = function (element) {
-            scrollTo(that, element);
-        };
-        
-        /**
-         * Scrolls to the bottom of the view.
-         */
-        that.scrollBottom = function () {
-            scrollBottom(that);
-        };
-        
-        /**
-         * Refreshes the scroller's appearance based on any changes to the document.
-         */
-        that.refreshView = function () {
-            if ($.browser.msie && $.browser.version < 7) {
-                refreshView(that);
-            }
-        };
-        
-        that.refreshView();
-        return that;
-    };
-    
-    fluid.defaults("fluid.scroller", {  
-        selectors: {
-            wrapper: ".flc-scroller"
-        },
-        
-        maxHeight: 180,
-        
-        padScroll: true
-    });
-    
-})(jQuery, fluid_1_1);
-/*
-Copyright 2008-2009 University of Cambridge
-Copyright 2008-2009 University of Toronto
-Copyright 2007-2009 University of California, Berkeley
-
-Licensed under the Educational Community License (ECL), Version 2.0 or the New
-BSD license. You may not use this file except in compliance with one these
-Licenses.
-
-You may obtain a copy of the ECL 2.0 License and BSD License at
-https://source.fluidproject.org/svn/LICENSE.txt
-*/
-
-/*global SWFUpload*/
-/*global swfobject*/
-/*global jQuery*/
-/*global fluid_1_1*/
-
-fluid_1_1 = fluid_1_1 || {};
-
-(function ($, fluid) {
-
-    /*****************************
-     * SWFUpload Setup Decorator *
-     *****************************/
-    
-    var unbindSelectFiles = function () {
-        // There's a bug in SWFUpload 2.2.0b3 that causes the entire browser to crash 
-        // if selectFile() or selectFiles() is invoked. Remove them so no one will accidently crash their browser.
-        var emptyFunction = function () {};
-        SWFUpload.prototype.selectFile = emptyFunction;
-        SWFUpload.prototype.selectFiles = emptyFunction;
-    };
-    
-    var prepareUpstreamOptions = function (that, uploader) {
-        that.returnedOptions = {
-            uploadManager: {
-                type: uploader.options.uploadManager.type || uploader.options.uploadManager
-            }
-        };
-    };
-    
-    var createAfterReadyHandler = function (that, uploader) {
-        return function () {
-            var flashMovie = $("#" + uploader.uploadManager.swfUploader.movieName, uploader.container);
-            var browseButton = uploader.locate("browseButton");
-            
-            // Do our best to make the Flash movie as accessible as possib
-            fluid.tabindex(flashMovie, 0);
-            flashMovie.attr("role", "button");
-            flashMovie.attr("alt", "Browse files button");
-            
-            if (that.isTransparent) {
-                // Style the Flash movie so that it floats trasparently over the button.
-                flashMovie.addClass(that.options.styles.browseButtonOverlay);
-                flashMovie.css("top", browseButton.position().top);
-                flashMovie.css("left", browseButton.position().left);
-            }
-        };
-    };
-    
-    var createFlash9MovieContainer = function () {
-        // Create a hidden container and a placeholder element for SWFUpload to replace.
-        var container = $("<div class='fl-uploader-flash9-container'></div>");
-        var placeholder = $("<span></span>");
-        var placeholderId = fluid.allocateSimpleId(placeholder);
-        container.append(placeholder);
-        $("body").append(container);
-        return placeholderId;
-    };
-    
-    var setupForFlash9 = function (that, uploader) {
-        that.returnedOptions.uploadManager.options = {
-            flashURL: that.options.flash9URL || undefined,
-            flashButtonPeerId: createFlash9MovieContainer()
-        };
-    };
-    
-    var createEmptyPlaceholder = function () {
-        var placeholder = $("<span></span>");
-        fluid.allocateSimpleId(placeholder);
-        
-        return placeholder;
-    };
-    
-    var createButtonPlaceholder = function (browseButton) {
-        var placeholder = $("<span></span>");
-        var placeholderId = fluid.allocateSimpleId(placeholder);
-        browseButton.before(placeholder);
-        unbindSelectFiles();
-        
-        return placeholderId;
-    };
-    
-    var setupForFlash10 = function (that, uploader) {
-        // If we're working in Flash 10 or later, we need to attach the Flash movie to the browse button.
-        var browseButton = uploader.locate("browseButton");
-        fluid.tabindex(browseButton, -1);
-
-        that.isTransparent = that.options.flashButtonAlwaysVisible ? false : 
-                                                                     (!$.browser.msie || that.options.transparentEvenInIE);
-        
-        // If the button is transparent, we'll need an extra placeholder element which will be replaced by the movie.
-        // If the Flash movie is visible, we can just replace the button itself.
-        var peerId = that.isTransparent ? createButtonPlaceholder(browseButton) : fluid.allocateSimpleId(browseButton);
-        
-        that.returnedOptions.uploadManager.options = {
-            flashURL: that.options.flash10URL || undefined,
-            flashButtonImageURL: that.isTransparent ? undefined : that.options.flashButtonImageURL, 
-            flashButtonPeerId: peerId,
-            flashButtonHeight: that.isTransparent ? browseButton.outerHeight(): that.options.flashButtonHeight,
-            flashButtonWidth: that.isTransparent ? browseButton.outerWidth(): that.options.flashButtonWidth,
-            flashButtonWindowMode: that.isTransparent ? SWFUpload.WINDOW_MODE.TRANSPARENT : SWFUpload.WINDOW_MODE.OPAQUE,
-            flashButtonCursorEffect: SWFUpload.CURSOR.HAND,
-            listeners: {
-                afterReady: createAfterReadyHandler(that, uploader),
-                onUploadStart: function () {
-                    uploader.uploadManager.swfUploader.setButtonDisabled(true);
-                },
-                afterUploadComplete: function () {
-                    uploader.uploadManager.swfUploader.setButtonDisabled(false);
+        return function (count, first, mid) {
+            var togo = [];
+            var j = 0;
+            var lastSkip = false;
+            for (var i = 0; i < count; ++ i) {
+                if (i < locality || (count - i - 1) < locality || (i >= mid - midLocality && i <= mid + midLocality)) {
+                    togo[j++] = i;
+                    lastSkip = false;
                 }
-            }   
-        };
-    };
-    
-    /**
-     * SWFUploadSetupDecorator is a decorator designed to setup the DOM correctly for SWFUpload and configure
-     * the Uploader component according to the version of Flash and browser currently running.
-     * 
-     * @param {Uploader} uploader the Uploader component to decorate
-     * @param {options} options configuration options for the decorator
-     */
-    fluid.swfUploadSetupDecorator = function (uploader, options) {
-        var that = {};
-        fluid.mergeComponentOptions(that, "fluid.swfUploadSetupDecorator", options);
-               
-        that.flashVersion = swfobject.getFlashPlayerVersion().major;
-        prepareUpstreamOptions(that, uploader);  
-        if (that.flashVersion === 9) {
-            setupForFlash9(that, uploader);
-        } else {
-            setupForFlash10(that, uploader);
-        }
-        
-        return that;
-    };
-    
-    fluid.defaults("fluid.swfUploadSetupDecorator", {
-        // The flash9URL and flash10URLs are now deprecated in favour of the flashURL option in upload manager.
-        flashButtonAlwaysVisible: true,
-        transparentEvenInIE: false,
-        
-        // Used only when the Flash movie is visible.
-        flashButtonImageURL: "../images/browse.png",
-        flashButtonHeight: 22,
-        flashButtonWidth: 106,
-        
-        styles: {
-            browseButtonOverlay: "fl-uploader-browse-overlay"
-        }
-    });
-    
-    
-    /***********************
-     * SWF Upload Manager *
-     ***********************/
-    
-    // Maps SWFUpload's setting names to our component's setting names.
-    var swfUploadOptionsMap = {
-        uploadURL: "upload_url",
-        flashURL: "flash_url",
-        postParams: "post_params",
-        fileSizeLimit: "file_size_limit",
-        fileTypes: "file_types",
-        fileTypesDescription: "file_types_description",
-        fileUploadLimit: "file_upload_limit",
-        fileQueueLimit: "file_queue_limit",
-        flashButtonPeerId: "button_placeholder_id",
-        flashButtonImageURL: "button_image_url",
-        flashButtonHeight: "button_height",
-        flashButtonWidth: "button_width",
-        flashButtonWindowMode: "button_window_mode",
-        flashButtonCursorEffect: "button_cursor",
-        debug: "debug"
-    };
-    
-    // Maps SWFUpload's callback names to our component's callback names.
-    var swfUploadEventMap = {
-        afterReady: "swfupload_loaded_handler",
-        onFileDialog: "file_dialog_start_handler",
-        afterFileQueued: "file_queued_handler",
-        onQueueError: "file_queue_error_handler",
-        afterFileDialog: "file_dialog_complete_handler",
-        onFileStart: "upload_start_handler",
-        onFileProgress: "upload_progress_handler",
-        onFileError: "upload_error_handler",
-        onFileSuccess: "upload_success_handler"
-    };
-    
-    var mapNames = function (nameMap, source, target) {
-        var result = target || {};
-        for (var key in source) {
-            var mappedKey = nameMap[key];
-            if (mappedKey) {
-                result[mappedKey] = source[key];
-            }
-        }
-        
-        return result;
-    };
-    
-    // For each event type, hand the fire function to SWFUpload so it can fire the event at the right time for us.
-    var mapEvents = function (that, nameMap, target) {
-        var result = target || {};
-        for (var eventType in that.events) {
-            var fireFn = that.events[eventType].fire;
-            var mappedName = nameMap[eventType];
-            if (mappedName) {
-                result[mappedName] = fireFn;
-            }   
-        }
-        
-        result.upload_complete_handler = function (file) {
-            that.queueManager.finishFile(file);
-            if (that.queueManager.shouldUploadNextFile()) {
-                that.swfUploader.startUpload();
-            } else {
-                if (that.queueManager.queue.shouldStop) {
-                    that.swfUploader.stopUpload();
+                else if (!lastSkip) {
+                    togo[j++] = -1;
+                    lastSkip = true;
                 }
-                that.queueManager.complete();
             }
-        };
-
-        return result;
-    };
-    
-    // Invokes the OS browse files dialog, allowing either single or multiple select based on the options.
-    var browse = function (that) {
-        if (that.queue.isUploading) {
-            return;
-        }
-                   
-        if (that.options.fileQueueLimit === 1) {
-            that.swfUploader.selectFile();
-        } else {
-            that.swfUploader.selectFiles();
-        }  
-    };
-    
-    /* FLUID-822: while stopping the upload cycle while a file is in mid-upload should be possible
-     * in practice, it sets up a state where when the upload cycle is restarted SWFUpload will get stuck
-     * therefor we only stop the upload after a file has completed but before the next file begins. 
-     */
-    
-    var stopUpload = function (that) {
-        that.queue.shouldStop = true;
-        that.events.onUploadStop.fire();
-    };
-        
-    var bindEvents = function (that) {
-        var fileStatusUpdater = function (file) {
-            fluid.find(that.queue.files, function (potentialMatch) {
-                if (potentialMatch.id === file.id) {
-                    potentialMatch.filestatus = file.filestatus;
-                    return true;
-                }
-            });
-        };
-
-        // Add a listener that will keep our file queue model in sync with SWFUpload.
-        that.events.afterFileQueued.addListener(function (file) {
-            that.queue.addFile(file); 
-        });
-
-        that.events.onFileStart.addListener(function (file) {
-            that.queueManager.startFile();
-            fileStatusUpdater(file);
-        });
-        
-        that.events.onFileProgress.addListener(function (file, currentBytes, totalBytes) {
-            var currentBatch = that.queue.currentBatch;
-            var byteIncrement = currentBytes - currentBatch.previousBytesUploadedForFile;
-            currentBatch.totalBytesUploaded += byteIncrement;
-            currentBatch.bytesUploadedForFile += byteIncrement;
-            currentBatch.previousBytesUploadedForFile = currentBytes;
-            fileStatusUpdater(file);
-        });
-        
-        that.events.onFileError.addListener(function (file, error) {
-            if (error === fluid.uploader.errorConstants.UPLOAD_STOPPED) {
-                that.queue.isUploading = false;
-            } else if (that.queue.isUploading) {
-                that.queue.currentBatch.totalBytesUploaded += file.size;
-                that.queue.currentBatch.numFilesErrored++;
-            }
-            fileStatusUpdater(file);
-        });
-        
-        that.events.onFileSuccess.addListener(function (file) {
-            if (that.queue.currentBatch.bytesUploadedForFile === 0) {
-                that.queue.currentBatch.totalBytesUploaded += file.size;
-            }
-            fileStatusUpdater(file);
-        });
-        
-        that.events.afterUploadComplete.addListener(function () {
-            that.queue.isUploading = false; 
-        });
-    };
-    
-    var removeFile = function (that, file) {
-        that.queue.removeFile(file);
-        that.swfUploader.cancelUpload(file.id);
-        that.events.afterFileRemoved.fire(file);
-    };
-    
-    // Instantiates a new SWFUploader instance and attaches it the upload manager.
-    var setupSwfUploadManager = function (that, events) {
-        that.events = events;
-        that.queue = fluid.fileQueue();
-        that.queueManager = fluid.fileQueue.manager(that.queue, that.events);
-        
-        // Map the event and settings names to SWFUpload's expectations.
-        that.swfUploadSettings = mapNames(swfUploadOptionsMap, that.options);
-        mapEvents(that, swfUploadEventMap, that.swfUploadSettings);
-        
-        // Setup the instance.
-        that.swfUploader = new SWFUpload(that.swfUploadSettings);
-        
-        bindEvents(that);
-    };
-    
-    /**
-     * Server Upload Manager is responsible for coordinating with the Flash-based SWFUploader library,
-     * providing a simple way to start, pause, and cancel the uploading process. It requires a working
-     * server to respond to the upload POST requests.
-     * 
-     * @param {Object} eventBindings an object containing upload lifecycle callbacks
-     * @param {Object} options configuration options for the upload manager
-     */
-    fluid.swfUploadManager = function (events, options) {
-        var that = {};
-        
-        // This needs to be refactored!
-        fluid.mergeComponentOptions(that, "fluid.swfUploadManager", options);
-        fluid.mergeListeners(events, that.options.listeners);
-   
-        /**
-         * Opens the native OS browse file dialog.
-         */
-        that.browseForFiles = function () {
-            browse(that);
-        };
-        
-        /**
-         * Removes the specified file from the upload queue.
-         * 
-         * @param {File} file the file to remove
-         */
-        that.removeFile = function (file) {
-            removeFile(that, file);
-        };
-        
-        /**
-         * Starts uploading all queued files to the server.
-         */
-        that.start = function () {
-            that.queueManager.start();
-            that.swfUploader.startUpload();
-        };
-        
-        /**
-         * Cancels an in-progress upload.
-         */
-        that.stop = function () {
-            stopUpload(that);
-        };
-        
-        setupSwfUploadManager(that, events);
-        return that;
-    };
-    
-    fluid.defaults("fluid.swfUploadManager", {
-        uploadURL: "",
-        flashURL: "../../../lib/swfupload/flash/swfupload.swf",
-        flashButtonPeerId: "",
-        postParams: {},
-        fileSizeLimit: "20480",
-        fileTypes: "*",
-        fileTypesDescription: null,
-        fileUploadLimit: 0,
-        fileQueueLimit: 0,
-        debug: false
-    });
-    
-})(jQuery, fluid_1_1);
-/*
-Copyright 2007-2009 University of Toronto
-Copyright 2007-2009 University of California, Berkeley
-Copyright 2007-2009 University of Cambridge
-
-Licensed under the Educational Community License (ECL), Version 2.0 or the New
-BSD license. You may not use this file except in compliance with one these
-Licenses.
-
-You may obtain a copy of the ECL 2.0 License and BSD License at
-https://source.fluidproject.org/svn/LICENSE.txt
-*/
-
-/*global SWFUpload*/
-/*global swfobject*/
-/*global jQuery*/
-/*global fluid_1_1*/
-
-fluid_1_1 = fluid_1_1 || {};
-
-
-/*******************
- * File Queue View *
- *******************/
-
-(function ($, fluid) {
-    
-    // Real data binding would be nice to replace these two pairs.
-    var rowForFile = function (that, file) {
-        return that.locate("fileQueue").find("#" + file.id);
-    };
-    
-    var errorRowForFile = function (that, file) {
-        return $("#" + file.id + "_error", that.container);
-    };
-    
-    var fileForRow = function (that, row) {
-        var files = that.uploadManager.queue.files;
-        for (var i = 0; i < files.length; i++) {
-            var file = files[i];
-            if (file.id.toString() === row.attr("id")) {
-                return file;
-            }
-        }
-        return null;
-    };
-    
-    var progressorForFile = function (that, file) {
-        var progressId = file.id + "_progress";
-        return that.fileProgressors[progressId];
-    };
-    
-    var startFileProgress = function (that, file) {
-        var fileRowElm = rowForFile(that, file);
-        that.scroller.scrollTo(fileRowElm);
-         
-        // update the progressor and make sure that it's in position
-        var fileProgressor = progressorForFile(that, file);
-        fileProgressor.refreshView();
-        fileProgressor.show();
-    };
-        
-    var updateFileProgress = function (that, file, fileBytesComplete, fileTotalBytes) {
-        var filePercent = fluid.uploader.derivePercent(fileBytesComplete, fileTotalBytes);
-        var filePercentStr = filePercent + "%";    
-        progressorForFile(that, file).update(filePercent, filePercentStr);
-    };
-    
-    var hideFileProgress = function (that, file) {
-        var fileRowElm = rowForFile(that, file);
-        progressorForFile(that, file).hide();
-        if (file.filestatus === fluid.uploader.fileStatusConstants.COMPLETE) {
-            that.locate("fileIconBtn", fileRowElm).removeClass(that.options.styles.dim);
-        } 
-    };
-    
-    var removeFileProgress = function (that, file) {
-        var fileProgressor = progressorForFile(that, file);
-        if (!fileProgressor) {
-            return;
-        }
-        var rowProgressor = fileProgressor.displayElement;
-        rowProgressor.remove();
-    };
- 
-    var animateRowRemoval = function (that, row) {
-        row.fadeOut("fast", function () {
-            row.remove();  
-            that.refreshView();
-        });
-    };
-    
-    var removeFileErrorRow = function (that, file) {
-        if (file.filestatus === fluid.uploader.fileStatusConstants.ERROR) {
-            animateRowRemoval(that, errorRowForFile(that, file));
-        }
-    };
-   
-    var removeFileAndRow = function (that, file, row) {
-        // Clean up the stuff associated with a file row.
-        removeFileProgress(that, file);
-        removeFileErrorRow(that, file);
-        
-        // Remove the file itself.
-        that.uploadManager.removeFile(file);
-        animateRowRemoval(that, row);
-    };
-    
-    var removeFileForRow = function (that, row) {
-        var file = fileForRow(that, row);
-        if (!file || file.filestatus === fluid.uploader.fileStatusConstants.COMPLETE) {
-            return;
-        }
-        removeFileAndRow(that, file, row);
-    };
-    
-    var removeRowForFile = function (that, file) {
-        var row = rowForFile(that, file);
-        removeFileAndRow(that, file, row);
-    };
-    
-    var bindHover = function (row, styles) {
-        var over = function () {
-            if (row.hasClass(styles.ready) && !row.hasClass(styles.uploading)) {
-                row.addClass(styles.hover);
-            }
-        };
-        
-        var out = function () {
-            if (row.hasClass(styles.ready) && !row.hasClass(styles.uploading)) {
-                row.removeClass(styles.hover);
-            }   
-        };
-        row.hover(over, out);
-    };
-    
-    var bindDeleteKey = function (that, row) {
-        var deleteHandler = function () {
-            removeFileForRow(that, row);
-        };
-       
-        fluid.activatable(row, null, {
-            additionalBindings: [{
-                key: $.ui.keyCode.DELETE, 
-                activateHandler: deleteHandler
-            }]
-        });
-    };
-    
-    var bindRowHandlers = function (that, row) {
-        if ($.browser.msie && $.browser.version < 7) {
-            bindHover(row, that.options.styles);
-        }
-        
-        that.locate("fileIconBtn", row).click(function () {
-            removeFileForRow(that, row);
-        });
-        
-        bindDeleteKey(that, row);
-    };
-    
-    var renderRowFromTemplate = function (that, file) {
-        var row = that.rowTemplate.clone();
-        that.locate("fileName", row).text(file.name);
-        that.locate("fileSize", row).text(fluid.uploader.formatFileSize(file.size));
-        that.locate("fileIconBtn", row).addClass(that.options.styles.remove);
-        row.attr("id", file.id);
-        row.addClass(that.options.styles.ready);
-        bindRowHandlers(that, row);
-        
-        return row;    
-    };
-    
-    var createProgressorFromTemplate = function (that, row) {
-        // create a new progress bar for the row and position it
-        var rowProgressor = that.rowProgressorTemplate.clone();
-        var rowId = row.attr("id");
-        var progressId = rowId + "_progress";
-        rowProgressor.attr("id", progressId);
-        rowProgressor.css("top", row.position().top);
-        rowProgressor.height(row.height()).width(5);
-        that.container.after(rowProgressor);
-       
-        that.fileProgressors[progressId] = fluid.progress(that.uploadContainer, {
-            selectors: {
-                progressBar: "#" + rowId,
-                displayElement: "#" + progressId,
-                label: "#" + progressId + " .fl-uploader-file-progress-text",
-                indicator: "#" + progressId
-            }
-        });
-    };
-    
-    var addFile = function (that, file) {
-        var row = renderRowFromTemplate(that, file);
-        /* FLUID-2720 - do not hide the row under IE8 */
-        if (!($.browser.msie && ($.browser.version >= 8))) {
-            row.hide();
-        }
-        that.container.append(row);
-        row.fadeIn("slow");
-        that.scroller.scrollBottom();
-        createProgressorFromTemplate(that, row);
-
-        that.refreshView();
-    };
-    
-    var prepareForUpload = function (that) {
-        var rowButtons = that.locate("fileIconBtn", that.locate("fileRows"));
-        rowButtons.attr("disabled", "disabled");
-        rowButtons.addClass(that.options.styles.dim);    
-    };
-
-    var refreshAfterUpload = function (that) {
-        var rowButtons = that.locate("fileIconBtn", that.locate("fileRows"));
-        rowButtons.removeAttr("disabled");
-        rowButtons.removeClass(that.options.styles.dim);    
-    };
-        
-    var changeRowState = function (that, row, newState) {
-        row.removeClass(that.options.styles.ready).removeClass(that.options.styles.error).addClass(newState);
-    };
-    
-    var markRowAsComplete = function (that, file) {
-        // update styles and keyboard bindings for the file row
-        var row = rowForFile(that, file);
-        changeRowState(that, row, that.options.styles.uploaded);
-        row.attr("title", that.options.strings.status.success);
-        fluid.enabled(row, false);
-        
-        // update the click event and the styling for the file delete button
-        var removeRowBtn = that.locate("fileIconBtn", row);
-        removeRowBtn.unbind("click");
-        removeRowBtn.removeClass(that.options.styles.remove);
-		removeRowBtn.attr("title", that.options.strings.status.success); 
-    };
-    
-    var renderErrorInfoRowFromTemplate = function (that, fileRow, error) {
-        // Render the row by cloning the template and binding its id to the file.
-        var errorRow = that.errorInfoRowTemplate.clone();
-        errorRow.attr("id", fileRow.attr("id") + "_error");
-        
-        // Look up the error message and render it.
-        var errorType = fluid.keyForValue(fluid.uploader.errorConstants, error);
-        var errorMsg = that.options.strings.errors[errorType];
-        that.locate("errorText", errorRow).text(errorMsg);
-        fileRow.after(errorRow);
-        that.scroller.scrollTo(errorRow);
-    };
-    
-    var showErrorForFile = function (that, file, error) {
-        hideFileProgress(that, file);
-        if (file.filestatus === fluid.uploader.fileStatusConstants.ERROR) {
-            var fileRowElm = rowForFile(that, file);
-            changeRowState(that, fileRowElm, that.options.styles.error);
-            renderErrorInfoRowFromTemplate(that, fileRowElm, error);
-        }
-    };
-    
-    var bindModelEvents = function (that) {
-        that.returnedOptions = {
-            listeners: {
-                afterFileQueued: that.addFile,
-                onUploadStart: that.prepareForUpload,
-                onFileStart: that.showFileProgress,
-                onFileProgress: that.updateFileProgress,
-                onFileSuccess: that.markFileComplete,
-                onFileError: that.showErrorForFile,
-                afterFileComplete: that.hideFileProgress,
-                afterUploadComplete: that.refreshAfterUpload
-            }
+            return togo;
         };
     };
     
-    var addKeyboardNavigation = function (that) {
-        fluid.tabbable(that.container);
-        that.selectableContext = fluid.selectable(that.container, {
-            selectableSelector: that.options.selectors.fileRows,
-            onSelect: function (itemToSelect) {
-                $(itemToSelect).addClass(that.options.styles.selected);
+    fluid.pager.renderedPageList = function (container, events, pagerBarOptions, options, strings) {
+        options = $.extend(true, pagerBarOptions, options);
+        var that = fluid.initView("fluid.pager.renderedPageList", container, options);
+        options = that.options; // pick up any defaults
+        var renderOptions = {
+            cutpoints: [ {
+                id: "page-link:link",
+                selector: pagerBarOptions.selectors.pageLinks
             },
-            onUnselect: function (selectedItem) {
-                $(selectedItem).removeClass(that.options.styles.selected);
-            }
-        });
-    };
-    
-    var prepareTemplateElements = function (that) {
-        // Grab our template elements out of the DOM.  
-        that.rowTemplate = that.locate("rowTemplate").remove();
-        /* FLUID-2720 - do not hide the row under IE8 */
-        if ($.browser.msie && ($.browser.version >= 8)) {
-            that.rowTemplate.removeClass(that.options.styles.hiddenTemplate);
+            {
+                id: "page-link:skip",
+                selector: pagerBarOptions.selectors.pageLinkSkip
+            },
+            {
+                id: "page-link:disabled",
+                selector: pagerBarOptions.selectors.pageLinkDisabled
+            }]
+        };
+        
+        if (options.linkBody) {
+            renderOptions.cutpoints[renderOptions.cutpoints.length] = {
+                id: "payload-component",
+                selector: options.linkBody
+            };
+        }        
+        function pageToComponent(current) {
+            return function (page) {
+                return page === -1? {
+                    ID: "page-link:skip"
+                } : 
+                {
+                    ID: page === current? "page-link:link": "page-link:link",
+                    localID: page + 1,
+                    value: page + 1,
+                    pageIndex: page,
+                    decorators: [
+                        {type: "jQuery",
+                             func: "click", 
+                             args: function () {events.initiatePageChange.fire({pageIndex: page}); }
+                         },
+                        {type: page === current? "addClass" : "",
+                             classes: that.options.styles.currentPage}
+                         ]
+                };
+            };
         }
-        that.errorInfoRowTemplate = that.locate("errorInfoRowTemplate").remove();
-        that.errorInfoRowTemplate.removeClass(that.options.styles.hiddenTemplate);
-        that.rowProgressorTemplate = that.locate("rowProgressorTemplate", that.uploadContainer).remove();
-    };
-    
-    var setupFileQueue = function (that, uploadManager) {
-        that.uploadManager = uploadManager;
-        that.scroller = fluid.scroller(that.container);
-        prepareTemplateElements(that);         
-        addKeyboardNavigation(that); 
-        bindModelEvents(that);
-    };
-    
-    /**
-     * Creates a new File Queue view.
-     * 
-     * @param {jQuery|selector} container the file queue's container DOM element
-     * @param {UploadManager} uploadManager an upload manager model instance
-     * @param {Object} options configuration options for the view
-     */
-    fluid.fileQueueView = function (container, parentContainer, uploadManager, options) {
-        var that = fluid.initView("fluid.fileQueueView", container, options);
-        that.uploadContainer = parentContainer;
-        that.fileProgressors = {};
+        var root = that.locate("root");
+        fluid.expectFilledSelector(root, "Error finding root template for fluid.pager.renderedPageList");
         
-        that.addFile = function (file) {
-            addFile(that, file);
-        };
-        
-        that.removeFile = function (file) {
-            removeRowForFile(that, file);
-        };
-        
-        that.prepareForUpload = function () {
-            prepareForUpload(that);
-        };
-        
-        that.refreshAfterUpload = function () {
-            refreshAfterUpload(that);
-        };
-
-        that.showFileProgress = function (file) {
-            startFileProgress(that, file);
-        };
-        
-        that.updateFileProgress = function (file, fileBytesComplete, fileTotalBytes) {
-            updateFileProgress(that, file, fileBytesComplete, fileTotalBytes); 
-        };
-        
-        that.markFileComplete = function (file) {
-            progressorForFile(that, file).update(100, "100%");
-            markRowAsComplete(that, file);
-        };
-        
-        that.showErrorForFile = function (file, error) {
-            showErrorForFile(that, file, error);
-        };
-        
-        that.hideFileProgress = function (file) {
-            hideFileProgress(that, file);
-        };
-        
-        that.refreshView = function () {
-            that.scroller.refreshView();
-            that.selectableContext.refresh();
-        };
-        
-        setupFileQueue(that, uploadManager);     
+        var template = fluid.selfRender(root, {}, renderOptions);
+        events.onModelChange.addListener(
+            function (newModel, oldModel) {
+                var pages = that.options.pageStrategy(newModel.pageCount, 0, newModel.pageIndex);
+                var pageTree = fluid.transform(pages, pageToComponent(newModel.pageIndex));
+                pageTree[pageTree.length - 1].value = pageTree[pageTree.length - 1].value + strings.last;
+                events.onRenderPageLinks.fire(pageTree, newModel);
+                fluid.reRender(template, root, pageTree, renderOptions);
+                updateStyles(that, newModel, oldModel);
+            }
+        );
         return that;
     };
     
-    fluid.defaults("fluid.fileQueueView", {
-        selectors: {
-            fileRows: ".flc-uploader-file",
-            fileName: ".flc-uploader-file-name",
-            fileSize: ".flc-uploader-file-size",
-            fileIconBtn: ".flc-uploader-file-action",      
-            errorText: ".flc-uploader-file-error",
+    fluid.defaults("fluid.pager.renderedPageList",
+        {
+            selectors: {
+                root: ".flc-pager-links"
+            },
+            linkBody: "a",
+            pageStrategy: fluid.pager.everyPageStrategy
+        }
+    );
+    
+    var updatePreviousNext = function (that, options, newModel) {
+        if (newModel.pageIndex === 0) {
+            that.previous.addClass(options.styles.disabled);
+        } else {
+            that.previous.removeClass(options.styles.disabled);
+        }
+        
+        if (newModel.pageIndex === newModel.pageCount - 1) {
+            that.next.addClass(options.styles.disabled);
+        } else {
+            that.next.removeClass(options.styles.disabled);
+        }
+    };
+    
+    fluid.pager.previousNext = function (container, events, options) {
+        var that = fluid.initView("fluid.pager.previousNext", container, options);
+        that.previous = that.locate("previous");
+        bindLinkClick(that.previous, events, {relativePage: -1});
+        that.next = that.locate("next");
+        bindLinkClick(that.next, events, {relativePage: +1});
+        events.onModelChange.addListener(
+            function (newModel, oldModel, overallThat) {
+                updatePreviousNext(that, options, newModel);
+            }
+        );
+        return that;
+    };
+
+    fluid.pager.pagerBar = function (events, container, options, strings) {
+        var that = fluid.initView("fluid.pager.pagerBar", container, options);
+        that.pageList = fluid.initSubcomponent(that, "pageList", 
+           [container, events, that.options, fluid.COMPONENT_OPTIONS, strings]);
+        that.previousNext = fluid.initSubcomponent(that, "previousNext", 
+           [container, events, that.options, fluid.COMPONENT_OPTIONS, strings]);
+        
+        return that;
+    };
+
+    
+    fluid.defaults("fluid.pager.pagerBar", {
             
-            rowTemplate: ".flc-uploader-file-tmplt",
-            errorInfoRowTemplate: ".flc-uploader-file-error-tmplt",
-            rowProgressorTemplate: ".flc-uploader-file-progressor-tmplt"
+        previousNext: {
+            type: "fluid.pager.previousNext"
+        },
+        
+        pageList: {
+            type: "fluid.pager.directPageList"
+        },
+        
+        selectors: {
+            pageLinks: ".flc-pager-pageLink",
+            pageLinkSkip: ".flc-pager-pageLink-skip",
+            pageLinkDisabled: ".flc-pager-pageLink-disabled",
+            previous: ".flc-pager-previous",
+            next: ".flc-pager-next"
         },
         
         styles: {
-            hover: "fl-uploader-file-hover",
-            selected: "fl-uploader-file-focus",
-            ready: "fl-uploader-file-state-ready",
-            uploading: "fl-uploader-file-state-uploading",
-            uploaded: "fl-uploader-file-state-uploaded",
-            error: "fl-uploader-file-state-error",
-            remove: "fl-uploader-file-action-remove",
-            dim: "fl-uploader-dim",
-            hiddenTemplate: "fl-uploader-hidden-templates"
+            currentPage: "fl-pager-currentPage",
+            disabled: "fl-pager-disabled"
+        }
+    });
+
+    function getColumnDefs(that) {
+        return that.options.columnDefs;
+    }
+
+    fluid.pager.findColumnDef = function (columnDefs, key) {
+        var columnDef = $.grep(columnDefs, function (def) {
+            return def.key === key;
+        })[0];
+        return columnDef;
+    };
+    
+    function getRoots(target, overallThat, index) {
+        var cellRoot = (overallThat.options.dataOffset? overallThat.options.dataOffset + ".": "");
+        target.shortRoot = index;
+        target.longRoot = cellRoot + target.shortRoot;
+    }
+    
+    function expandPath(EL, shortRoot, longRoot) {
+        if (EL.charAt(0) === "*") {
+            return longRoot + EL.substring(1); 
+        }
+        else {
+            return EL.replace("*", shortRoot);
+        }
+    }
+    
+    fluid.pager.fetchValue = function (that, dataModel, index, valuebinding, roots) {
+        getRoots(roots, that, index);
+
+        var path = expandPath(valuebinding, roots.shortRoot, roots.longRoot);
+        return fluid.model.getBeanValue(dataModel, path);
+    };
+    
+    fluid.pager.basicSorter = function (overallThat, model) {        
+        var dataModel = overallThat.options.dataModel;
+        var roots = {};
+        var columnDefs = getColumnDefs(overallThat);
+        var columnDef = fluid.pager.findColumnDef(columnDefs, model.sortKey);
+        var sortrecs = [];
+        for (var i = 0; i < model.totalRange; ++ i) {
+            sortrecs[i] = {
+                index: i,
+                value: fluid.pager.fetchValue(overallThat, dataModel, i, columnDef.valuebinding, roots)
+            };
+        }
+        var columnType = typeof sortrecs[0].value;
+        function sortfunc(arec, brec) {
+            var a = arec.value;
+            var b = brec.value;
+            return a === b? 0 : (a > b? model.sortDir : -model.sortDir); 
+        }
+        sortrecs.sort(sortfunc);
+        return fluid.transform(sortrecs, function (row) {return row.index; });
+    };
+
+    
+    fluid.pager.directModelFilter = function (model, pagerModel, perm) {
+        var togo = [];
+        var limit = computePageLimit(pagerModel);
+        for (var i = pagerModel.pageIndex * pagerModel.pageSize; i < limit; ++ i) {
+            var index = perm? perm[i]: i;
+            togo[togo.length] = {index: index, row: model[index]};
+        }
+        return togo;
+    };
+    
+    function expandVariables(value, opts) {
+        var togo = "";
+        var index = 0;
+        while (true) {
+            var nextindex = value.indexOf("${", index);
+            if (nextindex === -1) {
+                togo += value.substring(index);
+                break;
+            }
+            else {
+                togo += value.substring(index, nextindex);
+                var endi = value.indexOf("}", nextindex + 2);
+                var EL = value.substring(nextindex + 2, endi);
+                if (EL === "VALUE") {
+                    EL = opts.EL;
+                }
+                else {
+                    EL = expandPath(EL, opts.shortRoot, opts.longRoot);
+                }
+
+                var val = fluid.model.getBeanValue(opts.dataModel, EL);
+                togo += val;
+                index = endi + 1;
+            }
+        }
+        return togo;
+    }
+   
+    function expandPaths(target, tree, opts) {
+        for (var i in tree) {
+            var val = tree[i];
+            if (val === fluid.VALUE) {
+                if (i === "valuebinding") {
+                    target[i] = opts.EL;
+                }
+                else {
+                    target[i] = {"valuebinding" : opts.EL};
+                }
+            }
+            else if (i === "valuebinding") {
+                target[i] = expandPath(tree[i], opts);
+            }
+            else if (typeof(val) === 'object') {
+                target[i] = val.length !== undefined? [] : {};
+                expandPaths(target[i], val, opts);
+            }
+            else if (typeof(val) === 'string') {
+                target[i] = expandVariables(val, opts);
+            }
+            else {target[i] = tree[i]; }
+        }
+        return target;
+    }
+   
+   // sets opts.EL, returns ID
+    function iDforColumn(columnDef, opts) {
+        var options = opts.options;
+        var EL = columnDef.valuebinding;
+        var key = columnDef.key;
+        if (!EL) {
+            fluid.fail("Error in definition for column with key " + key + ": valuebinding is not set");
+        }
+        opts.EL = expandPath(EL, opts.shortRoot, opts.longRoot);
+        if (!key) {
+            var segs = fluid.model.parseEL(EL);
+            key = segs[segs.length - 1];
+        }
+        var ID = (options.keyPrefix? options.keyPrefix : "") + key;
+        return ID;
+    }
+   
+    function expandColumnDefs(filteredRow, opts) {
+        var tree = fluid.transform(opts.columnDefs, function (columnDef) {
+            var ID = iDforColumn(columnDef, opts);
+            var togo;
+            if (!columnDef.components) {
+                return {
+                    ID: ID,
+                    valuebinding: opts.EL
+                };
+            }
+            else if (typeof columnDef.components === 'function') {
+                togo = columnDef.components(filteredRow.row, filteredRow.index);
+            }
+            else {
+                togo = columnDef.components;
+            }
+            togo = expandPaths({}, togo, opts);
+            togo.ID = ID;
+            return togo;
+        });
+        return tree;
+    }
+   
+    function fetchModel(overallThat) {
+        return fluid.model.getBeanValue(overallThat.options.dataModel, 
+            overallThat.options.dataOffset);
+    }
+   
+    
+    function bigHeaderForKey(key, opts) {
+        var id = opts.options.renderOptions.idMap["header:" + key];
+        var smallHeader = fluid.jById(id);
+        if (smallHeader.length === 0) {return null; }
+        var headerSortStylisticOffset = opts.overallOptions.selectors.headerSortStylisticOffset;
+        var bigHeader = fluid.findAncestor(smallHeader, function (element) {
+            return $(element).is(headerSortStylisticOffset); });
+        return bigHeader;
+    }
+   
+    function setSortHeaderClass(styles, element, sort) {
+        element = $(element);
+        element.removeClass(styles.ascendingHeader);
+        element.removeClass(styles.descendingHeader);
+        if (sort !== 0) {
+            element.addClass(sort === 1? styles.ascendingHeader : styles.descendingHeader);
+        }
+    }
+    
+    function isCurrentColumnSortable(columnDefs, model) {
+        var columnDef = model.sortKey? fluid.pager.findColumnDef(columnDefs, model.sortKey) : null;
+        return columnDef ? columnDef.sortable : false;
+    };
+    
+    function setModelSortHeaderClass(newModel, opts) {
+        var styles = opts.overallOptions.styles;
+        var sort = isCurrentColumnSortable(opts.columnDefs, newModel) ? newModel.sortDir : 0;
+        setSortHeaderClass(styles, bigHeaderForKey(newModel.sortKey, opts), sort);
+    }
+   
+    function fireModelChange(that, newModel, forceUpdate) {
+        computePageCount(newModel);
+        if (newModel.pageIndex >= newModel.pageCount) {
+            newModel.pageIndex = newModel.pageCount - 1;
+        }
+        if (forceUpdate || newModel.pageIndex !== that.model.pageIndex || newModel.pageSize !== that.model.pageSize || newModel.sortKey !== that.model.sortKey ||
+                newModel.sortDir !== that.model.sortDir) {
+            var sorted = isCurrentColumnSortable(getColumnDefs(that), newModel) ? 
+                that.options.sorter(that, newModel) : null;
+            that.permutation = sorted;
+            that.events.onModelChange.fire(newModel, that.model, that);
+            fluid.model.copyModel(that.model, newModel);
+        }            
+    }
+ 
+    function generateColumnClick(overallThat, columnDef, opts) {
+        return function () {
+            if (columnDef.sortable === true) {
+                var model = overallThat.model;
+                var newModel = fluid.copy(model);
+                var styles = overallThat.options.styles;
+                var oldKey = model.sortKey;
+                if (columnDef.key !== model.sortKey) {
+                    newModel.sortKey = columnDef.key;
+                    newModel.sortDir = 1;
+                    var oldBig = bigHeaderForKey(oldKey, opts);
+                    if (oldBig) {
+                        setSortHeaderClass(styles, oldBig, 0);
+                    }
+                }
+                else if (newModel.sortKey === columnDef.key) {
+                    newModel.sortDir = -1 * newModel.sortDir;
+                }
+                else {return false; }
+                newModel.pageIndex = 0;
+                fireModelChange(overallThat, newModel, true);
+                setModelSortHeaderClass(newModel, opts);                
+            }
+            return false;
+        };
+    }
+   
+    function fetchHeaderDecorators(decorators, columnDef) {
+        return decorators[columnDef.sortable? "sortableHeader" : "unsortableHeader"];
+    }
+   
+    function generateHeader(overallThat, newModel, columnDefs, opts) {
+        return {
+            children:  
+                fluid.transform(columnDefs, function (columnDef) {
+                return {
+                    ID: iDforColumn(columnDef, opts),
+                    value: columnDef.label,
+                    decorators: [
+                        {"jQuery": ["click", generateColumnClick(overallThat, columnDef, opts)]},
+                        {identify: "header:" + columnDef.key}].concat(fetchHeaderDecorators(opts.overallOptions.decorators, columnDef))
+                };
+            }
+       )};
+    }
+   
+    /** A body renderer implementation which uses the Fluid renderer to render a table section **/
+   
+    fluid.pager.selfRender = function (overallThat, inOptions) {
+        var that = fluid.initView("fluid.pager.selfRender", overallThat.container, inOptions);
+        var options = that.options;
+        options.renderOptions.idMap = options.renderOptions.idMap || {};
+        var idMap = options.renderOptions.idMap;
+        var root = that.locate("root");
+        var template = fluid.selfRender(root, {}, options.renderOptions);
+        root.addClass(options.styles.root);
+        var columnDefs = getColumnDefs(overallThat);
+        var expOpts = {options: options, columnDefs: columnDefs, overallOptions: overallThat.options, dataModel: overallThat.options.dataModel, idMap: idMap};
+        var directModel = fetchModel(overallThat);
+
+        return {
+            returnedOptions: {
+                listeners: {
+                    onModelChange: function (newModel, oldModel) {
+                        var filtered = overallThat.options.modelFilter(directModel, newModel, overallThat.permutation);
+                        var tree = fluid.transform(filtered, 
+                            function (filteredRow) {
+                                var roots = getRoots(expOpts, overallThat, filteredRow.index);
+                                if (columnDefs === "explode") {
+                                    return fluid.explode(filteredRow.row, root);
+                                }
+                                else if (columnDefs.length) {
+                                    return expandColumnDefs(filteredRow, expOpts);
+                                }
+                            }
+                            );
+                        var fullTree = {};
+                        fullTree[options.row] = tree;
+                        if (typeof(columnDefs) === "object") {
+                            fullTree[options.header] = generateHeader(overallThat, newModel, columnDefs, expOpts);
+                        }
+                        options.renderOptions = options.renderOptions || {};
+                        options.renderOptions.model = expOpts.dataModel;
+                        fluid.reRender(template, root, fullTree, options.renderOptions);
+                        setModelSortHeaderClass(newModel, expOpts); // TODO, should this not be actually renderable?
+                    }
+                }
+            }
+        };
+    };
+
+    fluid.defaults("fluid.pager.selfRender", {
+        selectors: {
+            root: ".flc-pager-body-template"
+        },
+		
+		styles: {
+			root: "fl-pager"
+        },
+		
+        keyStrategy: "id",
+        keyPrefix: "",
+        row: "row:",
+        header: "header:",
+        // Options passed upstream to the renderer
+        renderOptions: {}
+    });
+
+
+    fluid.pager.summary = function (dom, options) {
+        var node = dom.locate("summary");
+        return {
+            returnedOptions: {
+                listeners: {
+                    onModelChange: function (newModel, oldModel) {
+                        var text = fluid.stringTemplate(options.message, {
+                            first: newModel.pageIndex * newModel.pageSize + 1,
+                            last: computePageLimit(newModel),
+                            total: newModel.totalRange
+                        });
+                        if (node.length > 0) {
+                            node.text(text);
+                        }
+                    }
+                }
+            }
+        };
+    };
+    
+    fluid.pager.directPageSize = function (that) {
+        var node = that.locate("pageSize");
+        if (node.length > 0) {
+            that.events.onModelChange.addListener(
+                function (newModel, oldModel) {
+                    if (node.val() !== newModel.pageSize) {
+                        node.val(newModel.pageSize);
+                    }
+                }
+            );
+            node.change(function () {
+                that.events.initiatePageSizeChange.fire(node.val());
+            });
+        }
+        return that;
+    };
+
+
+    fluid.pager.rangeAnnotator = function (that, options) {
+        var roots = {};
+        that.events.onRenderPageLinks.addListener(function (tree, newModel) {
+            var column = that.options.annotateColumnRange;
+            var dataModel = that.options.dataModel;
+            // TODO: reaching into another component's options like this is a bit unfortunate
+            var columnDefs = getColumnDefs(that);
+
+            if (!column || !dataModel || !columnDefs) {
+                return;
+            }
+            var columnDef = fluid.pager.findColumnDef(columnDefs, column);
+            
+            function fetchValue(index) {
+                index = that.permutation? that.permutation[index] : index;
+                return fluid.pager.fetchValue(that, dataModel, index, columnDef.valuebinding, roots);
+            }
+            var tModel = {};
+            fluid.model.copyModel(tModel, newModel);
+            
+            fluid.transform(tree, function (cell) {
+                if (cell.ID === "page-link:link") {
+                    var page = cell.pageIndex;
+                    var start = page * tModel.pageSize;
+                    tModel.pageIndex = page;
+                    var limit = computePageLimit(tModel);
+                    var iValue = fetchValue(start);
+                    var lValue = fetchValue(limit - 1);
+                    
+                    var text = "<b>" + iValue + "</b><br/>&mdash;<br/><b>" + lValue + "</b>";
+                    
+                    var decorator = {
+                        type: "jQuery",
+                        func: "tooltip",
+                        args: {
+                            delay: that.options.tooltipDelay,
+                            extraClass: that.options.styles.tooltip,
+                            bodyHandler: function () { 
+                                return text; 
+                            },
+                            showURL: false,
+                            id: that.options.tooltipId
+                        }
+                    };
+                    cell.decorators.push(decorator);
+                }
+            });
+        });
+    };
+
+    /*******************
+     * Pager Component *
+     *******************/
+    
+    fluid.pagerImpl = function (container, options) {
+        var that = fluid.initView("fluid.pager", container, options);
+        
+        var pageIndexConformer = function (model, changeRequest) {
+            if (changeRequest.value < 0) {
+                changeRequest.value = 0;
+            }
+        };
+        
+        that.events.initiatePageChange.addListener(
+            function (arg) {
+                var newModel = fluid.copy(that.model);
+                if (arg.relativePage !== undefined) {
+                    newModel.pageIndex = that.model.pageIndex + arg.relativePage;
+                }
+                else {
+                    newModel.pageIndex = arg.pageIndex;
+                }
+                if (newModel.pageIndex === undefined || newModel.pageIndex < 0) {
+                    newModel.pageIndex = 0;
+                }
+                fireModelChange(that, newModel, arg.forceUpdate);
+            }
+        );
+        
+        that.events.initiatePageSizeChange.addListener(
+            function (arg) {
+                var newModel = fluid.copy(that.model);
+                newModel.pageSize = arg;
+                fireModelChange(that, newModel);     
+            }
+            );
+
+        // Setup the top and bottom pager bars.
+        var pagerBarElement = that.locate("pagerBar");
+        if (pagerBarElement.length > 0) {
+            that.pagerBar = fluid.initSubcomponent(that, "pagerBar", 
+            [that.events, pagerBarElement, fluid.COMPONENT_OPTIONS, that.options.strings]);
+        }
+        
+        var pagerBarSecondaryElement = that.locate("pagerBarSecondary");
+        if (pagerBarSecondaryElement.length > 0) {
+            that.pagerBarSecondary = fluid.initSubcomponent(that, "pagerBar",
+               [that.events, pagerBarSecondaryElement, fluid.COMPONENT_OPTIONS, that.options.strings]);
+        }
+ 
+        that.bodyRenderer = fluid.initSubcomponent(that, "bodyRenderer", [that, fluid.COMPONENT_OPTIONS]);
+        
+        that.summary = fluid.initSubcomponent(that, "summary", [that.dom, fluid.COMPONENT_OPTIONS]);
+        
+        that.pageSize = fluid.initSubcomponent(that, "pageSize", [that]);
+        
+        that.rangeAnnotator = fluid.initSubcomponent(that, "rangeAnnotator", [that, fluid.COMPONENT_OPTIONS]);
+ 
+        that.model = fluid.copy(that.options.model);
+        
+        var dataModel = fetchModel(that);
+        if (dataModel) {
+            that.model.totalRange = dataModel.length;
+        }
+        if (that.model.totalRange === undefined) {
+            if (!that.pagerBar) {
+                fluid.fail("Error in Pager configuration - cannot determine total range, " +
+                " since not configured in model.totalRange and no PagerBar is configured");
+            }
+            that.model = that.pagerBar.pageList.defaultModel;
+        }
+        that.applier = fluid.makeChangeApplier(that.model);
+
+        that.events.initiatePageChange.fire({pageIndex: that.model.pageIndex? that.model.pageIndex: 0, 
+           forceUpdate: true});
+
+        return that;
+    };
+    
+    fluid.defaults("fluid.pager", {
+        pagerBar: {type: "fluid.pager.pagerBar", 
+            options: null},
+        
+        summary: {type: "fluid.pager.summary", options: {
+            message: "%first-%last of %total items"
+        }},
+        
+        pageSize: {
+            type: "fluid.pager.directPageSize"
+        },
+        
+        modelFilter: fluid.pager.directModelFilter,
+        
+        sorter: fluid.pager.basicSorter,
+        
+        bodyRenderer: {
+            type: "fluid.emptySubcomponent"
+        },
+        
+        model: {
+            pageIndex: undefined,
+            pageSize: 10,
+            totalRange: undefined
+        },
+        
+        dataModel: undefined,
+        // Offset of the tree's "main" data from the overall dataModel root
+        dataOffset: "",
+        
+        // strategy for generating a tree row, either "explode" or an array of columnDef objects
+        columnDefs: "explode",
+        
+        annotateColumnRange: undefined,
+        
+        tooltipDelay: 300,
+        
+        tooltipId: "tooltip",
+        
+        rangeAnnotator: {
+            type: "fluid.pager.rangeAnnotator"
+        },
+        
+        selectors: {
+            pagerBar: ".flc-pager-top",
+            pagerBarSecondary: ".flc-pager-bottom",
+            summary: ".flc-pager-summary",
+            pageSize: ".flc-pager-page-size",
+            headerSortStylisticOffset: ".flc-pager-sort-header"
+        },
+        
+        styles: {
+            tooltip: "fl-pager-tooltip",
+            ascendingHeader: "fl-pager-asc",
+            descendingHeader: "fl-pager-desc"
+        },
+        
+        decorators: {
+            sortableHeader: [],
+            unsortableHeader: []
         },
         
         strings: {
-            progress: {
-                toUploadLabel: "To upload: %fileCount %fileLabel (%totalBytes)", 
-                singleFile: "file",
-                pluralFiles: "files"
-            },
-            status: {
-                success: "File Uploaded",
-                error: "File Upload Error"
-            }, 
-            errors: {
-                HTTP_ERROR: "File upload error: a network error occured or the file was rejected (reason unknown).",
-                IO_ERROR: "File upload error: a network error occured.",
-                UPLOAD_LIMIT_EXCEEDED: "File upload error: you have uploaded as many files as you are allowed during this session",
-                UPLOAD_FAILED: "File upload error: the upload failed for an unknown reason.",
-                QUEUE_LIMIT_EXCEEDED: "You have as many files in the queue as can be added at one time. Removing files from the queue may allow you to add different files.",
-                FILE_EXCEEDS_SIZE_LIMIT: "One or more of the files that you attempted to add to the queue exceeded the limit of %fileSizeLimit.",
-                ZERO_BYTE_FILE: "One or more of the files that you attempted to add contained no data.",
-                INVALID_FILETYPE: "One or more files were not added to the queue because they were of the wrong type."
-            }
-        }
-    });
-   
-})(jQuery, fluid_1_1);
-
-
-/************
- * Uploader *
- ************/
-
-(function ($, fluid) {
-    
-    var fileOrFiles = function (that, numFiles) {
-        return (numFiles === 1) ? that.options.strings.progress.singleFile : 
-                                  that.options.strings.progress.pluralFiles;
-    };
-    
-    var enableElement = function (that, elm) {
-        elm.removeAttr("disabled");
-        elm.removeClass(that.options.styles.dim);
-    };
-    
-    var disableElement = function (that, elm) {
-        elm.attr("disabled", "disabled");
-        elm.addClass(that.options.styles.dim);
-    };
-    
-    var showElement = function (that, elm) {
-        elm.removeClass(that.options.styles.hidden);
-    };
-     
-    var hideElement = function (that, elm) {
-        elm.addClass(that.options.styles.hidden);
-    };
-    
-    var setTotalProgressStyle = function (that, didError) {
-        didError = didError || false;
-        var indicator = that.totalProgress.indicator;
-        indicator.toggleClass(that.options.styles.totalProgress, !didError);
-        indicator.toggleClass(that.options.styles.totalProgressError, didError);
-    };
-    
-    var setStateEmpty = function (that) {
-        disableElement(that, that.locate("uploadButton"));
-        
-        // If the queue is totally empty, treat it specially.
-        if (that.uploadManager.queue.files.length === 0) { 
-            that.locate("browseButton").text(that.options.strings.buttons.browse);
-            showElement(that, that.locate("instructions"));
-        }
-    };
-    
-    var setStateDone = function (that) {
-        disableElement(that, that.locate("uploadButton"));
-        enableElement(that, that.locate("browseButton"));
-        hideElement(that, that.locate("pauseButton"));
-        showElement(that, that.locate("uploadButton"));
-    };
-
-    var setStateLoaded = function (that) {
-        that.locate("browseButton").text(that.options.strings.buttons.addMore);
-        hideElement(that, that.locate("pauseButton"));
-        showElement(that, that.locate("uploadButton"));
-        enableElement(that, that.locate("uploadButton"));
-        enableElement(that, that.locate("browseButton"));
-        hideElement(that, that.locate("instructions"));
-        that.totalProgress.hide();
-    };
-    
-    var setStateUploading = function (that) {
-        that.totalProgress.hide(false, false);
-        setTotalProgressStyle(that);
-        hideElement(that, that.locate("uploadButton"));
-        disableElement(that, that.locate("browseButton"));
-        enableElement(that, that.locate("pauseButton"));
-        showElement(that, that.locate("pauseButton"));
-        that.locate(that.options.focusWithEvent.afterUploadStart).focus();
-    };    
-    
-    var renderUploadTotalMessage = function (that) {
-        // Render template for the total file status message.
-        var numReadyFiles = that.uploadManager.queue.getReadyFiles().length;
-        var bytesReadyFiles = that.uploadManager.queue.sizeOfReadyFiles();
-        var fileLabelStr = fileOrFiles(that, numReadyFiles);
-                                                   
-        var totalStateStr = fluid.stringTemplate(that.options.strings.progress.toUploadLabel, {
-            fileCount: numReadyFiles, 
-            fileLabel: fileLabelStr, 
-            totalBytes: fluid.uploader.formatFileSize(bytesReadyFiles)
-        });
-        that.locate("totalFileStatusText").html(totalStateStr);
-    };
-        
-    var updateTotalProgress = function (that) {
-        var batch = that.uploadManager.queue.currentBatch;
-        var totalPercent = fluid.uploader.derivePercent(batch.totalBytesUploaded, batch.totalBytes);
-        var numFilesInBatch = batch.files.length;
-        var fileLabelStr = fileOrFiles(that, numFilesInBatch);
-        
-        var totalProgressStr = fluid.stringTemplate(that.options.strings.progress.totalProgressLabel, {
-            curFileN: batch.fileIdx + 1, 
-            totalFilesN: numFilesInBatch, 
-            fileLabel: fileLabelStr,
-            currBytes: fluid.uploader.formatFileSize(batch.totalBytesUploaded), 
-            totalBytes: fluid.uploader.formatFileSize(batch.totalBytes)
-        });  
-        that.totalProgress.update(totalPercent, totalProgressStr);
-    };
-    
-    var updateTotalAtCompletion = function (that) {
-        var numErroredFiles = that.uploadManager.queue.getErroredFiles().length;
-        var numTotalFiles = that.uploadManager.queue.files.length;
-        var fileLabelStr = fileOrFiles(that, numTotalFiles);
-        
-        var errorStr = "";
-        
-        // if there are errors then change the total progress bar
-        // and set up the errorStr so that we can use it in the totalProgressStr
-        if (numErroredFiles > 0) {
-            var errorLabelString = (numErroredFiles === 1) ? that.options.strings.progress.singleError : 
-                                                             that.options.strings.progress.pluralErrors;
-            setTotalProgressStyle(that, true);
-            errorStr = fluid.stringTemplate(that.options.strings.progress.numberOfErrors, {
-                errorsN: numErroredFiles,
-                errorLabel: errorLabelString
-            });
-        }
-        
-        var totalProgressStr = fluid.stringTemplate(that.options.strings.progress.completedLabel, {
-            curFileN: that.uploadManager.queue.getUploadedFiles().length, 
-            totalFilesN: numTotalFiles,
-            errorString: errorStr,
-            fileLabel: fileLabelStr,
-            totalCurrBytes: fluid.uploader.formatFileSize(that.uploadManager.queue.sizeOfUploadedFiles())
-        });
-        
-        that.totalProgress.update(100, totalProgressStr);
-    };
-   
-    var bindDOMEvents = function (that) {
-        that.locate("browseButton").click(function (evnt) {        
-            that.uploadManager.browseForFiles();
-            evnt.preventDefault();
-        });
-        
-        that.locate("uploadButton").click(function () {
-            that.uploadManager.start();
-        });
-
-        that.locate("pauseButton").click(function () {
-            that.uploadManager.stop();
-        });
-    };
-
-    var updateStateAfterFileDialog = function (that) {
-        if (that.uploadManager.queue.getReadyFiles().length > 0) {
-            setStateLoaded(that);
-            renderUploadTotalMessage(that);
-            that.locate(that.options.focusWithEvent.afterFileDialog).focus();  
-        }
-    };
-    
-    var updateStateAfterFileRemoval = function (that) {
-        if (that.uploadManager.queue.getReadyFiles().length === 0) {
-            setStateEmpty(that);
-        }
-        renderUploadTotalMessage(that);
-    };
-    
-    var updateStateAfterPause = function (that) {
-        // do nothing, moved to afterUploadComplete
-    };
-    
-    var updateStateAfterCompletion = function (that) {
-        var userPaused = that.uploadManager.queue.shouldStop;
-        if (that.uploadManager.queue.getReadyFiles().length === 0) {
-            setStateDone(that);
-        } else {
-            setStateLoaded(that);
-        }
-        updateTotalAtCompletion(that);
-    };
-    
-    var bindModelEvents = function (that) {
-        that.events.afterFileDialog.addListener(function () {
-            updateStateAfterFileDialog(that);
-        });
-        
-        that.events.afterFileRemoved.addListener(function () {
-            updateStateAfterFileRemoval(that);
-        });
-        
-        that.events.onUploadStart.addListener(function () {
-            setStateUploading(that);
-        });
-        
-        that.events.onUploadStop.addListener(function () {
-            that.locate(that.options.focusWithEvent.afterUploadStop).focus();
-        });
-        
-        that.events.onFileProgress.addListener(function () {
-            updateTotalProgress(that); 
-        });
-        
-        that.events.onFileSuccess.addListener(function () {
-            updateTotalProgress(that); 
-        });
-        
-        that.events.onFileError.addListener(function (file, error, message) {
-            if (error === fluid.uploader.errorConstants.UPLOAD_STOPPED) {
-                updateStateAfterPause(that);
-            }
-        });
-
-        that.events.afterUploadComplete.addListener(function () {
-            updateStateAfterCompletion(that);
-        });
-    };
-   
-    var initUploadManager = function (that) {
-        var manager = fluid.initSubcomponent(that, 
-                                             "uploadManager", 
-                                             [that.events, fluid.COMPONENT_OPTIONS]);
-        return that.options.demo ? fluid.demoUploadManager(manager) : manager;
-    };
-    
-    var setupUploader = function (that) {
-        // Instantiate the upload manager, file queue view, and total file progress bar,
-        // passing them smaller chunks of the overall options for the uploader.
-        that.decorators = fluid.initSubcomponents(that, "decorators", [that, fluid.COMPONENT_OPTIONS]);
-        that.uploadManager = initUploadManager(that);
-        that.fileQueueView = fluid.initSubcomponent(that, 
-                                                    "fileQueueView", 
-                                                    [that.locate("fileQueue"),
-                                                    that.container, 
-                                                    that.uploadManager,
-                                                    fluid.COMPONENT_OPTIONS]); 
-        that.totalProgress = fluid.initSubcomponent(that,
-                                                    "totalProgressBar",
-                                                    [that.container, fluid.COMPONENT_OPTIONS]);
-        
-        // Upload button should not be enabled until there are files to upload
-        disableElement(that, that.locate("uploadButton"));
-        bindDOMEvents(that);
-        bindModelEvents(that);
-    };
-    
-    /**
-     * Instantiates a new Uploader component.
-     * 
-     * @param {Object} container the DOM element in which the Uploader lives
-     * @param {Object} options configuration options for the component.
-     */
-    fluid.uploader = function (container, options) {
-        var that = fluid.initView("fluid.uploader", container, options);
-        
-        setupUploader(that);
-        return that;  
-    };
-    
-    /**
-     * Instantiates a new Uploader component in the progressive enhancement style.
-     * This mode requires another DOM element to be present, the element that is to be enhanced.
-     * This method checks to see if the correct version of Flash is present, and will only
-     * create the Uploader component if so.
-     * 
-     * @param {Object} container the DOM element in which the Uploader component lives
-     * @param {Object} enhanceable the DOM element to show if the system requirements aren't met
-     * @param {Object} options configuration options for the component
-     */
-    fluid.progressiveEnhanceableUploader = function (container, enhanceable, options) {
-        enhanceable = fluid.container(enhanceable);
-        container = fluid.container(container);
-              
-        if (swfobject.getFlashPlayerVersion().major < 9) {
-            // Degrade gracefully.
-            enhanceable.show();
-        } else {
-            // Instantiate the component.
-            container.show();
-            return fluid.uploader(container, options);
-        }
-    };
-    
-    /**
-     * Pretty prints a file's size, converting from bytes to kilobytes or megabytes.
-     * 
-     * @param {Number} bytes the files size, specified as in number bytes.
-     */
-    fluid.uploader.formatFileSize = function (bytes) {
-        if (typeof bytes === "number") {
-            if (bytes === 0) {
-                return "0.0 KB";
-            } else if (bytes > 0) {
-                if (bytes < 1048576) {
-                    return (Math.ceil(bytes / 1024 * 10) / 10).toFixed(1) + " KB";
-                }
-                else {
-                    return (Math.ceil(bytes / 1048576 * 10) / 10).toFixed(1) + " MB";
-                }
-            }
-        }
-        return "";
-    };
-    
-    fluid.uploader.derivePercent = function (num, total) {
-        return Math.round((num * 100) / total);
-    };
-
-    fluid.defaults("fluid.uploader", {
-        demo: false,
-        
-        decorators: [{
-            type: "fluid.swfUploadSetupDecorator"
-        }, {
-            type: "fluid.manuallyDegrade",
-            options: {
-                selectors: {
-                    enhanceable: ".fl-uploader.fl-progEnhance-basic"
-                }
-            }
-        }],
-        
-        uploadManager: {
-            type: "fluid.swfUploadManager"
-        },
-        
-        fileQueueView: {
-            type: "fluid.fileQueueView"
-        },
-        
-        totalProgressBar: {
-            type: "fluid.progress",
-            options: {
-                selectors: {
-                    progressBar: ".flc-uploader-queue-footer",
-                    displayElement: ".flc-uploader-total-progress", 
-                    label: ".flc-uploader-total-progress-text",
-                    indicator: ".flc-uploader-total-progress",
-                    ariaElement: ".flc-uploader-total-progress"
-                }
-            }
-        },
-        
-        selectors: {
-            fileQueue: ".flc-uploader-queue",
-            browseButton: ".flc-uploader-button-browse",
-            uploadButton: ".flc-uploader-button-upload",
-            pauseButton: ".flc-uploader-button-pause",
-            totalFileStatusText: ".flc-uploader-total-progress-text",
-            instructions: ".flc-uploader-browse-instructions"
-        },
- 
-        // Event listeners must already be implemented to use these options.
-        // At the moment, the following events are supported: 
-        //   afterFileDialog, afterUploadStart, and afterUploadStop.
-        focusWithEvent: {
-            afterFileDialog: "uploadButton",
-            afterUploadStart: "pauseButton",
-            afterUploadStop: "uploadButton"
-        },
-        
-        styles: {
-            disabled: "fl-uploader-disabled",
-            hidden: "fl-uploader-hidden",
-            dim: "fl-uploader-dim",
-            totalProgress: "fl-uploader-total-progress-okay",
-            totalProgressError: "fl-uploader-total-progress-errored"
+            last: " (last)"
         },
         
         events: {
-            afterReady: null,
-            onFileDialog: null,
-            afterFileQueued: null,
-            afterFileRemoved: null,
-            onQueueError: null,
-            afterFileDialog: null,
-            onUploadStart: null,
-            onUploadStop: null,
-            onFileStart: null,
-            onFileProgress: null,
-            onFileError: null,
-            onFileSuccess: null,
-            afterFileComplete: null,
-            afterUploadComplete: null
-        },
-
-        strings: {
-            progress: {
-                toUploadLabel: "To upload: %fileCount %fileLabel (%totalBytes)", 
-                totalProgressLabel: "Uploading: %curFileN of %totalFilesN %fileLabel (%currBytes of %totalBytes)", 
-                completedLabel: "Uploaded: %curFileN of %totalFilesN %fileLabel (%totalCurrBytes)%errorString",
-                numberOfErrors: ", %errorsN %errorLabel",
-                singleFile: "file",
-                pluralFiles: "files",
-                singleError: "error",
-                pluralErrors: "errors"
-            },
-            buttons: {
-                browse: "Browse Files",
-                addMore: "Add More",
-                stopUpload: "Stop Upload",
-                cancelRemaning: "Cancel remaining Uploads",
-                resumeUpload: "Resume Upload"
-            }
+            initiatePageChange: null,
+            initiatePageSizeChange: null,
+            onModelChange: null,
+            onRenderPageLinks: null
         }
     });
-    
-    
-    fluid.uploader.errorConstants = {
-        HTTP_ERROR: -200,
-        MISSING_UPLOAD_URL: -210,
-        IO_ERROR: -220,
-        SECURITY_ERROR: -230,
-        UPLOAD_LIMIT_EXCEEDED: -240,
-        UPLOAD_FAILED: -250,
-        SPECIFIED_FILE_ID_NOT_FOUND: -260,
-        FILE_VALIDATION_FAILED: -270,
-        FILE_CANCELLED: -280,
-        UPLOAD_STOPPED: -290
-    };
-    
-    fluid.uploader.fileStatusConstants = {
-        QUEUED: -1,
-        IN_PROGRESS: -2,
-        ERROR: -3,
-        COMPLETE: -4,
-        CANCELLED: -5
-    };
-    
-    /*******************
-     * ManuallyDegrade *
-     *******************/
-    
-    var renderLink = function (renderLocation, text, classes, appendBeside) {
-        var link = $("<a href='#'>" + text + "</a>");
-        link.addClass(classes);
-        
-        if (renderLocation === "before") {
-            appendBeside.before(link);
-        } else {
-            appendBeside.after(link);
-        }
-        
-        return link;
-    };
-
-    var toggleVisibility = function (toShow, toHide) {
-        // For FLUID-2789: hide() doesn't work in Opera, so this check
-        // uses a style to hide if the browser is Opera
-        if (window.opera) { 
-            toShow.show().removeClass("hideUploaderForOpera");
-            toHide.show().addClass("hideUploaderForOpera");
-        } else {
-            toShow.show();
-            toHide.hide();
-        }
-    };
-    
-    var defaultControlRenderer = function (that) {
-        var degradeLink = renderLink(that.options.defaultRenderLocation,
-                   that.options.strings.degradeLinkText,
-                   that.options.styles.degradeLinkClass,
-                   that.enhancedContainer);
-        degradeLink.addClass("flc-manuallyDegrade-degrade");
-        
-        var enhanceLink = renderLink(that.options.defaultRenderLocation,
-                   that.options.strings.enhanceLinkText,
-                   that.options.styles.enhanceLinkClass,
-                   that.degradedContainer);
-        enhanceLink.addClass("flc-manuallyDegrade-enhance");
-    };
-    
-    var fetchControls = function (that) {
-        that.degradeControl = that.locate("degradeControl");
-        that.enhanceControl = that.locate("enhanceControl");
-    };
-    
-    var setupManuallyDegrade = function (that) {
-        // If we don't have anything to degrade to, stop right here.
-        if (!that.degradedContainer.length) {
-            return;
-        }
-        
-        // Render the controls if they're not already there.
-        fetchControls(that);
-        if (!that.degradeControl.length && !that.enhanceControl.length) {
-            that.options.controlRenderer(that);
-            fetchControls(that);
-        }
-        
-        // Bind click handlers to them.
-        that.degradeControl.click(that.degrade);
-        that.enhanceControl.click(that.enhance);
-        
-        // Hide the enhance link to start.
-        that.enhanceControl.hide();
-    };
-    
-    var determineContainer = function (options) {
-        var defaults = fluid.defaults("fluid.manuallyDegrade");
-        return (options && options.container) ? options.container : defaults.container;
-    };
-    
-    fluid.manuallyDegrade = function (component, options) {
-        var container = determineContainer(options);
-
-        var that = fluid.initView("fluid.manuallyDegrade", container, options);
-        var isDegraded = false;
-        that.enhancedContainer = component.container;
-        that.degradedContainer = that.locate("enhanceable");
-  
-        
-        that.degrade = function () {
-            toggleVisibility(that.enhanceControl, that.degradeControl);
-            toggleVisibility(that.degradedContainer, that.enhancedContainer);
-	        isDegraded = true;
-        };
-         
-	    that.enhance = function () {
-            toggleVisibility(that.degradeControl, that.enhanceControl);
-            toggleVisibility(that.enhancedContainer, that.degradedContainer);
-	        isDegraded = false;
-	    };
-         
-        that.isDegraded = function () {
-	        return isDegraded;
-	    };
-         
-        setupManuallyDegrade(that);
-        return that;
-    };
-     
-    fluid.defaults("fluid.manuallyDegrade", {
-        container: "body",
-        
-        controlRenderer: defaultControlRenderer,
-        
-        defaultRenderLocation: "before",
-        strings: {
-            degradeLinkText: "Switch to the standard single-file Uploader",
-            enhanceLinkText: "Switch to the Flash-based multi-file Uploader"
-	    },
-        selectors: {
-            enhanceable: ".fl-ProgEnhance-basic",
-            degradeControl: ".flc-manuallyDegrade-degrade",
-            enhanceControl: ".flc-manuallyDegrade-enhance"
-        },
-        
-        styles: {
-            degradeLinkClass: "fl-uploader-manually-degrade",
-            enhanceLinkClass: "fl-uploader-manually-enhance"
-        }
-	});
-
-})(jQuery, fluid_1_1);
-/* Copyright (c) 2006 Brandon Aaron (http://brandonaaron.net)
- * Dual licensed under the MIT (http://www.opensource.org/licenses/mit-license.php) 
- * and GPL (http://www.opensource.org/licenses/gpl-license.php) licenses.
- *
- * $LastChangedDate: 2009-05-05 11:14:12 -0400 (Tue, 05 May 2009) $
- * $Rev: 7137 $
- *
- * Version 2.1
- */
-
-(function($){
-
-/**
- * The bgiframe is chainable and applies the iframe hack to get 
- * around zIndex issues in IE6. It will only apply itself in IE 
- * and adds a class to the iframe called 'bgiframe'. The iframe
- * is appeneded as the first child of the matched element(s) 
- * with a tabIndex and zIndex of -1.
- * 
- * By default the plugin will take borders, sized with pixel units,
- * into account. If a different unit is used for the border's width,
- * then you will need to use the top and left settings as explained below.
- *
- * NOTICE: This plugin has been reported to cause perfromance problems
- * when used on elements that change properties (like width, height and
- * opacity) a lot in IE6. Most of these problems have been caused by 
- * the expressions used to calculate the elements width, height and 
- * borders. Some have reported it is due to the opacity filter. All 
- * these settings can be changed if needed as explained below.
- *
- * @example $('div').bgiframe();
- * @before <div><p>Paragraph</p></div>
- * @result <div><iframe class="bgiframe".../><p>Paragraph</p></div>
- *
- * @param Map settings Optional settings to configure the iframe.
- * @option String|Number top The iframe must be offset to the top
- * 		by the width of the top border. This should be a negative 
- *      number representing the border-top-width. If a number is 
- * 		is used here, pixels will be assumed. Otherwise, be sure
- *		to specify a unit. An expression could also be used. 
- * 		By default the value is "auto" which will use an expression 
- * 		to get the border-top-width if it is in pixels.
- * @option String|Number left The iframe must be offset to the left
- * 		by the width of the left border. This should be a negative 
- *      number representing the border-left-width. If a number is 
- * 		is used here, pixels will be assumed. Otherwise, be sure
- *		to specify a unit. An expression could also be used. 
- * 		By default the value is "auto" which will use an expression 
- * 		to get the border-left-width if it is in pixels.
- * @option String|Number width This is the width of the iframe. If
- *		a number is used here, pixels will be assume. Otherwise, be sure
- * 		to specify a unit. An experssion could also be used.
- *		By default the value is "auto" which will use an experssion
- * 		to get the offsetWidth.
- * @option String|Number height This is the height of the iframe. If
- *		a number is used here, pixels will be assume. Otherwise, be sure
- * 		to specify a unit. An experssion could also be used.
- *		By default the value is "auto" which will use an experssion
- * 		to get the offsetHeight.
- * @option Boolean opacity This is a boolean representing whether or not
- * 		to use opacity. If set to true, the opacity of 0 is applied. If
- *		set to false, the opacity filter is not applied. Default: true.
- * @option String src This setting is provided so that one could change 
- *		the src of the iframe to whatever they need.
- *		Default: "javascript:false;"
- *
- * @name bgiframe
- * @type jQuery
- * @cat Plugins/bgiframe
- * @author Brandon Aaron (brandon.aaron@gmail.com || http://brandonaaron.net)
- */
-$.fn.bgIframe = $.fn.bgiframe = function(s) {
-	// This is only for IE6
-	if ( $.browser.msie && parseInt($.browser.version) <= 6 ) {
-		s = $.extend({
-			top     : 'auto', // auto == .currentStyle.borderTopWidth
-			left    : 'auto', // auto == .currentStyle.borderLeftWidth
-			width   : 'auto', // auto == offsetWidth
-			height  : 'auto', // auto == offsetHeight
-			opacity : true,
-			src     : 'javascript:false;'
-		}, s || {});
-		var prop = function(n){return n&&n.constructor==Number?n+'px':n;},
-		    html = '<iframe class="bgiframe"frameborder="0"tabindex="-1"src="'+s.src+'"'+
-		               'style="display:block;position:absolute;z-index:-1;'+
-			               (s.opacity !== false?'filter:Alpha(Opacity=\'0\');':'')+
-					       'top:'+(s.top=='auto'?'expression(((parseInt(this.parentNode.currentStyle.borderTopWidth)||0)*-1)+\'px\')':prop(s.top))+';'+
-					       'left:'+(s.left=='auto'?'expression(((parseInt(this.parentNode.currentStyle.borderLeftWidth)||0)*-1)+\'px\')':prop(s.left))+';'+
-					       'width:'+(s.width=='auto'?'expression(this.parentNode.offsetWidth+\'px\')':prop(s.width))+';'+
-					       'height:'+(s.height=='auto'?'expression(this.parentNode.offsetHeight+\'px\')':prop(s.height))+';'+
-					'"/>';
-		return this.each(function() {
-			if ( $('> iframe.bgiframe', this).length == 0 )
-				this.insertBefore( document.createElement(html), this.firstChild );
-		});
-	}
-	return this;
-};
-
-// Add browser.version if it doesn't exist
-if (!$.browser.version)
-	$.browser.version = navigator.userAgent.toLowerCase().match(/.+(?:rv|it|ra|ie)[\/: ]([\d.]+)/)[1];
-
-})(jQuery);/*
- * jQuery Tooltip plugin 1.2
- *
- * http://bassistance.de/jquery-plugins/jquery-plugin-tooltip/
- * http://docs.jquery.com/Plugins/Tooltip
- *
- * Copyright (c) 2006 - 2008 JÃ¶rn Zaefferer
- *
- * $Id: jquery.tooltip.js 6846 2009-03-26 21:03:37Z a.cheetham@utoronto.ca $
- * 
- * Dual licensed under the MIT and GPL licenses:
- *   http://www.opensource.org/licenses/mit-license.php
- *   http://www.gnu.org/licenses/gpl.html
- */
- 
-;(function($) {
-	
-		// the tooltip element
-	var helper = {},
-		// the current tooltipped element
-		current,
-		// the title of the current element, used for restoring
-		title,
-		// timeout id for delayed tooltips
-		tID,
-		// IE 5.5 or 6
-		IE = $.browser.msie && /MSIE\s(5\.5|6\.)/.test(navigator.userAgent),
-		// flag for mouse tracking
-		track = false;
-	
-	$.tooltip = {
-		blocked: false,
-		defaults: {
-			delay: 200,
-			showURL: true,
-			extraClass: "",
-			top: 15,
-			left: 15,
-			id: "tooltip"
-		},
-		block: function() {
-			$.tooltip.blocked = !$.tooltip.blocked;
-		}
-	};
-	
-	$.fn.extend({
-		tooltip: function(settings) {
-			settings = $.extend({}, $.tooltip.defaults, settings);
-			createHelper(settings);
-			return this.each(function() {
-					$.data(this, "tooltip-settings", settings);
-					// copy tooltip into its own expando and remove the title
-					this.tooltipText = this.title;
-					$(this).removeAttr("title");
-					// also remove alt attribute to prevent default tooltip in IE
-					this.alt = "";
-				})
-				.hover(save, hide)
-				.click(hide);
-		},
-		fixPNG: IE ? function() {
-			return this.each(function () {
-				var image = $(this).css('backgroundImage');
-				if (image.match(/^url\(["']?(.*\.png)["']?\)$/i)) {
-					image = RegExp.$1;
-					$(this).css({
-						'backgroundImage': 'none',
-						'filter': "progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true, sizingMethod=crop, src='" + image + "')"
-					}).each(function () {
-						var position = $(this).css('position');
-						if (position != 'absolute' && position != 'relative')
-							$(this).css('position', 'relative');
-					});
-				}
-			});
-		} : function() { return this; },
-		unfixPNG: IE ? function() {
-			return this.each(function () {
-				$(this).css({'filter': '', backgroundImage: ''});
-			});
-		} : function() { return this; },
-		hideWhenEmpty: function() {
-			return this.each(function() {
-				$(this)[ $(this).html() ? "show" : "hide" ]();
-			});
-		},
-		url: function() {
-			return this.attr('href') || this.attr('src');
-		}
-	});
-	
-	function createHelper(settings) {
-		// there can be only one tooltip helper
-		if( helper.parent )
-			return;
-		// create the helper, h3 for title, div for url
-		helper.parent = $('<div id="' + settings.id + '"><h3></h3><div class="body"></div><div class="url"></div></div>')
-			// add to document
-			.appendTo(document.body)
-			// hide it at first
-			.hide();
-			
-		// apply bgiframe if available
-		if ( $.fn.bgiframe )
-			helper.parent.bgiframe();
-		
-		// save references to title and url elements
-		helper.title = $('h3', helper.parent);
-		helper.body = $('div.body', helper.parent);
-		helper.url = $('div.url', helper.parent);
-	}
-	
-	function settings(element) {
-		return $.data(element, "tooltip-settings");
-	}
-	
-	// main event handler to start showing tooltips
-	function handle(event) {
-		// show helper, either with timeout or on instant
-		if( settings(this).delay )
-			tID = setTimeout(show, settings(this).delay);
-		else
-			show();
-		
-		// if selected, update the helper position when the mouse moves
-		track = !!settings(this).track;
-		$(document.body).bind('mousemove', update);
-			
-		// update at least once
-		update(event);
-	}
-	
-	// save elements title before the tooltip is displayed
-	function save() {
-		// if this is the current source, or it has no title (occurs with click event), stop
-		if ( $.tooltip.blocked || this == current || (!this.tooltipText && !settings(this).bodyHandler) )
-			return;
-
-		// save current
-		current = this;
-		title = this.tooltipText;
-		
-		if ( settings(this).bodyHandler ) {
-			helper.title.hide();
-			var bodyContent = settings(this).bodyHandler.call(this);
-			if (bodyContent.nodeType || bodyContent.jquery) {
-				helper.body.empty().append(bodyContent)
-			} else {
-				helper.body.html( bodyContent );
-			}
-			helper.body.show();
-		} else if ( settings(this).showBody ) {
-			var parts = title.split(settings(this).showBody);
-			helper.title.html(parts.shift()).show();
-			helper.body.empty();
-			for(var i = 0, part; part = parts[i]; i++) {
-				if(i > 0)
-					helper.body.append("<br/>");
-				helper.body.append(part);
-			}
-			helper.body.hideWhenEmpty();
-		} else {
-			helper.title.html(title).show();
-			helper.body.hide();
-		}
-		
-		// if element has href or src, add and show it, otherwise hide it
-		if( settings(this).showURL && $(this).url() )
-			helper.url.html( $(this).url().replace('http://', '') ).show();
-		else 
-			helper.url.hide();
-		
-		// add an optional class for this tip
-		helper.parent.addClass(settings(this).extraClass);
-
-		// fix PNG background for IE
-		if (settings(this).fixPNG )
-			helper.parent.fixPNG();
-			
-		handle.apply(this, arguments);
-	}
-	
-	// delete timeout and show helper
-	function show() {
-		tID = null;
-		helper.parent.show();
-		update();
-	}
-	
-	/**
-	 * callback for mousemove
-	 * updates the helper position
-	 * removes itself when no current element
-	 */
-	function update(event)	{
-		if($.tooltip.blocked)
-			return;
-		
-		// stop updating when tracking is disabled and the tooltip is visible
-		if ( !track && helper.parent.is(":visible")) {
-			$(document.body).unbind('mousemove', update)
-		}
-		
-    // if no current element is available, remove this listener
-    // AMB temp proximate fix for FLUID-2323
-    if( current == null || !settings(current) ) {
-      //$(document.body).unbind('mousemove', update);
-      return; 
-    }
-		
-		// remove position helper classes
-		helper.parent.removeClass("viewport-right").removeClass("viewport-bottom");
-		
-		var left = helper.parent[0].offsetLeft;
-		var top = helper.parent[0].offsetTop;
-		if(event) {
-			// position the helper 15 pixel to bottom right, starting from mouse position
-			left = event.pageX + settings(current).left;
-			top = event.pageY + settings(current).top;
-			helper.parent.css({
-				left: left + 'px',
-				top: top + 'px'
-			});
-		}
-		
-		var v = viewport(),
-			h = helper.parent[0];
-		// check horizontal position
-		if(v.x + v.cx < h.offsetLeft + h.offsetWidth) {
-			left -= h.offsetWidth + 20 + settings(current).left;
-			helper.parent.css({left: left + 'px'}).addClass("viewport-right");
-		}
-		// check vertical position
-		if(v.y + v.cy < h.offsetTop + h.offsetHeight) {
-			top -= h.offsetHeight + 20 + settings(current).top;
-			helper.parent.css({top: top + 'px'}).addClass("viewport-bottom");
-		}
-	}
-	
-	function viewport() {
-		return {
-			x: $(window).scrollLeft(),
-			y: $(window).scrollTop(),
-			cx: $(window).width(),
-			cy: $(window).height()
-		};
-	}
-	
-	// hide helper and restore added classes and the title
-	function hide(event) {
-		if($.tooltip.blocked)
-			return;
-		// clear timeout if possible
-		if(tID)
-			clearTimeout(tID);
-		// no more current element
-		current = null;
-		
-		helper.parent.hide().removeClass( settings(this).extraClass );
-		
-		if( settings(this).fixPNG )
-			helper.parent.unfixPNG();
-	}
-	
-	$.fn.Tooltip = $.fn.tooltip;
-	
-})(jQuery);
-/*
-Copyright 2008-2009 University of Cambridge
-Copyright 2008-2009 University of Toronto
-Copyright 2007-2009 University of California, Berkeley
-
-Licensed under the Educational Community License (ECL), Version 2.0 or the New
-BSD license. You may not use this file except in compliance with one these
-Licenses.
-
-You may obtain a copy of the ECL 2.0 License and BSD License at
-https://source.fluidproject.org/svn/LICENSE.txt
-*/
-
-/*global jQuery*/
-/*global fluid_1_1*/
-
-fluid_1_1 = fluid_1_1 || {};
-
-(function ($, fluid) {
-    
-  // The three states of the undo component
-    var STATE_INITIAL = "state_initial", 
-        STATE_CHANGED = "state_changed",
-        STATE_REVERTED = "state_reverted";
-  
-    function defaultRenderer(that, targetContainer) {
-        var markup = "<span class='flc-undo'>" + 
-          "<span class='flc-undo-undoContainer'>[<a href='#' class='flc-undo-undoControl'>undo</a>]</span>" + 
-          "<span class='flc-undo-redoContainer'>[<a href='#' class='flc-undo-redoControl'>redo</a>]</span>" + 
-        "</span>";
-        var markupNode = $(markup);
-        targetContainer.append(markupNode);
-        return markupNode;
-    }
-  
-    function refreshView(that) {
-        if (that.state === STATE_INITIAL) {
-            that.locate("undoContainer").hide();
-            that.locate("redoContainer").hide();
-        }
-        else if (that.state === STATE_CHANGED) {
-            that.locate("undoContainer").show();
-            that.locate("redoContainer").hide();
-        }
-        else if (that.state === STATE_REVERTED) {
-            that.locate("undoContainer").hide();
-            that.locate("redoContainer").show();          
-        }
-    }
-   
-    
-    var bindHandlers = function (that) { 
-        that.locate("undoControl").click( 
-            function () {
-                if (that.state !== STATE_REVERTED) {
-                    fluid.model.copyModel(that.extremalModel, that.component.model);
-                    that.component.updateModel(that.initialModel, that);
-                    that.state = STATE_REVERTED;
-                    refreshView(that);
-                    that.locate("redoControl").focus();
-                }
-				return false;
-            }
-        );
-        that.locate("redoControl").click( 
-            function () {
-                if (that.state !== STATE_CHANGED) {
-                    that.component.updateModel(that.extremalModel, that);
-                    that.state = STATE_CHANGED;
-                    refreshView(that);
-                    that.locate("undoControl").focus();
-                }
-				return false;
-            }
-        );
-        return {
-            modelChanged: function (newModel, oldModel, source) {
-                if (source !== that) {
-                    that.state = STATE_CHANGED;
-                
-                    fluid.model.copyModel(that.initialModel, oldModel);
-                
-                    refreshView(that);
-                }
-            }
-        };
-    };
-    
-    /**
-     * Decorates a target component with the function of "undoability"
-     * 
-     * @param {Object} component a "model-bearing" standard Fluid component to receive the "undo" functionality
-     * @param {Object} options a collection of options settings
-     */
-    fluid.undoDecorator = function (component, userOptions) {
-        var that = fluid.initView("undo", null, userOptions);
-        that.container = that.options.renderer(that, component.container);
-        fluid.initDomBinder(that);
-        fluid.tabindex(that.locate("undoControl"), 0);
-        fluid.tabindex(that.locate("redoControl"), 0);
-        
-        that.component = component;
-        that.initialModel = {};
-        that.extremalModel = {};
-        fluid.model.copyModel(that.initialModel, component.model);
-        fluid.model.copyModel(that.extremalModel, component.model);
-        
-        that.state = STATE_INITIAL;
-        refreshView(that);
-        var listeners = bindHandlers(that);
-        
-        that.returnedOptions = {
-            listeners: listeners
-        };
-        return that;
-    };
-  
-    fluid.defaults("undo", {  
-        selectors: {
-            undoContainer: ".flc-undo-undoContainer",
-            undoControl: ".flc-undo-undoControl",
-            redoContainer: ".flc-undo-redoContainer",
-            redoControl: ".flc-undo-redoControl"
-        },
-                    
-        renderer: defaultRenderer
-    });
-        
 })(jQuery, fluid_1_1);
 /*
 Copyright 2008-2009 University of Cambridge
@@ -18736,2555 +21256,4 @@ fluid_1_1 = fluid_1_1 || {};
 // register it with the standard fluid event firer at fluid.inlineEdit.FCKEditor.complete
 function FCKeditor_OnComplete(editorInstance) {
     fluid.inlineEdit.FCKEditor.complete.fire(editorInstance);
-}/*
-Copyright 2008-2009 University of Cambridge
-Copyright 2008-2009 University of Toronto
-Copyright 2007-2009 University of California, Berkeley
-
-Licensed under the Educational Community License (ECL), Version 2.0 or the New
-BSD license. You may not use this file except in compliance with one these
-Licenses.
-
-You may obtain a copy of the ECL 2.0 License and BSD License at
-https://source.fluidproject.org/svn/LICENSE.txt
-*/
-
-// Declare dependencies.
-/*global jQuery*/
-/*global fluid_1_1*/
-
-var fluid_1_1 = fluid_1_1 || {};
-
-(function ($, fluid) {
-    
-    fluid.orientation = {
-        HORIZONTAL: 4,
-        VERTICAL: 1
-    };
-    
-    fluid.rectSides = {
-        // agree with fluid.orientation
-        4: ["left", "right"],
-        1: ["top", "bottom"],
-        // agree with fluid.direction
-        8: "top",
-        12: "bottom",
-        2: "left",
-        3: "right"
-    };
-    
-    /**
-     * This is the position, relative to a given drop target, that a dragged item should be dropped.
-     */
-    fluid.position = {
-        BEFORE: -1,
-        AFTER: 1,
-        INSIDE: 2,
-        REPLACE: 3
-    };
-    
-    /**
-     * For incrementing/decrementing a count or index, or moving in a rectilinear direction.
-     */
-    fluid.direction = {
-        NEXT: 1,
-        PREVIOUS: -1,
-        UP: 8,
-        DOWN: 12,
-        LEFT: 2,
-        RIGHT: 3
-    };
-    
-    fluid.directionSign = function (direction) {
-        return direction === fluid.direction.UP || direction === fluid.direction.LEFT? 
-             fluid.direction.PREVIOUS : fluid.direction.NEXT;
-    };
-    
-    fluid.directionAxis = function (direction) {
-        return direction === fluid.direction.LEFT || direction === fluid.direction.RIGHT?
-            0 : 1; 
-    };
-    
-    fluid.directionOrientation = function (direction) {
-        return fluid.directionAxis(direction)? fluid.orientation.VERTICAL : fluid.orientation.HORIZONTAL;
-    };
-    
-    fluid.keycodeDirection = {
-        up: fluid.direction.UP,
-        down: fluid.direction.DOWN,
-        left: fluid.direction.LEFT,
-        right: fluid.direction.RIGHT
-    };
-    
-    // moves a single node in the DOM to a new position relative to another
-    fluid.moveDom = function (source, target, position) {
-        source = fluid.unwrap(source);
-        target = fluid.unwrap(target);
-        
-        var scan;
-        // fluid.log("moveDom source " + fluid.dumpEl(source) + " target " + fluid.dumpEl(target) + " position " + position);     
-        if (position === fluid.position.INSIDE) {
-            target.appendChild(source);
-        }
-        else if (position === fluid.position.BEFORE) {
-            for (scan = target.previousSibling; ; scan = scan.previousSibling) {
-                if (!scan || !fluid.dom.isIgnorableNode(scan)) {
-                    if (scan !== source) {
-                        fluid.dom.cleanseScripts(source);
-                        target.parentNode.insertBefore(source, target);    
-                    }
-                    break;
-                }
-            }
-        }
-        else if (position === fluid.position.AFTER) {
-            for (scan = target.nextSibling; ; scan = scan.nextSibling) {
-                if (!scan || !fluid.dom.isIgnorableNode(scan)) {
-                    if (scan !== source) {
-                        fluid.dom.cleanseScripts(source);
-                        fluid.dom.insertAfter(source, target);
-                    }
-                    break;
-                }
-            }
-        }
-        else {
-            fluid.fail("Unrecognised position supplied to fluid.moveDom: " + position);
-        }
-    };
-    
-    fluid.normalisePosition = function (position, samespan, targeti, sourcei) {
-        // convert a REPLACE into a primitive BEFORE/AFTER
-        if (position === fluid.position.REPLACE) {
-            position = samespan && targeti >= sourcei? fluid.position.AFTER: fluid.position.BEFORE;
-        }
-        return position;
-    };
-    
-    fluid.permuteDom = function (element, target, position, sourceelements, targetelements) {
-        element = fluid.unwrap(element);
-        target = fluid.unwrap(target);
-        var sourcei = $.inArray(element, sourceelements);
-        if (sourcei === -1) {
-            fluid.fail("Error in permuteDom: source element " + fluid.dumpEl(element) 
-               + " not found in source list " + fluid.dumpEl(sourceelements));
-        }
-        var targeti = $.inArray(target, targetelements);
-        if (targeti === -1) {
-            fluid.fail("Error in permuteDom: target element " + fluid.dumpEl(target) 
-               + " not found in source list " + fluid.dumpEl(targetelements));
-        }
-        var samespan = sourceelements === targetelements;
-        position = fluid.normalisePosition(position, samespan, targeti, sourcei);
-
-        //fluid.log("permuteDom sourcei " + sourcei + " targeti " + targeti);
-        // cache the old neighbourhood of the element for the final move
-        var oldn = {};
-        oldn[fluid.position.AFTER] = element.nextSibling;
-        oldn[fluid.position.BEFORE] = element.previousSibling;
-        fluid.moveDom(sourceelements[sourcei], targetelements[targeti], position);
-        
-        // perform the leftward-moving, AFTER shift
-        var frontlimit = samespan? targeti - 1: sourceelements.length - 2;
-        var i;
-        if (position === fluid.position.BEFORE && samespan) { 
-            // we cannot do skip processing if the element was "fused against the grain" 
-            frontlimit--;
-        }
-        if (!samespan || targeti > sourcei) {
-            for (i = frontlimit; i > sourcei; -- i) {
-                fluid.moveDom(sourceelements[i + 1], sourceelements[i], fluid.position.AFTER);
-            }
-            if (sourcei + 1 < sourceelements.length) {
-                fluid.moveDom(sourceelements[sourcei + 1], oldn[fluid.position.AFTER], fluid.position.BEFORE);
-            }
-        }
-        // perform the rightward-moving, BEFORE shift
-        var backlimit = samespan? sourcei - 1: targetelements.length - 1;
-        if (position === fluid.position.AFTER) { 
-            // we cannot do skip processing if the element was "fused against the grain" 
-            targeti++;
-        }
-        if (!samespan || targeti < sourcei) {
-            for (i = targeti; i < backlimit; ++ i) {
-                fluid.moveDom(targetelements[i], targetelements[i + 1], fluid.position.BEFORE);
-            }
-            if (backlimit >= 0 && backlimit < targetelements.length - 1) {
-                fluid.moveDom(targetelements[backlimit], oldn[fluid.position.BEFORE], fluid.position.AFTER);
-            }                
-        }
-
-    };
-  
-    var curCss = function (a, name) {
-        return window.getComputedStyle? window.getComputedStyle(a, null).getPropertyValue(name) : 
-          a.currentStyle[name];
-    };
-    
-    var isAttached = function (node) {
-        while (node && node.nodeName) {
-            if (node.nodeName === "BODY") {
-                return true;
-            }
-            node = node.parentNode;
-        }
-        return false;
-    };
-    
-    var generalHidden = function (a) {
-        return "hidden" === a.type || curCss(a, "display") === "none" || curCss(a, "visibility") === "hidden" || !isAttached(a);
-    };
-    
-
-    var computeGeometry = function (element, orientation, disposition) {
-        var elem = {};
-        elem.element = element;
-        elem.orientation = orientation;
-        if (disposition === fluid.position.INSIDE) {
-            elem.position = disposition;
-        }
-        if (generalHidden(element)) {
-            elem.clazz = "hidden";
-        }
-        var pos = fluid.dom.computeAbsolutePosition(element) || [0, 0];
-        var width = element.offsetWidth;
-        var height = element.offsetHeight;
-        elem.rect = {left: pos[0], top: pos[1]};
-        elem.rect.right = pos[0] + width;
-        elem.rect.bottom = pos[1] + height;
-        return elem;
-    };
-    
-    // A "suitable large" value for the sentinel blocks at the ends of spans
-    var SENTINEL_DIMENSION = 10000;
-
-    function dumprect(rect) {
-        return "Rect top: " + rect.top +
-                 " left: " + rect.left + 
-               " bottom: " + rect.bottom +
-                " right: " + rect.right;
-    }
-
-    function dumpelem(cacheelem) {
-        if (!cacheelem || !cacheelem.rect) {
-            return "null";
-        } else {
-            return dumprect(cacheelem.rect) + " position: " +
-            cacheelem.position +
-            " for " +
-            fluid.dumpEl(cacheelem.element);
-        }
-    }
-    
-    fluid.dropManager = function () {
-        var targets = [];
-        var cache = {};
-        var that = {};
-        
-        var lastClosest;
-        
-        function cacheKey(element) {
-            return $(element).data("");
-        }
-        
-        function sentinelizeElement(targets, sides, cacheelem, fc, disposition, clazz) {
-            var elemCopy = $.extend(true, {}, cacheelem);
-            elemCopy.rect[sides[fc]] = elemCopy.rect[sides[1 - fc]] + (fc? 1: -1);
-            elemCopy.rect[sides[1 - fc]] = (fc? -1 : 1) * SENTINEL_DIMENSION;
-            elemCopy.position = disposition === fluid.position.INSIDE?
-               disposition : (fc? fluid.position.BEFORE : fluid.position.AFTER);
-            elemCopy.clazz = clazz;
-            targets[targets.length] = elemCopy;
-        }
-        
-        function splitElement(targets, sides, cacheelem, disposition, clazz1, clazz2) {
-            var elem1 = $.extend(true, {}, cacheelem);
-            var elem2 = $.extend(true, {}, cacheelem);
-            var midpoint = (elem1.rect[sides[0]] + elem1.rect[sides[1]]) / 2;
-            elem1.rect[sides[1]] = midpoint; 
-            elem1.position = fluid.position.BEFORE;
-            
-            elem2.rect[sides[0]] = midpoint; 
-            elem2.position = fluid.position.AFTER;
-            
-            elem1.clazz = clazz1;
-            elem2.clazz = clazz2;
-            targets[targets.length] = elem1;
-            targets[targets.length] = elem2;
-        }
-       
-        // Expand this configuration point if we ever go back to a full "permissions" model
-        function getRelativeClass(thisElements, index, relative, thisclazz, mapper) {
-            index += relative;
-            if (index < 0 && thisclazz === "locked") {
-                return "locked";
-            }
-            if (index >= thisElements.length || mapper === null) {
-                return null;
-            } else {
-                relative = thisElements[index];
-                return mapper(relative) === "locked" && thisclazz === "locked" ? "locked" : null;
-            }
-        }
-        
-        var lastGeometry;
-        var displacementX, displacementY;
-        
-        that.updateGeometry = function (geometricInfo) {
-            lastGeometry = geometricInfo;
-            targets = [];
-            cache = {};
-            var mapper = geometricInfo.elementMapper;
-            for (var i = 0; i < geometricInfo.extents.length; ++ i) {
-                var thisInfo = geometricInfo.extents[i];
-                var orientation = thisInfo.orientation;
-                var sides = fluid.rectSides[orientation];
-                
-                var processElement = function (element, sentB, sentF, disposition, j) {
-                    var cacheelem = computeGeometry(element, orientation, disposition);
-                    cacheelem.owner = thisInfo;
-                    if (cacheelem.clazz !== "hidden" && mapper) {
-                        cacheelem.clazz = mapper(element);
-                    }
-                    cache[$.data(element)] = cacheelem;
-                    var backClass = getRelativeClass(thisInfo.elements, j, fluid.position.BEFORE, cacheelem.clazz, mapper); 
-                    var frontClass = getRelativeClass(thisInfo.elements, j, fluid.position.AFTER, cacheelem.clazz, mapper); 
-                    if (disposition === fluid.position.INSIDE) {
-                        targets[targets.length] = cacheelem;
-                    }
-                    else {
-                        splitElement(targets, sides, cacheelem, disposition, backClass, frontClass);
-                    }
-                    // deal with sentinel blocks by creating near-copies of the end elements
-                    if (sentB && geometricInfo.sentinelize) {
-                        sentinelizeElement(targets, sides, cacheelem, 1, disposition, backClass);
-                    }
-                    if (sentF && geometricInfo.sentinelize) {
-                        sentinelizeElement(targets, sides, cacheelem, 0, disposition, frontClass);
-                    }
-                    //fluid.log(dumpelem(cacheelem));
-                    return cacheelem;
-                };
-                
-                var allHidden = true;
-                for (var j = 0; j < thisInfo.elements.length; ++ j) {
-                    var element = thisInfo.elements[j];
-                    var cacheelem = processElement(element, j === 0, j === thisInfo.elements.length - 1, 
-                            fluid.position.INTERLEAVED, j);
-                    if (cacheelem.clazz !== "hidden") {
-                        allHidden = false;
-                    }
-                }
-                if (allHidden && thisInfo.parentElement) {
-                    processElement(thisInfo.parentElement, true, true, 
-                            fluid.position.INSIDE);
-                }
-            }   
-        };
-        
-        that.startDrag = function (event, handlePos, handleWidth, handleHeight) {
-            var handleMidX = handlePos[0] + handleWidth / 2;
-            var handleMidY = handlePos[1] + handleHeight / 2;
-            var dX = handleMidX - event.pageX;
-            var dY = handleMidY - event.pageY;
-            that.updateGeometry(lastGeometry);
-            lastClosest = null;
-            displacementX = dX;
-            displacementY = dY;
-            $("").bind("mousemove.fluid-dropManager", that.mouseMove);
-        };
-        
-        that.lastPosition = function () {
-            return lastClosest;
-        };
-        
-        that.endDrag = function () {
-            $("").unbind("mousemove.fluid-dropManager");
-        };
-        
-        that.mouseMove = function (evt) {
-            var x = evt.pageX + displacementX;
-            var y = evt.pageY + displacementY;
-            //fluid.log("Mouse x " + x + " y " + y );
-            
-            var closestTarget = that.closestTarget(x, y, lastClosest);
-            if (closestTarget && closestTarget !== fluid.dropManager.NO_CHANGE) {
-                lastClosest = closestTarget;
-              
-                that.dropChangeFirer.fire(closestTarget);
-            }
-        };
-        
-        that.dropChangeFirer = fluid.event.getEventFirer();
-        
-        var blankHolder = {
-            element: null
-        };
-        
-        that.closestTarget = function (x, y, lastClosest) {
-            var mindistance = Number.MAX_VALUE;
-            var minelem = blankHolder;
-            var minlockeddistance = Number.MAX_VALUE;
-            var minlockedelem = blankHolder;
-            for (var i = 0; i < targets.length; ++ i) {
-                var cacheelem = targets[i];
-                if (cacheelem.clazz === "hidden") {
-                    continue;
-                }
-                var distance = fluid.geom.minPointRectangle(x, y, cacheelem.rect);
-                if (cacheelem.clazz === "locked") {
-                    if (distance < minlockeddistance) {
-                        minlockeddistance = distance;
-                        minlockedelem = cacheelem;
-                    }
-                } else {
-                    if (distance < mindistance) {
-                        mindistance = distance;
-                        minelem = cacheelem;
-                    }
-                    if (distance === 0) {
-                        break;
-                    }
-                }
-            }
-            if (!minelem) {
-                return minelem;
-            }
-            if (minlockeddistance >= mindistance) {
-                minlockedelem = blankHolder;
-            }
-            //fluid.log("PRE: mindistance " + mindistance + " element " + 
-            //   fluid.dumpEl(minelem.element) + " minlockeddistance " + minlockeddistance
-            //    + " locked elem " + dumpelem(minlockedelem));
-            if (lastClosest && lastClosest.position === minelem.position &&
-                fluid.unwrap(lastClosest.element) === fluid.unwrap(minelem.element) &&
-                fluid.unwrap(lastClosest.lockedelem) === fluid.unwrap(minlockedelem.element)
-                ) {
-                return fluid.dropManager.NO_CHANGE;
-            }
-            //fluid.log("mindistance " + mindistance + " minlockeddistance " + minlockeddistance);
-            return {
-                position: minelem.position,
-                element: minelem.element,
-                lockedelem: minlockedelem.element
-            };
-        };
-        
-        that.shuffleProjectFrom = function (element, direction, includeLocked) {
-            var togo = that.projectFrom(element, direction, includeLocked);
-            togo.position = fluid.position.REPLACE;
-            return togo;
-        };
-        
-        that.projectFrom = function (element, direction, includeLocked) {
-            that.updateGeometry(lastGeometry);
-            var cacheelem = cache[cacheKey(element)];
-            var projected = fluid.geom.projectFrom(cacheelem.rect, direction, targets, includeLocked);
-            if (!projected.cacheelem) {
-                return null;
-            }
-            var retpos = projected.cacheelem.position;
-            return {element: projected.cacheelem.element, 
-                     position: retpos? retpos : fluid.position.BEFORE 
-                     };
-        };
-        
-        function getRelativeElement(element, direction, elements) {
-            var folded = fluid.directionSign(direction);
-      
-            var index = $(elements).index(element) + folded;
-            if (index < 0) {
-                index += elements.length;
-            }
-            index %= elements.length;
-            return elements[index];            
-        }
-        
-        that.logicalFrom = function (element, direction, includeLocked) {
-            var orderables = that.getOwningSpan(element, fluid.position.INTERLEAVED, includeLocked);
-            return {element: getRelativeElement(element, direction, orderables), 
-                position: fluid.position.REPLACE};
-        };
-           
-        that.lockedWrapFrom = function (element, direction, includeLocked) {
-            var base = that.logicalFrom(element, direction, includeLocked);
-            var selectables = that.getOwningSpan(element, fluid.position.INTERLEAVED, includeLocked);
-            var allElements = cache[cacheKey(element)].owner.elements;
-            if (includeLocked || selectables[0] === allElements[0]) {
-                return base;
-            }
-            var directElement = getRelativeElement(element, direction, allElements);
-            if (lastGeometry.elementMapper(directElement) === "locked") {
-                base.element = null;
-                base.clazz = "locked";  
-            }
-            return base;
-        }; 
-        
-        that.getOwningSpan = function (element, position, includeLocked) {
-            var owner = cache[cacheKey(element)].owner; 
-            var elements = position === fluid.position.INSIDE? [owner.parentElement] : owner.elements;
-            if (!includeLocked && lastGeometry.elementMapper) {
-                elements = $.makeArray(elements);
-                fluid.remove_if(elements, function (element) {
-                    return lastGeometry.elementMapper(element) === "locked";
-                });
-            }
-            return elements;
-        };
-        
-        that.geometricMove = function (element, target, position) {
-            var sourceElements = that.getOwningSpan(element, null, true);
-            var targetElements = that.getOwningSpan(target, position, true);
-            fluid.permuteDom(element, target, position, sourceElements, targetElements);
-        };
-        
-        return that;
-    };
- 
-    fluid.dropManager.NO_CHANGE = "no change";
-
-
-    fluid.geom = fluid.geom || {};
-    
-    // These distance algorithms have been taken from
-    // http://www.cs.mcgill.ca/~cs644/Godfried/2005/Fall/fzamal/concepts.htm
-    
-    /** Returns the minimum squared distance between a point and a rectangle **/
-    fluid.geom.minPointRectangle = function (x, y, rectangle) {
-        var dx = x < rectangle.left? (rectangle.left - x) : 
-                  (x > rectangle.right? (x - rectangle.right) : 0);
-        var dy = y < rectangle.top? (rectangle.top - y) : 
-                  (y > rectangle.bottom? (y - rectangle.bottom) : 0);
-        return dx * dx + dy * dy;
-    };
-    
-    /** Returns the minimum squared distance between two rectangles **/
-    fluid.geom.minRectRect = function (rect1, rect2) {
-        var dx = rect1.right < rect2.left? rect2.left - rect1.right : 
-                 rect2.right < rect1.left? rect1.left - rect2.right :0;
-        var dy = rect1.bottom < rect2.top? rect2.top - rect1.bottom : 
-                 rect2.bottom < rect1.top? rect1.top - rect2.bottom :0;
-        return dx * dx + dy * dy;
-    };
-    
-    var makePenCollect = function () {
-        return {
-            mindist: Number.MAX_VALUE,
-            minrdist: Number.MAX_VALUE
-        };
-    };
-
-    /** Determine the one amongst a set of rectangle targets which is the "best fit"
-     * for an axial motion from a "base rectangle" (commonly arising from the case
-     * of cursor key navigation).
-     * @param {Rectangle} baserect The base rectangl from which the motion is to be referred
-     * @param {fluid.direction} direction  The direction of motion
-     * @param {Array of Rectangle holders} targets An array of objects "cache elements" 
-     * for which the member <code>rect</code> is the holder of the rectangle to be tested.
-     * @return The cache element which is the most appropriate for the requested motion.
-     */
-    fluid.geom.projectFrom = function (baserect, direction, targets, forSelection) {
-        var axis = fluid.directionAxis(direction);
-        var frontSide = fluid.rectSides[direction];
-        var backSide = fluid.rectSides[axis * 15 + 5 - direction];
-        var dirSign = fluid.directionSign(direction);
-        
-        var penrect = {left: (7 * baserect.left + 1 * baserect.right) / 8,
-                       right: (5 * baserect.left + 3 * baserect.right) / 8,
-                       top: (7 * baserect.top + 1 * baserect.bottom) / 8,
-                       bottom: (5 * baserect.top + 3 * baserect.bottom) / 8};
-         
-        penrect[frontSide] = dirSign * SENTINEL_DIMENSION;
-        penrect[backSide] = -penrect[frontSide];
-        
-        function accPen(collect, cacheelem, backSign) {
-            var thisrect = cacheelem.rect;
-            var pdist = fluid.geom.minRectRect(penrect, thisrect);
-            var rdist = -dirSign * backSign * (baserect[backSign === 1 ? frontSide:backSide] 
-                                             - thisrect[backSign === 1 ? backSide:frontSide]);
-            // fluid.log("pdist: " + pdist + " rdist: " + rdist);
-            // the oddity in the rdist comparison is intended to express "half-open"-ness of rectangles
-            // (backSign === 1? 0 : 1) - this is now gone - must be possible to move to perpendicularly abutting regions
-            if (pdist <= collect.mindist && rdist >= 0) {
-                if (pdist === collect.mindist && rdist * backSign > collect.minrdist) {
-                    return;
-                }
-                collect.minrdist = rdist * backSign;
-                collect.mindist = pdist;
-                collect.minelem = cacheelem;
-            }
-        }
-        var collect = makePenCollect();
-        var backcollect = makePenCollect();
-        var lockedcollect = makePenCollect();
-
-        for (var i = 0; i < targets.length; ++ i) {
-            var elem = targets[i];
-            var isPure = elem.owner && elem.element === elem.owner.parentElement;
-            if (elem.clazz === "hidden" || forSelection && isPure) {
-                continue;
-            }
-            else if (!forSelection && elem.clazz === "locked") {
-                accPen(lockedcollect, elem, 1);
-            }
-            else {
-                accPen(collect, elem, 1);
-                accPen(backcollect, elem, -1);
-            }
-            //fluid.log("Element " + i + " " + dumpelem(elem) + " mindist " + collect.mindist);
-        }
-        var wrap = !collect.minelem || backcollect.mindist < collect.mindist;
-        var mincollect = wrap? backcollect: collect;
-        var togo = {
-            wrapped: wrap,
-            cacheelem: mincollect.minelem
-        };
-        if (lockedcollect.mindist < mincollect.mindist) {
-            togo.lockedelem = lockedcollect.minelem;
-        }
-        return togo;
-    };
-})(jQuery, fluid_1_1);
-/*
-Copyright 2007-2009 University of Toronto
-Copyright 2007-2009 University of Cambridge
-Copyright 2007-2009 University of California, Berkeley
-
-Licensed under the Educational Community License (ECL), Version 2.0 or the New
-BSD license. You may not use this file except in compliance with one these
-Licenses.
-
-You may obtain a copy of the ECL 2.0 License and BSD License at
-https://source.fluidproject.org/svn/LICENSE.txt
-*/
-
-// Declare dependencies.
-/*global $, jQuery*/
-/*global fluid_1_1*/
-
-fluid_1_1 = fluid_1_1 || {};
-
-(function ($, fluid) {
-    
-    var defaultAvatarCreator = function (item, cssClass, dropWarning) {
-        var avatar = $(item).clone();
-        
-        fluid.dom.iterateDom(avatar.get(0), function (node) {
-            if (node.tagName.toLowerCase() === "script") {
-                return "delete";
-            }
-            node.removeAttribute("id");
-            if (node.tagName.toLowerCase() === "input") {
-                node.setAttribute("disabled", "disabled");
-            }
-        });
-        
-        avatar.removeAttr("id");
-        avatar.removeClass("ui-droppable");
-        avatar.addClass(cssClass);
-        
-        if (dropWarning) {
-            // Will a 'div' always be valid in this position?
-            var avatarContainer = $(document.createElement("div"));
-            avatarContainer.append(avatar);
-            avatarContainer.append(dropWarning);
-            avatar = avatarContainer;
-        }
-        $("body").append(avatar);
-        if (!$.browser.safari) {
-            // FLUID-1597: Safari appears incapable of correctly determining the dimensions of elements
-            avatar.css("display", "block").width(item.offsetWidth).height(item.offsetHeight);
-        }
-        
-        if ($.browser.opera) { // FLUID-1490. Without this detect, curCSS explodes on the avatar on Firefox.
-            avatar.hide();
-        }
-        return avatar;
-    };   
-    
-    function firstSelectable(that) {
-        var selectables = that.dom.fastLocate("selectables");
-        if (selectables.length <= 0) {
-            return null;
-        }
-        return selectables[0];
-    }
-    
-    function bindHandlersToContainer(container, keyDownHandler, keyUpHandler, mouseMoveHandler) {
-        var actualKeyDown = keyDownHandler;
-        var advancedPrevention = false;
-
-        // FLUID-1598 and others: Opera will refuse to honour a "preventDefault" on a keydown.
-        // http://forums.devshed.com/javascript-development-115/onkeydown-preventdefault-opera-485371.html
-        if ($.browser.opera) {
-            container.keypress(function (evt) {
-                if (advancedPrevention) {
-                    advancedPrevention = false;
-                    evt.preventDefault();
-                    return false;
-                }
-            });
-            actualKeyDown = function (evt) {
-                var oldret = keyDownHandler(evt);
-                if (oldret === false) {
-                    advancedPrevention = true;
-                }
-            };
-        }
-        container.keydown(actualKeyDown);
-        container.keyup(keyUpHandler);
-    }
-    
-    function addRolesToContainer(that) {
-        var first = that.dom.fastLocate("selectables")[0];
-        that.container.attr("role", that.options.containerRole.container);
-        that.container.attr("aria-multiselectable", "false");
-        that.container.attr("aria-readonly", "false");
-        that.container.attr("aria-disabled", "false");
-    }
-    
-    function createAvatarId(parentId) {
-        // Generating the avatar's id to be containerId_avatar
-        // This is safe since there is only a single avatar at a time
-        return parentId + "_avatar";
-    }
-    
-    var adaptKeysets = function (options) {
-        if (options.keysets && !(options.keysets instanceof Array)) {
-            options.keysets = [options.keysets];    
-        }
-    };
-    
-    /**
-     * @param container - the root node of the Reorderer.
-     * @param options - an object containing any of the available options:
-     *                  containerRole - indicates the role, or general use, for this instance of the Reorderer
-     *                  keysets - an object containing sets of keycodes to use for directional navigation. Must contain:
-     *                            modifier - a function that returns a boolean, indicating whether or not the required modifier(s) are activated
-     *                            up
-     *                            down
-     *                            right
-     *                            left
-     *                  styles - an object containing class names for styling the Reorderer
-     *                                  defaultStyle
-     *                                  selected
-     *                                  dragging
-     *                                  hover
-     *                                  dropMarker
-     *                                  mouseDrag
-     *                                  avatar
-     *                  avatarCreator - a function that returns a valid DOM node to be used as the dragging avatar
-     */
-    fluid.reorderer = function (container, options) {
-        if (!container) {
-            fluid.fail("Reorderer initialised with no container");
-        }
-        var thatReorderer = fluid.initView("fluid.reorderer", container, options);
-        options = thatReorderer.options;
-        
-        var dropManager = fluid.dropManager();
-        
-        thatReorderer.layoutHandler = fluid.initSubcomponent(thatReorderer,
-            "layoutHandler", [container, options, dropManager, thatReorderer.dom]);
-        
-        thatReorderer.activeItem = undefined;
-
-        adaptKeysets(options);
- 
-        var kbDropWarning = thatReorderer.locate("dropWarning");
-        var mouseDropWarning;
-        if (kbDropWarning) {
-            mouseDropWarning = kbDropWarning.clone();
-        }
-
-        var isMove = function (evt) {
-            var keysets = options.keysets;
-            for (var i = 0; i < keysets.length; i++) {
-                if (keysets[i].modifier(evt)) {
-                    return true;
-                }
-            }
-            return false;
-        };
-        
-        var isActiveItemMovable = function () {
-            return $.inArray(thatReorderer.activeItem, thatReorderer.dom.fastLocate("movables")) >= 0;
-        };
-        
-        var setDropEffects = function (value) {
-            thatReorderer.dom.fastLocate("dropTargets").attr("aria-dropeffect", value);
-        };
-        
-        var styles = options.styles;
-        
-        var noModifier = function (evt) {
-            return (!evt.ctrlKey && !evt.altKey && !evt.shiftKey && !evt.metaKey);
-        };
-        
-        var handleDirectionKeyDown = function (evt) {
-            var item = thatReorderer.activeItem;
-            if (!item) {
-                return true;
-            }
-            var keysets = options.keysets;
-            for (var i = 0; i < keysets.length; i++) {
-                var keyset = keysets[i];
-                var didProcessKey = false;
-                var keydir = fluid.keyForValue(keyset, evt.keyCode);
-                if (!keydir) {
-                    continue;
-                }
-                var isMovement = keyset.modifier(evt);
-                
-                var dirnum = fluid.keycodeDirection[keydir];
-                var relativeItem = thatReorderer.layoutHandler.getRelativePosition(item, dirnum, !isMovement);
-                if (!relativeItem) {
-                    continue;
-                }
-                
-                if (isMovement) {
-                    var prevent = thatReorderer.events.onBeginMove.fire(item);
-                    if (prevent === false) {
-                        return false;
-                    }
-                    if (kbDropWarning.length > 0) {
-                        if (relativeItem.clazz === "locked") {
-                            thatReorderer.events.onShowKeyboardDropWarning.fire(item, kbDropWarning);
-                            kbDropWarning.show();                       
-                        }
-                        else {
-                            kbDropWarning.hide();
-                        }
-                    }
-                    if (relativeItem.element) {
-                        thatReorderer.requestMovement(relativeItem, item);
-                    }
-            
-                } else if (noModifier(evt)) {
-                    $(relativeItem.element).focus();
-                }
-                return false;
-            }
-            return true;
-        };
-
-        thatReorderer.handleKeyDown = function (evt) {
-            if (!thatReorderer.activeItem || thatReorderer.activeItem !== evt.target) {
-                return true;
-            }
-            // If the key pressed is ctrl, and the active item is movable we want to restyle the active item.
-            var jActiveItem = $(thatReorderer.activeItem);
-            if (!jActiveItem.hasClass(styles.dragging) && isMove(evt)) {
-               // Don't treat the active item as dragging unless it is a movable.
-                if (isActiveItemMovable()) {
-                    jActiveItem.removeClass(styles.selected);
-                    jActiveItem.addClass(styles.dragging);
-                    jActiveItem.attr("aria-grabbed", "true");
-                    setDropEffects("move");
-                }
-                return false;
-            }
-            // The only other keys we listen for are the arrows.
-            return handleDirectionKeyDown(evt);
-        };
-
-        thatReorderer.handleKeyUp = function (evt) {
-            if (!thatReorderer.activeItem || thatReorderer.activeItem !== evt.target) {
-                return true;
-            }
-            var jActiveItem = $(thatReorderer.activeItem);
-            
-            // Handle a key up event for the modifier
-            if (jActiveItem.hasClass(styles.dragging) && !isMove(evt)) {
-                if (kbDropWarning) {
-                    kbDropWarning.hide();
-                }
-                jActiveItem.removeClass(styles.dragging);
-                jActiveItem.addClass(styles.selected);
-                jActiveItem.attr("aria-grabbed", "false");
-                setDropEffects("none");
-                return false;
-            }
-            
-            return false;
-        };
-
-        var dropMarker;
-
-        var createDropMarker = function (tagName) {
-            var dropMarker = $(document.createElement(tagName));
-            dropMarker.addClass(options.styles.dropMarker);
-            dropMarker.hide();
-            return dropMarker;
-        };
-
-        fluid.logEnabled = true;
-
-        thatReorderer.requestMovement = function (requestedPosition, item) {
-          // Temporary censoring to get around ModuleLayout inability to update relative to self.
-            if (!requestedPosition || fluid.unwrap(requestedPosition.element) === fluid.unwrap(item)) {
-                return;
-            }
-            thatReorderer.events.onMove.fire(item, requestedPosition);
-            dropManager.geometricMove(item, requestedPosition.element, requestedPosition.position);
-            //$(thatReorderer.activeItem).removeClass(options.styles.selected);
-           
-            // refocus on the active item because moving places focus on the body
-            $(thatReorderer.activeItem).focus();
-            
-            thatReorderer.refresh();
-            
-            dropManager.updateGeometry(thatReorderer.layoutHandler.getGeometricInfo());
-
-            thatReorderer.events.afterMove.fire(item, requestedPosition, thatReorderer.dom.fastLocate("movables"));
-        };
-
-        var hoverStyleHandler = function (item, state) {
-            thatReorderer.dom.fastLocate("grabHandle", item)[state?"addClass":"removeClass"](styles.hover);
-        };
-        /**
-         * Takes a $ object and adds 'movable' functionality to it
-         */
-        function initMovable(item) {
-            var styles = options.styles;
-            item.attr("aria-grabbed", "false");
-
-            item.mouseover(
-                function () {
-                    thatReorderer.events.onHover.fire(item, true);
-                }
-            );
-        
-            item.mouseout(
-                function () {
-                    thatReorderer.events.onHover.fire(item, false);
-                }
-            );
-            var avatar;
-        
-            thatReorderer.dom.fastLocate("grabHandle", item).draggable({
-                refreshPositions: false,
-                scroll: true,
-                helper: function () {
-                    var dropWarningEl;
-                    if (mouseDropWarning) {
-                        dropWarningEl = mouseDropWarning[0];
-                    }
-                    avatar = $(options.avatarCreator(item[0], styles.avatar, dropWarningEl));
-                    avatar.attr("id", createAvatarId(thatReorderer.container.id));
-                    return avatar;
-                },
-                start: function (e, ui) {
-                    var prevent = thatReorderer.events.onBeginMove.fire(item);
-                    if (prevent === false) {
-                        return false;
-                    }
-                    var handle = thatReorderer.dom.fastLocate("grabHandle", item)[0];
-                    var handlePos = fluid.dom.computeAbsolutePosition(handle);
-                    var handleWidth = handle.offsetWidth;
-                    var handleHeight = handle.offsetHeight;
-                    item.focus();
-                    item.removeClass(options.styles.selected);
-                    item.addClass(options.styles.mouseDrag);
-                    item.attr("aria-grabbed", "true");
-                    setDropEffects("move");
-                    dropManager.startDrag(e, handlePos, handleWidth, handleHeight);
-                    avatar.show();
-                },
-                stop: function (e, ui) {
-                    item.removeClass(options.styles.mouseDrag);
-                    item.addClass(options.styles.selected);
-                    $(thatReorderer.activeItem).attr("aria-grabbed", "false");
-                    var markerNode = fluid.unwrap(dropMarker);
-                    if (markerNode.parentNode) {
-                        markerNode.parentNode.removeChild(markerNode);
-                    }
-                    avatar.hide();
-                    ui.helper = null;
-                    setDropEffects("none");
-                    dropManager.endDrag();
-                    
-                    thatReorderer.requestMovement(dropManager.lastPosition(), item);
-                    // refocus on the active item because moving places focus on the body
-                    thatReorderer.activeItem.focus();
-                },
-                handle: thatReorderer.dom.fastLocate("grabHandle", item)
-            });
-        }
-           
-        function changeSelectedToDefault(jItem, styles) {
-            jItem.removeClass(styles.selected);
-            jItem.removeClass(styles.dragging);
-            jItem.addClass(styles.defaultStyle);
-            jItem.attr("aria-selected", "false");
-        }
-           
-        var selectItem = function (anItem) {
-            thatReorderer.events.onSelect.fire(anItem);
-            var styles = options.styles;
-            // Set the previous active item back to its default state.
-            if (thatReorderer.activeItem && thatReorderer.activeItem !== anItem) {
-                changeSelectedToDefault($(thatReorderer.activeItem), styles);
-            }
-            // Then select the new item.
-            thatReorderer.activeItem = anItem;
-            var jItem = $(anItem);
-            jItem.removeClass(styles.defaultStyle);
-            jItem.addClass(styles.selected);
-            jItem.attr("aria-selected", "true");
-        };
-   
-        var initSelectables = function () {
-            var handleBlur = function (evt) {
-                changeSelectedToDefault($(this), options.styles);
-                return evt.stopPropagation();
-            };
-        
-            var handleFocus = function (evt) {
-                selectItem(this);
-                return evt.stopPropagation();
-            };
-            
-            var selectables = thatReorderer.dom.fastLocate("selectables");
-            for (var i = 0; i < selectables.length; ++ i) {
-                var selectable = $(selectables[i]);
-                if (!$.data(selectable[0], "fluid.reorderer.selectable-initialised")) { 
-                    selectable.addClass(styles.defaultStyle);
-            
-                    selectables.blur(handleBlur);
-                    selectables.focus(handleFocus);
-                    selectables.click(function (evt) {
-                        var handle = fluid.unwrap(thatReorderer.dom.fastLocate("grabHandle", this));
-                        if (fluid.dom.isContainer(handle, evt.target)) {
-                            $(this).focus();
-                        }
-                    });
-                    
-                    selectables.attr("role", options.containerRole.item);
-                    selectables.attr("aria-selected", "false");
-                    selectables.attr("aria-disabled", "false");
-                    $.data(selectable[0], "fluid.reorderer.selectable-initialised", true);
-                }
-            }
-            if (!thatReorderer.selectableContext) {
-                thatReorderer.selectableContext = fluid.selectable(thatReorderer.container, {
-                    selectableElements: selectables,
-                    selectablesTabindex: thatReorderer.options.selectablesTabindex,
-                    direction: null
-                });
-            }
-        };
-    
-        var dropChangeListener = function (dropTarget) {
-            fluid.moveDom(dropMarker, dropTarget.element, dropTarget.position);
-            dropMarker.css("display", "");
-            if (mouseDropWarning) {
-                if (dropTarget.lockedelem) {
-                    mouseDropWarning.show();
-                }
-                else {
-                    mouseDropWarning.hide();
-                }
-            }
-        };
-    
-        var initItems = function () {
-            var movables = thatReorderer.dom.fastLocate("movables");
-            var dropTargets = thatReorderer.dom.fastLocate("dropTargets");
-            initSelectables();
-        
-            // Setup movables
-            for (var i = 0; i < movables.length; i++) {
-                var item = movables[i];
-                if (!$.data(item, "fluid.reorderer.movable-initialised")) { 
-                    initMovable($(item));
-                    $.data(item, "fluid.reorderer.movable-initialised", true);
-                }
-            }
-
-            // In order to create valid html, the drop marker is the same type as the node being dragged.
-            // This creates a confusing UI in cases such as an ordered list. 
-            // drop marker functionality should be made pluggable. 
-            if (movables.length > 0 && !dropMarker) {
-                dropMarker = createDropMarker(movables[0].tagName);
-            }
-            
-            dropManager.updateGeometry(thatReorderer.layoutHandler.getGeometricInfo());
-            
-            dropManager.dropChangeFirer.addListener(dropChangeListener, "fluid.Reorderer");
-            // Setup dropTargets
-            dropTargets.attr("aria-dropeffect", "none");  
-
-        };
-
-
-        // Final initialization of the Reorderer at the end of the construction process 
-        if (thatReorderer.container) {
-            bindHandlersToContainer(thatReorderer.container, 
-                thatReorderer.handleKeyDown,
-                thatReorderer.handleKeyUp);
-            addRolesToContainer(thatReorderer);
-            fluid.tabbable(thatReorderer.container);
-            initItems();
-        }
-
-        if (options.afterMoveCallbackUrl) {
-            thatReorderer.events.afterMove.addListener(function () {
-                var layoutHandler = thatReorderer.layoutHandler;
-                var model = layoutHandler.getModel? layoutHandler.getModel():
-                     options.acquireModel(thatReorderer);
-                $.post(options.afterMoveCallbackUrl, JSON.stringify(model));
-            }, "postModel");
-        }
-        thatReorderer.events.onHover.addListener(hoverStyleHandler, "style");
-
-        thatReorderer.refresh = function () {
-            thatReorderer.dom.refresh("movables");
-            thatReorderer.dom.refresh("selectables");
-            thatReorderer.dom.refresh("grabHandle", thatReorderer.dom.fastLocate("movables"));
-            thatReorderer.dom.refresh("stylisticOffset", thatReorderer.dom.fastLocate("movables"));
-            thatReorderer.dom.refresh("dropTargets");
-            thatReorderer.events.onRefresh.fire();
-            initItems();
-            thatReorderer.selectableContext.selectables = thatReorderer.dom.fastLocate("selectables");
-            thatReorderer.selectableContext.selectablesUpdated(thatReorderer.activeItem);
-        };
-
-        thatReorderer.refresh();
-
-        return thatReorderer;
-    };
-    
-    /**
-     * Constants for key codes in events.
-     */    
-    fluid.reorderer.keys = {
-        TAB: 9,
-        ENTER: 13,
-        SHIFT: 16,
-        CTRL: 17,
-        ALT: 18,
-        META: 19,
-        SPACE: 32,
-        LEFT: 37,
-        UP: 38,
-        RIGHT: 39,
-        DOWN: 40,
-        i: 73,
-        j: 74,
-        k: 75,
-        m: 77
-    };
-    
-    /**
-     * The default key sets for the Reorderer. Should be moved into the proper component defaults.
-     */
-    fluid.reorderer.defaultKeysets = [{
-        modifier : function (evt) {
-            return evt.ctrlKey;
-        },
-        up : fluid.reorderer.keys.UP,
-        down : fluid.reorderer.keys.DOWN,
-        right : fluid.reorderer.keys.RIGHT,
-        left : fluid.reorderer.keys.LEFT
-    },
-    {
-        modifier : function (evt) {
-            return evt.ctrlKey;
-        },
-        up : fluid.reorderer.keys.i,
-        down : fluid.reorderer.keys.m,
-        right : fluid.reorderer.keys.k,
-        left : fluid.reorderer.keys.j
-    }];
-    
-    /**
-     * These roles are used to add ARIA roles to orderable items. This list can be extended as needed,
-     * but the values of the container and item roles must match ARIA-specified roles.
-     */  
-    fluid.reorderer.roles = {
-        GRID: { container: "grid", item: "gridcell" },
-        LIST: { container: "list", item: "listitem" },
-        REGIONS: { container: "main", item: "article" }
-    };
-    
-    // Simplified API for reordering lists and grids.
-    var simpleInit = function (container, layoutHandler, options) {
-        options = options || {};
-        options.layoutHandler = layoutHandler;
-        return fluid.reorderer(container, options);
-    };
-    
-    fluid.reorderList = function (container, options) {
-        return simpleInit(container, "fluid.listLayoutHandler", options);
-    };
-    
-    fluid.reorderGrid = function (container, options) {
-        return simpleInit(container, "fluid.gridLayoutHandler", options); 
-    };
-    
-    fluid.reorderer.SHUFFLE_GEOMETRIC_STRATEGY = "shuffleProjectFrom";
-    fluid.reorderer.GEOMETRIC_STRATEGY         = "projectFrom";
-    fluid.reorderer.LOGICAL_STRATEGY           = "logicalFrom";
-    fluid.reorderer.WRAP_LOCKED_STRATEGY       = "lockedWrapFrom";
-    fluid.reorderer.NO_STRATEGY = null;
-    
-    fluid.reorderer.relativeInfoGetter = function (orientation, coStrategy, contraStrategy, dropManager, dom) {
-        return function (item, direction, forSelection) {
-            var dirorient = fluid.directionOrientation(direction);
-            var strategy = dirorient === orientation? coStrategy: contraStrategy;
-            return strategy !== null? dropManager[strategy](item, direction, forSelection) : null;
-        };
-    };
-    
-    fluid.defaults("fluid.reorderer", {
-        styles: {
-            defaultStyle: "fl-reorderer-movable-default",
-            selected: "fl-reorderer-movable-selected",
-            dragging: "fl-reorderer-movable-dragging",
-            mouseDrag: "fl-reorderer-movable-dragging",
-            hover: "fl-reorderer-movable-hover",
-            dropMarker: "fl-reorderer-dropMarker",
-            avatar: "fl-reorderer-avatar"
-        },
-        selectors: {
-            dropWarning: ".flc-reorderer-dropWarning",
-            movables: ".flc-reorderer-movable",
-            grabHandle: "",
-            stylisticOffset: ""
-        },
-        avatarCreator: defaultAvatarCreator,
-        keysets: fluid.reorderer.defaultKeysets,
-        layoutHandler: {
-            type: "fluid.listLayoutHandler"
-        },
-        
-        events: {
-            onShowKeyboardDropWarning: null,
-            onSelect: null,
-            onBeginMove: "preventable",
-            onMove: null,
-            afterMove: null,
-            onHover: null,
-            onRefresh: null
-        },
-        
-        mergePolicy: {
-            keysets: "replace",
-            "selectors.selectables": "selectors.movables",
-            "selectors.dropTargets": "selectors.movables"
-        }
-    });
-
-
-    /*******************
-     * Layout Handlers *
-     *******************/
-
-    function geometricInfoGetter(orientation, sentinelize, dom) {
-        return function () {
-            return {
-                sentinelize: sentinelize,
-                extents: [{
-                    orientation: orientation,
-                    elements: dom.fastLocate("dropTargets")
-                }],
-                elementMapper: function (element) {
-                    return $.inArray(element, dom.fastLocate("movables")) === -1? "locked": null;
-                }
-            };
-        };
-    }
-    
-    fluid.defaults(true, "fluid.listLayoutHandler", 
-        {orientation:         fluid.orientation.VERTICAL,
-         containerRole:       fluid.reorderer.roles.LIST,
-         selectablesTabindex: -1,
-         sentinelize:         true
-        });
-    
-    // Public layout handlers.
-    fluid.listLayoutHandler = function (container, options, dropManager, dom) {
-        var that = {};
-
-        that.getRelativePosition = 
-          fluid.reorderer.relativeInfoGetter(options.orientation, 
-                fluid.reorderer.LOGICAL_STRATEGY, null, dropManager, dom);
-        
-        that.getGeometricInfo = geometricInfoGetter(options.orientation, options.sentinelize, dom);
-        
-        return that;
-    }; // End ListLayoutHandler
-
-    fluid.defaults(true, "fluid.gridLayoutHandler", 
-        {orientation:         fluid.orientation.HORIZONTAL,
-         containerRole:       fluid.reorderer.roles.GRID,
-         selectablesTabindex: -1,
-         sentinelize:         false
-         });
-    /*
-     * Items in the Lightbox are stored in a list, but they are visually presented as a grid that
-     * changes dimensions when the window changes size. As a result, when the user presses the up or
-     * down arrow key, what lies above or below depends on the current window size.
-     * 
-     * The GridLayoutHandler is responsible for handling changes to this virtual 'grid' of items
-     * in the window, and of informing the Lightbox of which items surround a given item.
-     */
-    fluid.gridLayoutHandler = function (container, options, dropManager, dom) {
-        var that = {};
-
-        that.getRelativePosition = 
-           fluid.reorderer.relativeInfoGetter(options.orientation, 
-                 fluid.reorderer.LOGICAL_STRATEGY, fluid.reorderer.SHUFFLE_GEOMETRIC_STRATEGY, 
-                 dropManager, dom);
-        
-        that.getGeometricInfo = geometricInfoGetter(options.orientation, options.sentinelize, dom);
-        
-        return that;
-    }; // End of GridLayoutHandler
-
-})(jQuery, fluid_1_1);
-/*
-Copyright 2008-2009 University of Cambridge
-Copyright 2008-2009 University of Toronto
-Copyright 2007-2009 University of California, Berkeley
-
-Licensed under the Educational Community License (ECL), Version 2.0 or the New
-BSD license. You may not use this file except in compliance with one these
-Licenses.
-
-You may obtain a copy of the ECL 2.0 License and BSD License at
-https://source.fluidproject.org/svn/LICENSE.txt
-*/
-
-/*global jQuery*/
-/*global fluid_1_1*/
-
-fluid_1_1 = fluid_1_1 || {};
-
-(function ($, fluid) {
-    
-    var deriveLightboxCellBase = function (namebase, index) {
-        return namebase + "lightbox-cell:" + index + ":";
-    };
-            
-    var addThumbnailActivateHandler = function (lightboxContainer) {
-        var enterKeyHandler = function (evt) {
-            if (evt.which === fluid.reorderer.keys.ENTER) {
-                var thumbnailAnchors = $("a", evt.target);
-                document.location = thumbnailAnchors.attr('href');
-            }
-        };
-        
-        $(lightboxContainer).keypress(enterKeyHandler);
-    };
-    
-    // Custom query method seeks all tags descended from a given root with a 
-    // particular tag name, whose id matches a regex.
-    var seekNodesById = function (rootnode, tagname, idmatch) {
-        var inputs = rootnode.getElementsByTagName(tagname);
-        var togo = [];
-        for (var i = 0; i < inputs.length; i += 1) {
-            var input = inputs[i];
-            var id = input.id;
-            if (id && id.match(idmatch)) {
-                togo.push(input);
-            }
-        }
-        return togo;
-    };
-    
-    var createItemFinder = function (parentNode, containerId) {
-        // This orderable finder knows that the lightbox thumbnails are 'div' elements
-        var lightboxCellNamePattern = "^" + deriveLightboxCellBase(containerId, "[0-9]+") + "$";
-        
-        return function () {
-            return seekNodesById(parentNode, "div", lightboxCellNamePattern);
-        };
-    };
-    
-    var findForm = function (element) {
-        while (element) {
-            if (element.nodeName.toLowerCase() === "form") {
-                return element;
-            }
-            element = element.parentNode;
-        }
-    };
-    
-    /**
-     * Returns the default Lightbox order change callback. This callback is used by the Lightbox
-     * to send any changes in image order back to the server. It is implemented by nesting
-     * a form and set of hidden fields within the Lightbox container which contain the order value
-     * for each image displayed in the Lightbox. The default callback submits the form's default 
-     * action via AJAX.
-     * 
-     * @param {Element} lightboxContainer The DOM element containing the form that is POSTed back to the server upon order change 
-     */
-    var defaultAfterMoveCallback = function (lightboxContainer) {
-        var reorderform = findForm(lightboxContainer);
-        
-        return function () {
-            var inputs, i;
-            inputs = seekNodesById(
-                reorderform, 
-                "input", 
-                "^" + deriveLightboxCellBase(lightboxContainer.id, "[^:]*") + "reorder-index$");
-            
-            for (i = 0; i < inputs.length; i += 1) {
-                inputs[i].value = i;
-            }
-        
-            if (reorderform && reorderform.action) {
-                $.post(reorderform.action, 
-                $(reorderform).serialize(),
-                function (type, data, evt) { /* No-op response */ });
-            }
-        };
-    };
-
-    fluid.defaults("fluid.reorderImages", {
-        layoutHandler: "fluid.gridLayoutHandler",
-
-        selectors: {
-            imageTitle: ".flc-reorderer-imageTitle"
-        }
-    });
-
-    // Public Lightbox API
-    /**
-     * Creates a new Lightbox instance from the specified parameters, providing full control over how
-     * the Lightbox is configured.
-     * 
-     * @param {Object} container 
-     * @param {Object} options 
-     */
-    fluid.reorderImages = function (container, options) {
-        var that = fluid.initView("fluid.reorderImages", container, options);
-        
-        var containerEl = fluid.unwrap(that.container);
-
-        if (!that.options.afterMoveCallback) {
-            that.options.afterMoveCallback = defaultAfterMoveCallback(containerEl);
-        }
-        if (!that.options.selectors.movables) {
-            that.options.selectors.movables = createItemFinder(containerEl, containerEl.id);
-        }
-        
-        var reorderer = fluid.reorderer(container, that.options);
-        var movables = reorderer.locate("movables");
-        fluid.transform(movables, function (cell) { 
-            fluid.reorderImages.addAriaRoles(that.options.selectors.imageTitle, cell);
-        });
-                // Remove the anchors from the taborder.
-        fluid.tabindex($("a", container), -1);
-        addThumbnailActivateHandler(container);
-        return reorderer;
-    };
-   
-    
-    fluid.reorderImages.addAriaRoles = function (imageTitle, cell) {
-        cell = $(cell);
-        cell.attr("role", "img");
-        var title = $(imageTitle, cell);
-        if (title[0] === cell[0] || title[0] === document) {
-            fluid.fail("Could not locate cell title using selector " + imageTitle + " in context " + fluid.dumpEl(cell));
-        }
-        var titleId = fluid.allocateSimpleId(title);
-        cell.attr("aria-labelledby", titleId);
-        var image = $("img", cell);
-        image.attr("role", "presentation");
-        image.attr("alt", "");
-    };
-    
-    // This function now deprecated. Please use fluid.reorderImages() instead.
-    fluid.lightbox = fluid.reorderImages;
-    
-        
-})(jQuery, fluid_1_1);
-/*
-Copyright 2008-2009 University of Cambridge
-Copyright 2008-2009 University of Toronto
-Copyright 2007-2009 University of California, Berkeley
-
-Licensed under the Educational Community License (ECL), Version 2.0 or the New
-BSD license. You may not use this file except in compliance with one these
-Licenses.
-
-You may obtain a copy of the ECL 2.0 License and BSD License at
-https://source.fluidproject.org/svn/LICENSE.txt
-*/
-
-// Declare dependencies.
-/*global jQuery*/
-/*global fluid, fluid_1_1*/
-
-fluid_1_1 = fluid_1_1 || {};
-
-(function ($, fluid) {
-
-	fluid.moduleLayout = fluid.moduleLayout || {};
-	
-    /**
-     * Calculate the location of the item and the column in which it resides.
-     * @return  An object with column index and item index (within that column) properties.
-     *          These indices are -1 if the item does not exist in the grid.
-     */
-    var findColumnAndItemIndices = function (item, layout) {
-        return fluid.find(layout.columns,
-            function (column, colIndex) {
-                var index = $.inArray(item, column.elements);
-                return index === -1? null : {columnIndex: colIndex, itemIndex: index};
-            }, {columnIndex: -1, itemIndex: -1});
-    };
-        
-    var findColIndex = function (item, layout) {
-        return fluid.find(layout.columns,
-            function (column, colIndex) {
-            	return item === column.container? colIndex : null;
-            }, -1);
-    };
-
-    /**
-     * Move an item within the layout object. 
-     */
-    fluid.moduleLayout.updateLayout = function (item, target, position, layout) {
-        item = fluid.unwrap(item);
-        target = fluid.unwrap(target);
-        var itemIndices = findColumnAndItemIndices(item, layout);
-        layout.columns[itemIndices.columnIndex].elements.splice(itemIndices.itemIndex, 1);
-        var targetCol;
-        if (position === fluid.position.INSIDE) {
-            targetCol = layout.columns[findColIndex(target, layout)].elements;
-            targetCol.splice(targetCol.length, 0, item);
-
-        } else {
-            var relativeItemIndices = findColumnAndItemIndices(target, layout);
-            targetCol = layout.columns[relativeItemIndices.columnIndex].elements;
-            position = fluid.normalisePosition(position, 
-                  itemIndices.columnIndex === relativeItemIndices.columnIndex, 
-                  relativeItemIndices.itemIndex, itemIndices.itemIndex);
-            var relative = position === fluid.position.BEFORE? 0 : 1;
-            targetCol.splice(relativeItemIndices.itemIndex + relative, 0, item);
-        }
-    };
-       
-    /**
-     * Builds a layout object from a set of columns and modules.
-     * @param {jQuery} container
-     * @param {jQuery} columns
-     * @param {jQuery} portlets
-     */
-    fluid.moduleLayout.layoutFromFlat = function (container, columns, portlets) {
-        var layout = {};
-        layout.container = container;
-        layout.columns = fluid.transform(columns, 
-            function (column) {
-                return {
-                    container: column,
-                    elements: $.makeArray(portlets.filter(function () {
-                    	  // is this a bug in filter? would have expected "this" to be 1st arg
-                        return fluid.dom.isContainer(column, this);
-                    }))
-                };
-            });
-        return layout;
-    };
-      
-    /**
-     * Builds a layout object from a serialisable "layout" object consisting of id lists
-     */
-    fluid.moduleLayout.layoutFromIds = function (idLayout) {
-        return {
-            container: fluid.byId(idLayout.id),
-            columns: fluid.transform(idLayout.columns, 
-                function (column) {
-                    return {
-                        container: fluid.byId(column.id),
-                        elements: fluid.transform(column.children, fluid.byId)
-                    };
-                })
-            };
-    };
-      
-    /**
-     * Serializes the current layout into a structure of ids
-     */
-    fluid.moduleLayout.layoutToIds = function (idLayout) {
-        return {
-            id: fluid.getId(idLayout.container),
-            columns: fluid.transform(idLayout.columns, 
-                function (column) {
-                    return {
-                        id: fluid.getId(column.container),
-                        children: fluid.transform(column.elements, fluid.getId)
-                    };
-                })
-            };
-    };
-    
-    var defaultOnShowKeyboardDropWarning = function (item, dropWarning) {
-        if (dropWarning) {
-            var offset = $(item).offset();
-            dropWarning = $(dropWarning);
-            dropWarning.css("position", "absolute");
-            dropWarning.css("top", offset.top);
-            dropWarning.css("left", offset.left);
-        }
-    };
-    
-    fluid.defaults(true, "fluid.moduleLayoutHandler", 
-        {orientation: fluid.orientation.VERTICAL,
-         containerRole: fluid.reorderer.roles.REGIONS,
-         selectablesTabindex: 0,
-         sentinelize:         true
-         });
-    
-    /**
-     * Module Layout Handler for reordering content modules.
-     * 
-     * General movement guidelines:
-     * 
-     * - Arrowing sideways will always go to the top (moveable) module in the column
-     * - Moving sideways will always move to the top available drop target in the column
-     * - Wrapping is not necessary at this first pass, but is ok
-     */
-    fluid.moduleLayoutHandler = function (container, options, dropManager, dom) {
-        var that = {};
-        
-        function computeLayout() {
-            var togo;
-            if (options.selectors.modules) {
-                togo = fluid.moduleLayout.layoutFromFlat(container, dom.locate("columns"), dom.locate("modules"));
-            }
-            if (!togo) {
-                var idLayout = fluid.model.getBeanValue(options, "moduleLayout.layout");
-                fluid.moduleLayout.layoutFromIds(idLayout);
-            }
-            return togo;
-        }
-        var layout = computeLayout();
-        that.layout = layout;
-
-        function isLocked(item) {
-            var lockedModules = options.selectors.lockedModules? dom.fastLocate("lockedModules") : [];
-            return $.inArray(item, lockedModules) !== -1;
-        }
-
-        that.getRelativePosition  = 
-           fluid.reorderer.relativeInfoGetter(options.orientation, 
-                 fluid.reorderer.WRAP_LOCKED_STRATEGY, fluid.reorderer.GEOMETRIC_STRATEGY, 
-                 dropManager, dom);
-                 
-        that.getGeometricInfo = function () {
-        	var extents = [];
-            var togo = {extents: extents,
-                        sentinelize: options.sentinelize};
-            togo.elementMapper = function (element) {
-                return isLocked(element)? "locked" : null;
-            };
-            for (var col = 0; col < layout.columns.length; col++) {
-                var column = layout.columns[col];
-                var thisEls = {
-                    orientation: options.orientation,
-                    elements: $.makeArray(column.elements),
-                    parentElement: column.container
-                };
-              //  fluid.log("Geometry col " + col + " elements " + fluid.dumpEl(thisEls.elements) + " isLocked [" + 
-              //       fluid.transform(thisEls.elements, togo.elementMapper).join(", ") + "]");
-                extents.push(thisEls);
-            }
-
-            return togo;
-        };
-        
-        function computeModules(all) {
-            return function () {
-                var modules = fluid.accumulate(layout.columns, function (column, list) {
-                    return list.concat(column.elements); // note that concat will not work on a jQuery
-                }, []);
-                if (!all) {
-                    fluid.remove_if(modules, isLocked);
-                }
-                return modules;
-            };
-        }
-        
-        that.returnedOptions = {
-            selectors: {
-                movables: computeModules(false),
-                dropTargets: computeModules(false),
-                selectables: computeModules(true)
-            },
-            listeners: {
-                onMove: function (item, requestedPosition) {
-                    fluid.moduleLayout.updateLayout(item, requestedPosition.element, requestedPosition.position, layout);
-                },
-                onRefresh: function () {
-                    layout = computeLayout();
-                    that.layout = layout;
-                },
-                "onShowKeyboardDropWarning.setPosition": defaultOnShowKeyboardDropWarning
-            }
-        };
-        
-        that.getModel = function () {
-            return fluid.moduleLayout.layoutToIds(layout);
-        };
-              
-        return that;
-    };
-})(jQuery, fluid_1_1);
-/*
-Copyright 2008-2009 University of Cambridge
-Copyright 2008-2009 University of Toronto
-Copyright 2007-2009 University of California, Berkeley
-
-Licensed under the Educational Community License (ECL), Version 2.0 or the New
-BSD license. You may not use this file except in compliance with one these
-Licenses.
-
-You may obtain a copy of the ECL 2.0 License and BSD License at
-https://source.fluidproject.org/svn/LICENSE.txt
-*/
-
-/*global jQuery*/
-/*global fluid_1_1*/
-fluid_1_1 = fluid_1_1 || {};
-
-(function ($, fluid) {
- 
-    /**
-     * Simple way to create a layout reorderer.
-     * @param {selector} a selector for the layout container
-     * @param {Object} a map of selectors for columns and modules within the layout
-     * @param {Function} a function to be called when the order changes 
-     * @param {Object} additional configuration options
-     */
-    fluid.reorderLayout = function (container, userOptions) {
-        var assembleOptions = {
-            layoutHandler: "fluid.moduleLayoutHandler",
-            selectors: {
-                columns: ".flc-reorderer-column",
-                modules: ".flc-reorderer-module"
-            }
-        };
-        var options = $.extend(true, assembleOptions, userOptions);
-        return fluid.reorderer(container, options);
-    };    
-})(jQuery, fluid_1_1);
-/*
-Copyright 2008-2009 University of Cambridge
-Copyright 2008-2009 University of Toronto
-Copyright 2007-2009 University of California, Berkeley
-
-Licensed under the Educational Community License (ECL), Version 2.0 or the New
-BSD license. You may not use this file except in compliance with one these
-Licenses.
-
-You may obtain a copy of the ECL 2.0 License and BSD License at
-https://source.fluidproject.org/svn/LICENSE.txt
-*/
-
-/*global jQuery*/
-/*global fluid_1_1*/
-
-fluid_1_1 = fluid_1_1 || {};
-
-(function ($, fluid) {
-
-    /******************
-     * Pager Bar View *
-     ******************/
-
-    
-    function updateStyles(pageListThat, newModel, oldModel) {
-        if (!pageListThat.pageLinks) {
-            return;
-        }
-        if (oldModel.pageIndex !== undefined) {
-            var oldLink = pageListThat.pageLinks.eq(oldModel.pageIndex);
-            oldLink.removeClass(pageListThat.options.styles.currentPage);
-        }
-        var pageLink = pageListThat.pageLinks.eq(newModel.pageIndex);
-        pageLink.addClass(pageListThat.options.styles.currentPage); 
-
-
-    }
-    
-    function bindLinkClick(link, events, eventArg) {
-        link.unbind("click.fluid.pager");
-        link.bind("click.fluid.pager", function () {events.initiatePageChange.fire(eventArg); });
-    }
-    
-    // 10 -> 1, 11 -> 2
-    function computePageCount(model) {
-        model.pageCount = Math.max(1, Math.floor((model.totalRange - 1) / model.pageSize) + 1);
-    }
-    
-    function computePageLimit(model) {
-        return Math.min(model.totalRange, (model.pageIndex + 1) * model.pageSize);
-    }
-
-    fluid.pager = function () {
-        return fluid.pagerImpl.apply(null, arguments);
-    };
-    
-    fluid.pager.directPageList = function (container, events, options) {
-        var that = fluid.initView("fluid.pager.directPageList", container, options);
-        that.pageLinks = that.locate("pageLinks");
-        for (var i = 0; i < that.pageLinks.length; ++ i) {
-            var pageLink = that.pageLinks.eq(i);
-            bindLinkClick(pageLink, events, {pageIndex: i});
-        }
-        events.onModelChange.addListener(
-            function (newModel, oldModel) {
-                updateStyles(that, newModel, oldModel);
-            }
-        );
-        that.defaultModel = {
-            pageIndex: undefined,
-            pageSize: 1,
-            totalRange: that.pageLinks.length
-        };
-        return that;
-    };
-    
-    /** Returns an array of size count, filled with increasing integers, 
-     *  starting at 0 or at the index specified by first. 
-     */
-    
-    fluid.iota = function (count, first) {
-        first = first || 0;
-        var togo = [];
-        for (var i = 0; i < count; ++ i) {
-            togo[togo.length] = first++;
-        }
-        return togo;
-    };
-    
-    fluid.pager.everyPageStrategy = fluid.iota;
-    
-    fluid.pager.gappedPageStrategy = function (locality, midLocality) {
-        if (!locality) {
-            locality = 3;
-        }
-        if (!midLocality) {
-            midLocality = locality;
-        }
-        return function (count, first, mid) {
-            var togo = [];
-            var j = 0;
-            var lastSkip = false;
-            for (var i = 0; i < count; ++ i) {
-                if (i < locality || (count - i - 1) < locality || (i >= mid - midLocality && i <= mid + midLocality)) {
-                    togo[j++] = i;
-                    lastSkip = false;
-                }
-                else if (!lastSkip) {
-                    togo[j++] = -1;
-                    lastSkip = true;
-                }
-            }
-            return togo;
-        };
-    };
-    
-    fluid.pager.renderedPageList = function (container, events, pagerBarOptions, options, strings) {
-        options = $.extend(true, pagerBarOptions, options);
-        var that = fluid.initView("fluid.pager.renderedPageList", container, options);
-        options = that.options; // pick up any defaults
-        var renderOptions = {
-            cutpoints: [ {
-                id: "page-link:link",
-                selector: pagerBarOptions.selectors.pageLinks
-            },
-            {
-                id: "page-link:skip",
-                selector: pagerBarOptions.selectors.pageLinkSkip
-            },
-            {
-                id: "page-link:disabled",
-                selector: pagerBarOptions.selectors.pageLinkDisabled
-            }]
-        };
-        
-        if (options.linkBody) {
-            renderOptions.cutpoints[renderOptions.cutpoints.length] = {
-                id: "payload-component",
-                selector: options.linkBody
-            };
-        }        
-        function pageToComponent(current) {
-            return function (page) {
-                return page === -1? {
-                    ID: "page-link:skip"
-                } : 
-                {
-                    ID: page === current? "page-link:link": "page-link:link",
-                    localID: page + 1,
-                    value: page + 1,
-                    pageIndex: page,
-                    decorators: [
-                        {type: "jQuery",
-                             func: "click", 
-                             args: function () {events.initiatePageChange.fire({pageIndex: page}); }
-                         },
-                        {type: page === current? "addClass" : "",
-                             classes: that.options.styles.currentPage}
-                         ]
-                };
-            };
-        }
-        var root = that.locate("root");
-        fluid.expectFilledSelector(root, "Error finding root template for fluid.pager.renderedPageList");
-        
-        var template = fluid.selfRender(root, {}, renderOptions);
-        events.onModelChange.addListener(
-            function (newModel, oldModel) {
-                var pages = that.options.pageStrategy(newModel.pageCount, 0, newModel.pageIndex);
-                var pageTree = fluid.transform(pages, pageToComponent(newModel.pageIndex));
-                pageTree[pageTree.length - 1].value = pageTree[pageTree.length - 1].value + strings.last;
-                events.onRenderPageLinks.fire(pageTree, newModel);
-                fluid.reRender(template, root, pageTree, renderOptions);
-                updateStyles(that, newModel, oldModel);
-            }
-        );
-        return that;
-    };
-    
-    fluid.defaults("fluid.pager.renderedPageList",
-        {
-            selectors: {
-                root: ".flc-pager-links"
-            },
-            linkBody: "a",
-            pageStrategy: fluid.pager.everyPageStrategy
-        }
-    );
-    
-    var updatePreviousNext = function (that, options, newModel) {
-        if (newModel.pageIndex === 0) {
-            that.previous.addClass(options.styles.disabled);
-        } else {
-            that.previous.removeClass(options.styles.disabled);
-        }
-        
-        if (newModel.pageIndex === newModel.pageCount - 1) {
-            that.next.addClass(options.styles.disabled);
-        } else {
-            that.next.removeClass(options.styles.disabled);
-        }
-    };
-    
-    fluid.pager.previousNext = function (container, events, options) {
-        var that = fluid.initView("fluid.pager.previousNext", container, options);
-        that.previous = that.locate("previous");
-        bindLinkClick(that.previous, events, {relativePage: -1});
-        that.next = that.locate("next");
-        bindLinkClick(that.next, events, {relativePage: +1});
-        events.onModelChange.addListener(
-            function (newModel, oldModel, overallThat) {
-                updatePreviousNext(that, options, newModel);
-            }
-        );
-        return that;
-    };
-
-    fluid.pager.pagerBar = function (events, container, options, strings) {
-        var that = fluid.initView("fluid.pager.pagerBar", container, options);
-        that.pageList = fluid.initSubcomponent(that, "pageList", 
-           [container, events, that.options, fluid.COMPONENT_OPTIONS, strings]);
-        that.previousNext = fluid.initSubcomponent(that, "previousNext", 
-           [container, events, that.options, fluid.COMPONENT_OPTIONS, strings]);
-        
-        return that;
-    };
-
-    
-    fluid.defaults("fluid.pager.pagerBar", {
-            
-        previousNext: {
-            type: "fluid.pager.previousNext"
-        },
-        
-        pageList: {
-            type: "fluid.pager.directPageList"
-        },
-        
-        selectors: {
-            pageLinks: ".flc-pager-pageLink",
-            pageLinkSkip: ".flc-pager-pageLink-skip",
-            pageLinkDisabled: ".flc-pager-pageLink-disabled",
-            previous: ".flc-pager-previous",
-            next: ".flc-pager-next"
-        },
-        
-        styles: {
-            currentPage: "fl-pager-currentPage",
-            disabled: "fl-pager-disabled"
-        }
-    });
-
-    function getColumnDefs(that) {
-        return that.options.columnDefs;
-    }
-
-    fluid.pager.findColumnDef = function (columnDefs, key) {
-        var columnDef = $.grep(columnDefs, function (def) {
-            return def.key === key;
-        })[0];
-        return columnDef;
-    };
-    
-    function getRoots(target, overallThat, index) {
-        var cellRoot = (overallThat.options.dataOffset? overallThat.options.dataOffset + ".": "");
-        target.shortRoot = index;
-        target.longRoot = cellRoot + target.shortRoot;
-    }
-    
-    function expandPath(EL, shortRoot, longRoot) {
-        if (EL.charAt(0) === "*") {
-            return longRoot + EL.substring(1); 
-        }
-        else {
-            return EL.replace("*", shortRoot);
-        }
-    }
-    
-    fluid.pager.fetchValue = function (that, dataModel, index, valuebinding, roots) {
-        getRoots(roots, that, index);
-
-        var path = expandPath(valuebinding, roots.shortRoot, roots.longRoot);
-        return fluid.model.getBeanValue(dataModel, path);
-    };
-    
-    fluid.pager.basicSorter = function (overallThat, model) {        
-        var dataModel = overallThat.options.dataModel;
-        var roots = {};
-        var columnDefs = getColumnDefs(overallThat);
-        var columnDef = fluid.pager.findColumnDef(columnDefs, model.sortKey);
-        var sortrecs = [];
-        for (var i = 0; i < model.totalRange; ++ i) {
-            sortrecs[i] = {
-                index: i,
-                value: fluid.pager.fetchValue(overallThat, dataModel, i, columnDef.valuebinding, roots)
-            };
-        }
-        var columnType = typeof sortrecs[0].value;
-        function sortfunc(arec, brec) {
-            var a = arec.value;
-            var b = brec.value;
-            return a === b? 0 : (a > b? model.sortDir : -model.sortDir); 
-        }
-        sortrecs.sort(sortfunc);
-        return fluid.transform(sortrecs, function (row) {return row.index; });
-    };
-
-    
-    fluid.pager.directModelFilter = function (model, pagerModel, perm) {
-        var togo = [];
-        var limit = computePageLimit(pagerModel);
-        for (var i = pagerModel.pageIndex * pagerModel.pageSize; i < limit; ++ i) {
-            var index = perm? perm[i]: i;
-            togo[togo.length] = {index: index, row: model[index]};
-        }
-        return togo;
-    };
-    
-    function expandVariables(value, opts) {
-        var togo = "";
-        var index = 0;
-        while (true) {
-            var nextindex = value.indexOf("${", index);
-            if (nextindex === -1) {
-                togo += value.substring(index);
-                break;
-            }
-            else {
-                togo += value.substring(index, nextindex);
-                var endi = value.indexOf("}", nextindex + 2);
-                var EL = value.substring(nextindex + 2, endi);
-                if (EL === "VALUE") {
-                    EL = opts.EL;
-                }
-                else {
-                    EL = expandPath(EL, opts.shortRoot, opts.longRoot);
-                }
-
-                var val = fluid.model.getBeanValue(opts.dataModel, EL);
-                togo += val;
-                index = endi + 1;
-            }
-        }
-        return togo;
-    }
-   
-    function expandPaths(target, tree, opts) {
-        for (var i in tree) {
-            var val = tree[i];
-            if (val === fluid.VALUE) {
-                if (i === "valuebinding") {
-                    target[i] = opts.EL;
-                }
-                else {
-                    target[i] = {"valuebinding" : opts.EL};
-                }
-            }
-            else if (i === "valuebinding") {
-                target[i] = expandPath(tree[i], opts);
-            }
-            else if (typeof(val) === 'object') {
-                target[i] = val.length !== undefined? [] : {};
-                expandPaths(target[i], val, opts);
-            }
-            else if (typeof(val) === 'string') {
-                target[i] = expandVariables(val, opts);
-            }
-            else {target[i] = tree[i]; }
-        }
-        return target;
-    }
-   
-   // sets opts.EL, returns ID
-    function iDforColumn(columnDef, opts) {
-        var options = opts.options;
-        var EL = columnDef.valuebinding;
-        var key = columnDef.key;
-        if (!EL) {
-            fluid.fail("Error in definition for column with key " + key + ": valuebinding is not set");
-        }
-        opts.EL = expandPath(EL, opts.shortRoot, opts.longRoot);
-        if (!key) {
-            var segs = fluid.model.parseEL(EL);
-            key = segs[segs.length - 1];
-        }
-        var ID = (options.keyPrefix? options.keyPrefix : "") + key;
-        return ID;
-    }
-   
-    function expandColumnDefs(filteredRow, opts) {
-        var tree = fluid.transform(opts.columnDefs, function (columnDef) {
-            var ID = iDforColumn(columnDef, opts);
-            var togo;
-            if (!columnDef.components) {
-                return {
-                    ID: ID,
-                    valuebinding: opts.EL
-                };
-            }
-            else if (typeof columnDef.components === 'function') {
-                togo = columnDef.components(filteredRow.row, filteredRow.index);
-            }
-            else {
-                togo = columnDef.components;
-            }
-            togo = expandPaths({}, togo, opts);
-            togo.ID = ID;
-            return togo;
-        });
-        return tree;
-    }
-   
-    function fetchModel(overallThat) {
-        return fluid.model.getBeanValue(overallThat.options.dataModel, 
-            overallThat.options.dataOffset);
-    }
-   
-    
-    function bigHeaderForKey(key, opts) {
-        var id = opts.options.renderOptions.idMap["header:" + key];
-        var smallHeader = fluid.jById(id);
-        if (smallHeader.length === 0) {return null; }
-        var headerSortStylisticOffset = opts.overallOptions.selectors.headerSortStylisticOffset;
-        var bigHeader = fluid.findAncestor(smallHeader, function (element) {
-            return $(element).is(headerSortStylisticOffset); });
-        return bigHeader;
-    }
-   
-    function setSortHeaderClass(styles, element, sort) {
-        element = $(element);
-        element.removeClass(styles.ascendingHeader);
-        element.removeClass(styles.descendingHeader);
-        if (sort !== 0) {
-            element.addClass(sort === 1? styles.ascendingHeader : styles.descendingHeader);
-        }
-    }
-    
-    function isCurrentColumnSortable(columnDefs, model) {
-        var columnDef = model.sortKey? fluid.pager.findColumnDef(columnDefs, model.sortKey) : null;
-        return columnDef ? columnDef.sortable : false;
-    };
-    
-    function setModelSortHeaderClass(newModel, opts) {
-        var styles = opts.overallOptions.styles;
-        var sort = isCurrentColumnSortable(opts.columnDefs, newModel) ? newModel.sortDir : 0;
-        setSortHeaderClass(styles, bigHeaderForKey(newModel.sortKey, opts), sort);
-    }
-   
-    function fireModelChange(that, newModel, forceUpdate) {
-        computePageCount(newModel);
-        if (newModel.pageIndex >= newModel.pageCount) {
-            newModel.pageIndex = newModel.pageCount - 1;
-        }
-        if (forceUpdate || newModel.pageIndex !== that.model.pageIndex || newModel.pageSize !== that.model.pageSize || newModel.sortKey !== that.model.sortKey ||
-                newModel.sortDir !== that.model.sortDir) {
-            var sorted = isCurrentColumnSortable(getColumnDefs(that), newModel) ? 
-                that.options.sorter(that, newModel) : null;
-            that.permutation = sorted;
-            that.events.onModelChange.fire(newModel, that.model, that);
-            fluid.model.copyModel(that.model, newModel);
-        }            
-    }
- 
-    function generateColumnClick(overallThat, columnDef, opts) {
-        return function () {
-            if (columnDef.sortable === true) {
-                var model = overallThat.model;
-                var newModel = fluid.copy(model);
-                var styles = overallThat.options.styles;
-                var oldKey = model.sortKey;
-                if (columnDef.key !== model.sortKey) {
-                    newModel.sortKey = columnDef.key;
-                    newModel.sortDir = 1;
-                    var oldBig = bigHeaderForKey(oldKey, opts);
-                    if (oldBig) {
-                        setSortHeaderClass(styles, oldBig, 0);
-                    }
-                }
-                else if (newModel.sortKey === columnDef.key) {
-                    newModel.sortDir = -1 * newModel.sortDir;
-                }
-                else {return false; }
-                newModel.pageIndex = 0;
-                fireModelChange(overallThat, newModel, true);
-                setModelSortHeaderClass(newModel, opts);                
-            }
-            return false;
-        };
-    }
-   
-    function fetchHeaderDecorators(decorators, columnDef) {
-        return decorators[columnDef.sortable? "sortableHeader" : "unsortableHeader"];
-    }
-   
-    function generateHeader(overallThat, newModel, columnDefs, opts) {
-        return {
-            children:  
-                fluid.transform(columnDefs, function (columnDef) {
-                return {
-                    ID: iDforColumn(columnDef, opts),
-                    value: columnDef.label,
-                    decorators: [
-                        {"jQuery": ["click", generateColumnClick(overallThat, columnDef, opts)]},
-                        {identify: "header:" + columnDef.key}].concat(fetchHeaderDecorators(opts.overallOptions.decorators, columnDef))
-                };
-            }
-       )};
-    }
-   
-    /** A body renderer implementation which uses the Fluid renderer to render a table section **/
-   
-    fluid.pager.selfRender = function (overallThat, inOptions) {
-        var that = fluid.initView("fluid.pager.selfRender", overallThat.container, inOptions);
-        var options = that.options;
-        options.renderOptions.idMap = options.renderOptions.idMap || {};
-        var idMap = options.renderOptions.idMap;
-        var root = that.locate("root");
-        var template = fluid.selfRender(root, {}, options.renderOptions);
-        root.addClass(options.styles.root);
-        var columnDefs = getColumnDefs(overallThat);
-        var expOpts = {options: options, columnDefs: columnDefs, overallOptions: overallThat.options, dataModel: overallThat.options.dataModel, idMap: idMap};
-        var directModel = fetchModel(overallThat);
-
-        return {
-            returnedOptions: {
-                listeners: {
-                    onModelChange: function (newModel, oldModel) {
-                        var filtered = overallThat.options.modelFilter(directModel, newModel, overallThat.permutation);
-                        var tree = fluid.transform(filtered, 
-                            function (filteredRow) {
-                                var roots = getRoots(expOpts, overallThat, filteredRow.index);
-                                if (columnDefs === "explode") {
-                                    return fluid.explode(filteredRow.row, root);
-                                }
-                                else if (columnDefs.length) {
-                                    return expandColumnDefs(filteredRow, expOpts);
-                                }
-                            }
-                            );
-                        var fullTree = {};
-                        fullTree[options.row] = tree;
-                        if (typeof(columnDefs) === "object") {
-                            fullTree[options.header] = generateHeader(overallThat, newModel, columnDefs, expOpts);
-                        }
-                        options.renderOptions = options.renderOptions || {};
-                        options.renderOptions.model = expOpts.dataModel;
-                        fluid.reRender(template, root, fullTree, options.renderOptions);
-                        setModelSortHeaderClass(newModel, expOpts); // TODO, should this not be actually renderable?
-                    }
-                }
-            }
-        };
-    };
-
-    fluid.defaults("fluid.pager.selfRender", {
-        selectors: {
-            root: ".flc-pager-body-template"
-        },
-		
-		styles: {
-			root: "fl-pager"
-        },
-		
-        keyStrategy: "id",
-        keyPrefix: "",
-        row: "row:",
-        header: "header:",
-        // Options passed upstream to the renderer
-        renderOptions: {}
-    });
-
-
-    fluid.pager.summary = function (dom, options) {
-        var node = dom.locate("summary");
-        return {
-            returnedOptions: {
-                listeners: {
-                    onModelChange: function (newModel, oldModel) {
-                        var text = fluid.stringTemplate(options.message, {
-                            first: newModel.pageIndex * newModel.pageSize + 1,
-                            last: computePageLimit(newModel),
-                            total: newModel.totalRange
-                        });
-                        if (node.length > 0) {
-                            node.text(text);
-                        }
-                    }
-                }
-            }
-        };
-    };
-    
-    fluid.pager.directPageSize = function (that) {
-        var node = that.locate("pageSize");
-        if (node.length > 0) {
-            that.events.onModelChange.addListener(
-                function (newModel, oldModel) {
-                    if (node.val() !== newModel.pageSize) {
-                        node.val(newModel.pageSize);
-                    }
-                }
-            );
-            node.change(function () {
-                that.events.initiatePageSizeChange.fire(node.val());
-            });
-        }
-        return that;
-    };
-
-
-    fluid.pager.rangeAnnotator = function (that, options) {
-        var roots = {};
-        that.events.onRenderPageLinks.addListener(function (tree, newModel) {
-            var column = that.options.annotateColumnRange;
-            var dataModel = that.options.dataModel;
-            // TODO: reaching into another component's options like this is a bit unfortunate
-            var columnDefs = getColumnDefs(that);
-
-            if (!column || !dataModel || !columnDefs) {
-                return;
-            }
-            var columnDef = fluid.pager.findColumnDef(columnDefs, column);
-            
-            function fetchValue(index) {
-                index = that.permutation? that.permutation[index] : index;
-                return fluid.pager.fetchValue(that, dataModel, index, columnDef.valuebinding, roots);
-            }
-            var tModel = {};
-            fluid.model.copyModel(tModel, newModel);
-            
-            fluid.transform(tree, function (cell) {
-                if (cell.ID === "page-link:link") {
-                    var page = cell.pageIndex;
-                    var start = page * tModel.pageSize;
-                    tModel.pageIndex = page;
-                    var limit = computePageLimit(tModel);
-                    var iValue = fetchValue(start);
-                    var lValue = fetchValue(limit - 1);
-                    
-                    var text = "<b>" + iValue + "</b><br/>&mdash;<br/><b>" + lValue + "</b>";
-                    
-                    var decorator = {
-                        type: "jQuery",
-                        func: "tooltip",
-                        args: {
-                            delay: that.options.tooltipDelay,
-                            extraClass: that.options.styles.tooltip,
-                            bodyHandler: function () { 
-                                return text; 
-                            },
-                            showURL: false,
-                            id: that.options.tooltipId
-                        }
-                    };
-                    cell.decorators.push(decorator);
-                }
-            });
-        });
-    };
-
-    /*******************
-     * Pager Component *
-     *******************/
-    
-    fluid.pagerImpl = function (container, options) {
-        var that = fluid.initView("fluid.pager", container, options);
-        
-        var pageIndexConformer = function (model, changeRequest) {
-            if (changeRequest.value < 0) {
-                changeRequest.value = 0;
-            }
-        };
-        
-        that.events.initiatePageChange.addListener(
-            function (arg) {
-                var newModel = fluid.copy(that.model);
-                if (arg.relativePage !== undefined) {
-                    newModel.pageIndex = that.model.pageIndex + arg.relativePage;
-                }
-                else {
-                    newModel.pageIndex = arg.pageIndex;
-                }
-                if (newModel.pageIndex === undefined || newModel.pageIndex < 0) {
-                    newModel.pageIndex = 0;
-                }
-                fireModelChange(that, newModel, arg.forceUpdate);
-            }
-        );
-        
-        that.events.initiatePageSizeChange.addListener(
-            function (arg) {
-                var newModel = fluid.copy(that.model);
-                newModel.pageSize = arg;
-                fireModelChange(that, newModel);     
-            }
-            );
-
-        // Setup the top and bottom pager bars.
-        var pagerBarElement = that.locate("pagerBar");
-        if (pagerBarElement.length > 0) {
-            that.pagerBar = fluid.initSubcomponent(that, "pagerBar", 
-            [that.events, pagerBarElement, fluid.COMPONENT_OPTIONS, that.options.strings]);
-        }
-        
-        var pagerBarSecondaryElement = that.locate("pagerBarSecondary");
-        if (pagerBarSecondaryElement.length > 0) {
-            that.pagerBarSecondary = fluid.initSubcomponent(that, "pagerBar",
-               [that.events, pagerBarSecondaryElement, fluid.COMPONENT_OPTIONS, that.options.strings]);
-        }
- 
-        that.bodyRenderer = fluid.initSubcomponent(that, "bodyRenderer", [that, fluid.COMPONENT_OPTIONS]);
-        
-        that.summary = fluid.initSubcomponent(that, "summary", [that.dom, fluid.COMPONENT_OPTIONS]);
-        
-        that.pageSize = fluid.initSubcomponent(that, "pageSize", [that]);
-        
-        that.rangeAnnotator = fluid.initSubcomponent(that, "rangeAnnotator", [that, fluid.COMPONENT_OPTIONS]);
- 
-        that.model = fluid.copy(that.options.model);
-        
-        var dataModel = fetchModel(that);
-        if (dataModel) {
-            that.model.totalRange = dataModel.length;
-        }
-        if (that.model.totalRange === undefined) {
-            if (!that.pagerBar) {
-                fluid.fail("Error in Pager configuration - cannot determine total range, " +
-                " since not configured in model.totalRange and no PagerBar is configured");
-            }
-            that.model = that.pagerBar.pageList.defaultModel;
-        }
-        that.applier = fluid.makeChangeApplier(that.model);
-
-        that.events.initiatePageChange.fire({pageIndex: that.model.pageIndex? that.model.pageIndex: 0, 
-           forceUpdate: true});
-
-        return that;
-    };
-    
-    fluid.defaults("fluid.pager", {
-        pagerBar: {type: "fluid.pager.pagerBar", 
-            options: null},
-        
-        summary: {type: "fluid.pager.summary", options: {
-            message: "%first-%last of %total items"
-        }},
-        
-        pageSize: {
-            type: "fluid.pager.directPageSize"
-        },
-        
-        modelFilter: fluid.pager.directModelFilter,
-        
-        sorter: fluid.pager.basicSorter,
-        
-        bodyRenderer: {
-            type: "fluid.emptySubcomponent"
-        },
-        
-        model: {
-            pageIndex: undefined,
-            pageSize: 10,
-            totalRange: undefined
-        },
-        
-        dataModel: undefined,
-        // Offset of the tree's "main" data from the overall dataModel root
-        dataOffset: "",
-        
-        // strategy for generating a tree row, either "explode" or an array of columnDef objects
-        columnDefs: "explode",
-        
-        annotateColumnRange: undefined,
-        
-        tooltipDelay: 300,
-        
-        tooltipId: "tooltip",
-        
-        rangeAnnotator: {
-            type: "fluid.pager.rangeAnnotator"
-        },
-        
-        selectors: {
-            pagerBar: ".flc-pager-top",
-            pagerBarSecondary: ".flc-pager-bottom",
-            summary: ".flc-pager-summary",
-            pageSize: ".flc-pager-page-size",
-            headerSortStylisticOffset: ".flc-pager-sort-header"
-        },
-        
-        styles: {
-            tooltip: "fl-pager-tooltip",
-            ascendingHeader: "fl-pager-asc",
-            descendingHeader: "fl-pager-desc"
-        },
-        
-        decorators: {
-            sortableHeader: [],
-            unsortableHeader: []
-        },
-        
-        strings: {
-            last: " (last)"
-        },
-        
-        events: {
-            initiatePageChange: null,
-            initiatePageSizeChange: null,
-            onModelChange: null,
-            onRenderPageLinks: null
-        }
-    });
-})(jQuery, fluid_1_1);
+}
