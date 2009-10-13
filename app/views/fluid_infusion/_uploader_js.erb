@@ -8,7 +8,7 @@
     		       uploadURL: "<%= file_assets_path(:container_id=> params[:container_id], :only_path => false) %>",
 
     		       // This option points to the location of the SWFUpload Flash object that ships with Fluid Infusion.
-    		       flashURL: "<%= image_path("../infusion/lib/swfupload/flash/swfupload.swf", :plugin=>:fluid_infusion) %>"
+    		       flashURL: "<%= image_path("../infusion/lib/swfupload/flash/swfupload.swf", :plugin=>"fluid-infusion") %>"
     			}
     		},
 
@@ -16,7 +16,7 @@
                 type: "fluid.swfUploadSetupDecorator",
                 options: {
                     // This option points to the location of the Browse Files button used with Flash 10 clients.
-                    flashButtonImageURL: "<%= image_path("../infusion/components/uploader/images/browse.png", :plugin=>:fluid_infusion) %>"
+                    flashButtonImageURL: "<%= image_path("../infusion/components/uploader/images/browse.png", :plugin=>"fluid-infusion") %>"
                 }
             }
         });
