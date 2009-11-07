@@ -1,7 +1,6 @@
 /*
-Copyright 2008-2009 University of Cambridge
 Copyright 2008-2009 University of Toronto
-Copyright 2007-2009 University of California, Berkeley
+Copyright 2008-2009 University of California, Berkeley
 
 Licensed under the Educational Community License (ECL), Version 2.0 or the New
 BSD license. You may not use this file except in compliance with one these
@@ -11,10 +10,7 @@ You may obtain a copy of the ECL 2.0 License and BSD License at
 https://source.fluidproject.org/svn/LICENSE.txt
 */
 
-/*global SWFUpload*/
-/*global swfobject*/
-/*global jQuery*/
-/*global fluid_1_1*/
+/*global fluid_1_1,SWFUpload,swfobject,jQuery*/
 
 fluid_1_1 = fluid_1_1 || {};
 
@@ -69,10 +65,8 @@ fluid_1_1 = fluid_1_1 || {};
     
     var setupForFlash10 = function (that, uploader) {
         var o = that.options,
-            flashContainer = createFlash10MovieContainer(that, uploader.container);
-            browseButton = uploader.locate("browseButton"),
-            h = o.flashButtonHeight || browseButton.outerHeight(),
-            w = o.flashButtonWidth || browseButton.outerWidth();
+            flashContainer = createFlash10MovieContainer(that, uploader.container),
+            browseButton = uploader.locate("browseButton");
         
         fluid.tabindex(browseButton, -1);
         that.isTransparent = o.flashButtonAlwaysVisible ? false : (!$.browser.msie || o.transparentEvenInIE);
@@ -80,8 +74,8 @@ fluid_1_1 = fluid_1_1 || {};
             flashURL: o.flash10URL || undefined,
             flashButtonImageURL: that.isTransparent ? undefined : o.flashButtonImageURL, 
             flashButtonPeerId: fluid.allocateSimpleId(flashContainer.children().eq(0)),
-            flashButtonHeight: h,
-            flashButtonWidth: w,
+            flashButtonHeight: o.flashButtonHeight || browseButton.outerHeight(),
+            flashButtonWidth: o.flashButtonWidth || browseButton.outerWidth(),
             flashButtonWindowMode: that.isTransparent ? SWFUpload.WINDOW_MODE.TRANSPARENT : SWFUpload.WINDOW_MODE.OPAQUE,
             flashButtonCursorEffect: SWFUpload.CURSOR.HAND,
             listeners: {
